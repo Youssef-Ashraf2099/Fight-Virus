@@ -702,7 +702,9 @@ class Player {
   }
 
   getPosition() {
-    return this.position.clone();
+    const pos = this.position.clone();
+    pos.yaw = this.yaw; // Include yaw for minimap direction
+    return pos;
   }
 
   getDirection() {

@@ -24,6 +24,11 @@ class InputManager {
         e.preventDefault();
         this.emit("special");
       }
+
+      // Restart game
+      if (e.key === "r" || e.key === "R") {
+        this.emit("restart");
+      }
     });
 
     window.addEventListener("keyup", (e) => {

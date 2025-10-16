@@ -130,6 +130,13 @@ class GameMain {
         this.handleSpecialAbility();
       }
     });
+
+    // Restart game
+    this.inputManager.on("restart", () => {
+      if (!this.isRunning && !this.gameStarted) {
+        this.restartGame();
+      }
+    });
   }
 
   startGame() {
@@ -230,6 +237,13 @@ class GameMain {
     this.uiManager.updateWeapon(
       currentWeapon.name,
       currentWeapon.getAmmoDisplay()
+    );
+
+    // Update minimap
+    this.uiManager.updateMinimap(
+      this.player.getPosition(),
+      this.enemyManager.getEnemies(),
+      this.environment.getCurrentPhaseName()
     );
 
     if (this.waveManager.update(deltaTime)) {
@@ -362,12 +376,55 @@ class GameMain {
     this.gameStarted = false;
 
     this.uiManager.showMessage(
-      `GAME OVER<br>FINAL SCORE: ${this.score}<br><small>Refresh to play again</small>`,
+      `GAME OVER<br>FINAL SCORE: ${this.score}<br><small>Press R to Restart</small>`,
       0
     );
 
     this.enemyManager.clear();
     this.weaponManager.clear();
+  }
+
+  restartGame() {
+    console.log("🔄 Restarting game...");
+
+    // Clear existing game state
+    this.enemyManager.clear();
+    this.weaponManager.clear();
+    this.uiManager.hideMessage();
+
+    // Reset score and difficulty
+    this.score = 0;
+    this.difficulty = 1;
+
+    // Reset player
+    this.player.reset();
+
+    // Reset weapon manager
+    this.weaponManager.switchWeapon(0); // Switch back to first weapon
+
+    // Reset environment to first phase
+    this.environment.setPhase(0);
+
+    // Reset wave manager
+    this.waveManager.reset();
+
+    // Start game
+    this.gameStarted = true;
+    this.isRunning = true;
+
+    // Start first wave
+    this.waveManager.startWave();
+    this.environment.setPhaseByWave(this.waveManager.getCurrentWave());
+
+    // Update UI
+    this.uiManager.updateScore(this.score);
+    const phaseName = this.environment.getCurrentPhaseName();
+    this.uiManager.showMessage(
+      `${phaseName ? phaseName.toUpperCase() + "<br>" : ""}WAVE 1 - GET READY!`,
+      2200
+    );
+
+    console.log("✅ Game restarted successfully!");
   }
 
   animate() {

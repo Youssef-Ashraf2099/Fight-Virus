@@ -41,4 +41,10 @@ class WaveManager {
   getDifficulty() {
     return this.difficulty;
   }
+
+  reset() {
+    this.currentWave = 0;
+    this.waveActive = false;
+    this.difficulty = 1;
+  }
 }
