@@ -51,6 +51,24 @@ class InputManager {
     window.addEventListener("contextmenu", (e) => {
       e.preventDefault();
     });
+
+    // Mouse wheel weapon cycling
+    window.addEventListener(
+      "wheel",
+      (e) => {
+        // Allow scrolling to change weapons when pointer lock is active
+        if (document.pointerLockElement) {
+          e.preventDefault();
+        }
+
+        if (e.deltaY < 0) {
+          this.emit("weaponPrev");
+        } else if (e.deltaY > 0) {
+          this.emit("weaponNext");
+        }
+      },
+      { passive: false }
+    );
   }
 
   getMoveInput() {
@@ -83,9 +101,9 @@ class InputManager {
     this.listeners[event].push(callback);
   }
 
-  emit(event) {
+  emit(event, ...args) {
     if (this.listeners[event]) {
-      this.listeners[event].forEach((callback) => callback());
+      this.listeners[event].forEach((callback) => callback(...args));
     }
   }
 }

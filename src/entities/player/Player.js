@@ -97,14 +97,14 @@ class Player {
   createWeaponViewModel() {
     this.weaponGroup = new THREE.Group();
 
-    this.baseWeaponPos = new THREE.Vector3(0.33, -0.28, -1.05);
-    this.aimWeaponPos = new THREE.Vector3(0, -0.16, -0.7);
+  this.baseWeaponPos = new THREE.Vector3(0.22, -0.24, -0.88);
+  this.aimWeaponPos = new THREE.Vector3(0.01, -0.12, -0.68);
 
     this.weaponGroup.position.copy(this.baseWeaponPos);
-    this.weaponGroup.scale.set(1.35, 1.35, 1.35);
+  this.weaponGroup.scale.set(1.36, 1.36, 1.36);
 
-    this.baseWeaponRot = new THREE.Euler(-0.12, 0.14, 0.04);
-    this.aimWeaponRot = new THREE.Euler(0, 0, 0);
+  this.baseWeaponRot = new THREE.Euler(-0.08, 0.17, 0.02);
+  this.aimWeaponRot = new THREE.Euler(-0.015, 0.04, 0);
     this.weaponGroup.rotation.copy(this.baseWeaponRot);
 
     this.weaponGroup.renderOrder = 2;

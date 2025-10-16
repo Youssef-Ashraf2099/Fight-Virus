@@ -33,6 +33,14 @@ class WeaponManager {
     }
   }
 
+  cycleWeapon(step) {
+    if (!this.weapons.length) return;
+    const total = this.weapons.length;
+    const nextIndex =
+      (this.currentWeaponIndex + step + total) % total;
+    this.switchWeapon(nextIndex);
+  }
+
   getCurrentWeapon() {
     return this.weapons[this.currentWeaponIndex];
   }
