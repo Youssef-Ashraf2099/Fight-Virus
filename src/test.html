@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Game Test</title>
+    <style>
+      body {
+        margin: 0;
+        background: #000;
+        color: #0f0;
+        font-family: monospace;
+      }
+      #info {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        padding: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        border: 1px solid #0f0;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="info">
+      <h2>Game Initialization Test</h2>
+      <div id="status">Testing...</div>
+      <button id="testBtn">Click to Test Game Start</button>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script type="module">
+      const statusEl = document.getElementById("status");
+
+      function log(msg) {
+        console.log(msg);
+        statusEl.innerHTML += "<br>" + msg;
+      }
+
+      log("Step 1: Loading Three.js...");
+
+      try {
+        const THREE = await import("./lib/three.module.js");
+        log("✓ Three.js loaded successfully");
+
+        log("Step 2: Creating scene...");
+        const scene = new THREE.Scene();
+        log("✓ Scene created");
+
+        log("Step 3: Creating camera...");
+        const camera = new THREE.PerspectiveCamera(
+          75,
+          window.innerWidth / window.innerHeight,
+          0.1,
+          1000
+        );
+        log("✓ Camera created");
+
+        log("Step 4: Creating renderer...");
+        const renderer = new THREE.WebGLRenderer({
+          canvas: document.getElementById("gameCanvas"),
+          antialias: true,
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        log("✓ Renderer created");
+
+        log("Step 5: Creating a test cube...");
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = new THREE.MeshBasicMaterial({
+          color: 0x00ff00,
+          wireframe: true,
+        });
+        const cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
+        camera.position.z = 5;
+        log("✓ Test cube created");
+
+        log("Step 6: Starting animation loop...");
+        function animate() {
+          requestAnimationFrame(animate);
+          cube.rotation.x += 0.01;
+          cube.rotation.y += 0.01;
+          renderer.render(scene, camera);
+        }
+        animate();
+        log("✓ Animation loop started");
+
+        log("<br><b>✓✓✓ ALL TESTS PASSED!</b>");
+        log("If you see a spinning green cube, Three.js is working!");
+
+        // Test button
+        document
+          .getElementById("testBtn")
+          .addEventListener("click", async () => {
+            log("<br>Loading full game...");
+            try {
+              const { Game } = await import("./game/Game.js");
+              log("✓ Game module loaded");
+
+              // Clear test scene
+              document.getElementById("info").style.display = "none";
+
+              const game = new Game();
+              log("✓ Game instance created");
+            } catch (error) {
+              log("✗ Error loading game: " + error.message);
+              console.error(error);
+            }
+          });
+      } catch (error) {
+        log("✗ Error: " + error.message);
+        console.error(error);
+      }
+    </script>
+  </body>
+</html>
