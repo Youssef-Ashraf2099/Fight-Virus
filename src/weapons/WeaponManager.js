@@ -28,7 +28,7 @@ class WeaponManager {
 
   fire(mousePos, camera, muzzlePos, direction) {
     const weapon = this.getCurrentWeapon();
-    
+
     // Use muzzle position if provided, otherwise fall back to player position
     const firePosition = muzzlePos || this.player.getPosition();
     const fireDirection = direction || this.player.getDirection();

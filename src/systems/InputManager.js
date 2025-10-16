@@ -37,9 +37,9 @@ class InputManager {
 
     window.addEventListener("mouseup", (e) => {
       this.mouseButtons[e.button] = false;
-      
+
       // Check if any button is still down
-      this.mouseDown = Object.values(this.mouseButtons).some(v => v);
+      this.mouseDown = Object.values(this.mouseButtons).some((v) => v);
     });
 
     window.addEventListener("mousemove", (e) => {

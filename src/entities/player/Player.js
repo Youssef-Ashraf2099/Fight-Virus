@@ -52,7 +52,7 @@ class Player {
 
   setupMouseLook() {
     // Request pointer lock when clicking on canvas (after game starts)
-    const canvas = document.getElementById('gameCanvas');
+    const canvas = document.getElementById("gameCanvas");
     canvas.addEventListener("click", () => {
       if (!document.pointerLockElement) {
         canvas.requestPointerLock();
@@ -74,20 +74,22 @@ class Player {
     });
 
     // Handle right-click for aiming
-    canvas.addEventListener('mousedown', (event) => {
-      if (event.button === 2) { // Right click
+    canvas.addEventListener("mousedown", (event) => {
+      if (event.button === 2) {
+        // Right click
         this.isAiming = true;
       }
     });
 
-    canvas.addEventListener('mouseup', (event) => {
-      if (event.button === 2) { // Right click
+    canvas.addEventListener("mouseup", (event) => {
+      if (event.button === 2) {
+        // Right click
         this.isAiming = false;
       }
     });
 
     // Prevent context menu on right click
-    canvas.addEventListener('contextmenu', (event) => {
+    canvas.addEventListener("contextmenu", (event) => {
       event.preventDefault();
     });
   }
@@ -99,7 +101,7 @@ class Player {
     // Base position - lower right corner of screen
     this.baseWeaponPos = new THREE.Vector3(0.4, -0.35, -0.7);
     this.aimWeaponPos = new THREE.Vector3(0, -0.15, -0.5); // Centered when aiming
-    
+
     this.weaponGroup.position.copy(this.baseWeaponPos);
 
     // Create a more detailed gun model
@@ -273,7 +275,8 @@ class Player {
 
       // Weapon sway (reduced when aiming)
       targetPos.y += bobOffset * 2 * bobMultiplier;
-      this.weaponGroup.rotation.z = Math.sin(this.bobTime * 0.5) * 0.02 * bobMultiplier;
+      this.weaponGroup.rotation.z =
+        Math.sin(this.bobTime * 0.5) * 0.02 * bobMultiplier;
     } else {
       this.bobTime = 0;
       this.weaponGroup.rotation.z = THREE.MathUtils.lerp(
@@ -302,7 +305,11 @@ class Player {
 
     // Adjust FOV when aiming
     const targetFOV = this.isAiming ? 50 : 75;
-    this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFOV, deltaTime * 8);
+    this.camera.fov = THREE.MathUtils.lerp(
+      this.camera.fov,
+      targetFOV,
+      deltaTime * 8
+    );
     this.camera.updateProjectionMatrix();
 
     // Muzzle flash fade
