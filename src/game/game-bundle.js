@@ -25,6 +25,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     "./effects/ParticleSystem.js",
 
     // Environment
+    "./environment/maps/BaseEnvironmentMap.js",
+    "./environment/maps/CPUEnvironment.js",
+    "./environment/maps/MemoryEnvironment.js",
+    "./environment/maps/GPUEnvironment.js",
+    "./environment/maps/MotherboardEnvironment.js",
     "./environment/Environment.js",
 
     // Entities

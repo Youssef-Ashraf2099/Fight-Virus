@@ -3,312 +3,278 @@ class Environment {
     this.scene = scene;
     this.time = 0;
 
-    this.createLights();
-    this.createGround();
-    this.createGridSystem();
-    this.createDataStreams();
-    this.createFloatingPlatforms();
-    this.createBackground();
-  }
+    this.mapGroup = new THREE.Group();
+    this.scene.add(this.mapGroup);
 
-  createLights() {
-    // Ambient light
-    const ambient = new THREE.AmbientLight(0x001100, 0.5);
-    this.scene.add(ambient);
+    this.backgroundGroup = new THREE.Group();
+    this.scene.add(this.backgroundGroup);
 
-    // Main directional light
-    const dirLight = new THREE.DirectionalLight(0x00ff00, 0.8);
-    dirLight.position.set(10, 20, 10);
-    dirLight.castShadow = true;
-    dirLight.shadow.camera.left = -50;
-    dirLight.shadow.camera.right = 50;
-    dirLight.shadow.camera.top = 50;
-    dirLight.shadow.camera.bottom = -50;
-    dirLight.shadow.camera.near = 1;
-    dirLight.shadow.camera.far = 100;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
-    this.scene.add(dirLight);
+    this.createLightingRig();
+    this.createBackgroundElements();
+    this.initFog();
 
-    // Accent lights
-    const accentLight1 = new THREE.PointLight(0x00ffff, 1, 50);
-    accentLight1.position.set(-20, 10, -20);
-    this.scene.add(accentLight1);
+    this._tempPlayerPos = new THREE.Vector3();
+    this.phaseIndex = -1;
+    this.currentMap = null;
+    this.previousMap = null;
+    this.transitionState = null;
 
-    const accentLight2 = new THREE.PointLight(0xff00ff, 1, 50);
-    accentLight2.position.set(20, 10, 20);
-    this.scene.add(accentLight2);
-  }
-
-  createGround() {
-    // Circuit board style ground
-    const groundSize = 100;
-    const groundGeometry = new THREE.PlaneGeometry(
-      groundSize,
-      groundSize,
-      50,
-      50
-    );
-
-    // Create a grid texture pattern
-    const groundMaterial = new THREE.MeshPhongMaterial({
-      color: 0x001100,
-      emissive: 0x002200,
-      emissiveIntensity: 0.3,
-      shininess: 50,
-      transparent: true,
-      opacity: 0.9,
-    });
-
-    this.ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    this.ground.rotation.x = -Math.PI / 2;
-    this.ground.position.y = -2;
-    this.ground.receiveShadow = true;
-    this.scene.add(this.ground);
-
-    // Add distortion to ground vertices
-    const positions = groundGeometry.attributes.position;
-    const vertex = new THREE.Vector3();
-
-    for (let i = 0; i < positions.count; i++) {
-      vertex.fromBufferAttribute(positions, i);
-      const wave = Math.sin(vertex.x * 0.1) * Math.cos(vertex.y * 0.1) * 0.3;
-      positions.setZ(i, wave);
-    }
-
-    groundGeometry.computeVertexNormals();
-  }
-
-  createGridSystem() {
-    // Create 3D grid lines representing computer architecture
-    this.gridLines = new THREE.Group();
-
-    const lineMaterial = new THREE.LineBasicMaterial({
-      color: 0x00ff00,
-      transparent: true,
-      opacity: 0.3,
-    });
-
-    const size = 80;
-    const divisions = 20;
-    const step = size / divisions;
-
-    // Horizontal lines
-    for (let i = -divisions / 2; i <= divisions / 2; i++) {
-      const points = [];
-      points.push(new THREE.Vector3(-size / 2, 0, i * step));
-      points.push(new THREE.Vector3(size / 2, 0, i * step));
-
-      const geometry = new THREE.BufferGeometry().setFromPoints(points);
-      const line = new THREE.Line(geometry, lineMaterial);
-      this.gridLines.add(line);
-    }
-
-    // Vertical lines
-    for (let i = -divisions / 2; i <= divisions / 2; i++) {
-      const points = [];
-      points.push(new THREE.Vector3(i * step, 0, -size / 2));
-      points.push(new THREE.Vector3(i * step, 0, size / 2));
-
-      const geometry = new THREE.BufferGeometry().setFromPoints(points);
-      const line = new THREE.Line(geometry, lineMaterial);
-      this.gridLines.add(line);
-    }
-
-    this.scene.add(this.gridLines);
-  }
-
-  createDataStreams() {
-    // Flowing data particles in the background
-    this.dataStreams = [];
-
-    const particleGeometry = new THREE.BoxGeometry(0.2, 0.2, 1);
-    const particleMaterial = new THREE.MeshPhongMaterial({
-      color: 0x00ffff,
-      emissive: 0x00ffff,
-      emissiveIntensity: 1,
-      transparent: true,
-      opacity: 0.7,
-    });
-
-    for (let i = 0; i < 50; i++) {
-      const particle = new THREE.Mesh(
-        particleGeometry,
-        particleMaterial.clone()
-      );
-
-      particle.userData = {
-        startX: (Math.random() - 0.5) * 100,
-        startZ: (Math.random() - 0.5) * 100,
-        height: Math.random() * 15 + 5,
-        speed: Math.random() * 2 + 1,
-        phase: Math.random() * Math.PI * 2,
-      };
-
-      particle.position.set(
-        particle.userData.startX,
-        particle.userData.height,
-        particle.userData.startZ
-      );
-
-      this.dataStreams.push(particle);
-      this.scene.add(particle);
-    }
-  }
-
-  createFloatingPlatforms() {
-    // Floating circuit board platforms
-    this.platforms = [];
-
-    const platformGeometry = new THREE.BoxGeometry(5, 0.5, 5);
-    const platformMaterial = new THREE.MeshPhongMaterial({
-      color: 0x003300,
-      emissive: 0x00ff00,
-      emissiveIntensity: 0.3,
-      shininess: 80,
-    });
-
-    const positions = [
-      [15, 3, 15],
-      [-15, 4, 15],
-      [15, 3, -15],
-      [-15, 5, -15],
-      [0, 6, 25],
-      [0, 4, -25],
+    this.phaseConfigs = [
+      { key: "cpu", factory: () => new CPUEnvironment(this) },
+      { key: "memory", factory: () => new MemoryEnvironment(this) },
+      { key: "gpu", factory: () => new GPUEnvironment(this) },
+      { key: "motherboard", factory: () => new MotherboardEnvironment(this) },
     ];
 
-    positions.forEach((pos, index) => {
-      const platform = new THREE.Mesh(
-        platformGeometry,
-        platformMaterial.clone()
-      );
-      platform.position.set(...pos);
-      platform.castShadow = true;
-      platform.receiveShadow = true;
-      platform.userData = {
-        baseY: pos[1],
-        offset: index,
-      };
-
-      // Add circuit lines on platform
-      const lineGeometry = new THREE.BoxGeometry(0.1, 0.6, 4);
-      const lineMaterial = new THREE.MeshPhongMaterial({
-        color: 0x00ff00,
-        emissive: 0x00ff00,
-        emissiveIntensity: 0.8,
-      });
-
-      for (let i = 0; i < 3; i++) {
-        const line = new THREE.Mesh(lineGeometry, lineMaterial);
-        line.position.set((i - 1) * 1.5, 0.3, 0);
-        platform.add(line);
-      }
-
-      this.platforms.push(platform);
-      this.scene.add(platform);
-    });
+    this.setPhase(0);
   }
 
-  createBackground() {
-    // Create a cyberspace-like background
-    const bgGeometry = new THREE.SphereGeometry(200, 32, 32);
-    const bgMaterial = new THREE.MeshBasicMaterial({
-      color: 0x000000,
+  createLightingRig() {
+    const ambient = new THREE.AmbientLight(0x061414, 0.5);
+    this.ambientLight = ambient;
+    this.scene.add(ambient);
+
+    const dirLight = new THREE.DirectionalLight(0x1cff9b, 0.9);
+    dirLight.position.set(30, 50, 20);
+    dirLight.castShadow = true;
+    dirLight.shadow.camera.left = -120;
+    dirLight.shadow.camera.right = 120;
+    dirLight.shadow.camera.top = 120;
+    dirLight.shadow.camera.bottom = -120;
+    dirLight.shadow.camera.near = 5;
+    dirLight.shadow.camera.far = 200;
+    dirLight.shadow.mapSize.width = 4096;
+    dirLight.shadow.mapSize.height = 4096;
+    this.dirLight = dirLight;
+    this.scene.add(dirLight);
+
+    const accentA = new THREE.PointLight(0x12ffc3, 1.2, 180, 2);
+    accentA.position.set(-60, 30, -60);
+    const accentB = new THREE.PointLight(0xffd966, 1.1, 180, 2);
+    accentB.position.set(60, 40, 60);
+    this.accentLights = [accentA, accentB];
+    this.accentLights.forEach((light) => this.scene.add(light));
+  }
+
+  createBackgroundElements() {
+    const skyGeometry = new THREE.SphereGeometry(260, 40, 32);
+    const skyMaterial = new THREE.MeshBasicMaterial({
+      color: 0x020508,
       side: THREE.BackSide,
       transparent: true,
-      opacity: 0.9,
+      opacity: 0.95,
     });
+    this.skyDome = new THREE.Mesh(skyGeometry, skyMaterial);
+    this.backgroundGroup.add(this.skyDome);
 
-    this.background = new THREE.Mesh(bgGeometry, bgMaterial);
-    this.scene.add(this.background);
-
-    // Add stars/data points
-    this.stars = [];
-    const starGeometry = new THREE.SphereGeometry(0.5, 8, 8);
-
-    for (let i = 0; i < 200; i++) {
+    this.starSprites = [];
+    const starGeometry = new THREE.SphereGeometry(0.6, 6, 6);
+    for (let i = 0; i < 240; i++) {
       const starMaterial = new THREE.MeshBasicMaterial({
-        color: Math.random() > 0.5 ? 0x00ff00 : 0x00ffff,
+        color: i % 2 === 0 ? 0x36ffc9 : 0x7affff,
         transparent: true,
-        opacity: Math.random() * 0.5 + 0.3,
+        opacity: 0.4 + Math.random() * 0.3,
       });
-
       const star = new THREE.Mesh(starGeometry, starMaterial);
-
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
-      const radius = 150 + Math.random() * 40;
-
+      const radius = 210 + Math.random() * 40;
       star.position.set(
         radius * Math.sin(phi) * Math.cos(theta),
         radius * Math.sin(phi) * Math.sin(theta),
         radius * Math.cos(phi)
       );
-
       star.userData = {
         baseOpacity: star.material.opacity,
-        phase: Math.random() * Math.PI * 2,
+        offset: Math.random() * Math.PI * 2,
       };
+      this.starSprites.push(star);
+      this.backgroundGroup.add(star);
+    }
 
-      this.stars.push(star);
-      this.scene.add(star);
+    this.horizonRings = [];
+    for (let i = 0; i < 3; i++) {
+      const ringGeometry = new THREE.TorusGeometry(160 + i * 12, 1.8, 12, 120);
+      const ringMaterial = new THREE.MeshBasicMaterial({
+        color: 0x2ef8c9,
+        transparent: true,
+        opacity: 0.12,
+      });
+      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = -8 - i * 6;
+      this.horizonRings.push(ring);
+      this.backgroundGroup.add(ring);
+    }
+  }
+
+  initFog() {
+    this.fog = new THREE.FogExp2(0x020507, 0.018);
+    this.scene.fog = this.fog;
+  }
+
+  setPhase(index) {
+    const clamped = Math.max(0, Math.min(this.phaseConfigs.length - 1, index));
+    if (clamped === this.phaseIndex) {
+      return false;
+    }
+
+    const config = this.phaseConfigs[clamped];
+    const newMap = config.factory();
+    const palette = newMap.getPalette();
+
+    const prevMap = this.currentMap;
+    if (prevMap) {
+      this.previousMap = prevMap;
+    }
+
+    newMap.build(this.mapGroup);
+    if (newMap.group) {
+      newMap.group.position.set(0, -90, 0);
+      newMap.group.scale.setScalar(0.6);
+    }
+
+    this.currentMap = newMap;
+    this.phaseIndex = clamped;
+    this.currentPhaseName = newMap.displayName;
+    this.applyPalette(palette);
+
+    this.transitionState = {
+      elapsed: 0,
+      duration: 2.8,
+      incoming: newMap,
+      outgoing: this.previousMap,
+    };
+
+    return true;
+  }
+
+  setPhaseByWave(waveNumber) {
+    if (!waveNumber) return false;
+    const index = Math.floor((waveNumber - 1) / 3);
+    return this.setPhase(index);
+  }
+
+  applyPalette(palette) {
+    if (!palette) return;
+
+    if (this.ambientLight) {
+      this.ambientLight.color.setHex(palette.ambient || 0x061414);
+    }
+
+    if (this.dirLight) {
+      this.dirLight.color.setHex(palette.directional || 0xffffff);
+    }
+
+    if (this.accentLights && this.accentLights.length) {
+      if (palette.accentA) this.accentLights[0].color.setHex(palette.accentA);
+      if (palette.accentB) this.accentLights[1].color.setHex(palette.accentB);
+    }
+
+    if (this.skyDome && this.skyDome.material && palette.background) {
+      this.skyDome.material.color.setHex(palette.background);
+    }
+
+    if (this.horizonRings) {
+      this.horizonRings.forEach((ring, idx) => {
+        const tone =
+          idx % 2 === 0
+            ? palette.accentA || 0x2ef8c9
+            : palette.accentB || 0x7affff;
+        ring.material.color.setHex(tone);
+      });
+    }
+
+    if (this.starSprites && palette.accentA && palette.accentB) {
+      this.starSprites.forEach((star, index) => {
+        const color = index % 2 === 0 ? palette.accentA : palette.accentB;
+        star.material.color.setHex(color);
+      });
+    }
+
+    if (this.fog) {
+      if (palette.fog) this.fog.color.setHex(palette.fog);
+      if (typeof palette.fogDensity === "number")
+        this.fog.density = palette.fogDensity;
+    }
+  }
+
+  updateTransition(deltaTime) {
+    if (!this.transitionState) return;
+
+    const state = this.transitionState;
+    state.elapsed += deltaTime;
+    const t = Math.min(state.elapsed / state.duration, 1);
+    const easeInOut = t * t * (3 - 2 * t);
+
+    if (state.incoming && state.incoming.group) {
+      const group = state.incoming.group;
+      group.position.y = -90 + 90 * easeInOut;
+      group.scale.setScalar(0.6 + 0.4 * easeInOut);
+      group.rotation.y = (1 - easeInOut) * Math.PI * 0.25;
+    }
+
+    if (state.outgoing && state.outgoing.group) {
+      const group = state.outgoing.group;
+      group.position.y = easeInOut * 80;
+      group.scale.setScalar(1 - 0.4 * easeInOut);
+      group.rotation.y = easeInOut * Math.PI * 0.25;
+    }
+
+    if (t >= 1) {
+      if (state.outgoing) {
+        state.outgoing.dispose();
+      }
+      if (state.incoming && state.incoming.group) {
+        state.incoming.group.position.set(0, 0, 0);
+        state.incoming.group.scale.setScalar(1);
+        state.incoming.group.rotation.set(0, 0, 0);
+      }
+      this.previousMap = null;
+      this.transitionState = null;
+    }
+  }
+
+  updateBackground(deltaTime) {
+    if (this.skyDome) {
+      this.skyDome.rotation.y += deltaTime * 0.01;
+    }
+
+    if (this.starSprites) {
+      this.starSprites.forEach((star) => {
+        star.material.opacity = Math.max(
+          0.15,
+          star.userData.baseOpacity +
+            Math.sin(this.time * 2 + star.userData.offset) * 0.2
+        );
+      });
+    }
+
+    if (this.horizonRings) {
+      this.horizonRings.forEach((ring, index) => {
+        ring.rotation.z += deltaTime * (0.1 + index * 0.03);
+        ring.material.opacity = 0.08 + Math.sin(this.time * 1.5 + index) * 0.04;
+      });
     }
   }
 
   update(deltaTime, playerPosition) {
     this.time += deltaTime;
+    const playerPos = playerPosition || this._tempPlayerPos.set(0, 0, 0);
 
-    // Animate ground
-    const positions = this.ground.geometry.attributes.position;
-    const vertex = new THREE.Vector3();
+    this.updateBackground(deltaTime);
+    this.updateTransition(deltaTime);
 
-    for (let i = 0; i < positions.count; i++) {
-      vertex.fromBufferAttribute(positions, i);
-      const wave =
-        Math.sin(vertex.x * 0.1 + this.time) *
-        Math.cos(vertex.y * 0.1 + this.time) *
-        0.3;
-      positions.setZ(i, wave);
+    if (this.previousMap && this.previousMap !== this.currentMap) {
+      this.previousMap.update(deltaTime, this.time, playerPos);
     }
 
-    positions.needsUpdate = true;
-    this.ground.geometry.computeVertexNormals();
+    if (this.currentMap) {
+      this.currentMap.update(deltaTime, this.time, playerPos);
+    }
+  }
 
-    // Animate data streams
-    this.dataStreams.forEach((stream, index) => {
-      const phase = stream.userData.phase + this.time * stream.userData.speed;
-
-      stream.position.x = stream.userData.startX + Math.sin(phase) * 5;
-      stream.position.y = stream.userData.height + Math.sin(phase * 2) * 2;
-
-      stream.rotation.y = phase;
-      stream.rotation.x = Math.sin(phase) * 0.5;
-
-      // Pulse opacity
-      stream.material.opacity = 0.7 + Math.sin(this.time * 3 + index) * 0.2;
-    });
-
-    // Float platforms
-    this.platforms.forEach((platform) => {
-      platform.position.y =
-        platform.userData.baseY +
-        Math.sin(this.time + platform.userData.offset) * 0.5;
-
-      platform.rotation.y += deltaTime * 0.2;
-    });
-
-    // Twinkle stars
-    this.stars.forEach((star) => {
-      const opacity =
-        star.userData.baseOpacity +
-        Math.sin(this.time * 2 + star.userData.phase) * 0.2;
-      star.material.opacity = Math.max(0.1, opacity);
-    });
-
-    // Pulse grid
-    this.gridLines.children.forEach((line, index) => {
-      const opacity = 0.3 + Math.sin(this.time * 2 + index * 0.1) * 0.1;
-      line.material.opacity = opacity;
-    });
+  getCurrentPhaseName() {
+    return this.currentPhaseName;
   }
 }

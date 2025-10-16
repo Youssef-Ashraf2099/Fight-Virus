@@ -150,10 +150,17 @@ class GameMain {
 
       console.log("Starting wave...");
       this.waveManager.startWave();
+      this.environment.setPhaseByWave(this.waveManager.getCurrentWave());
 
       console.log("Updating UI...");
       this.uiManager.updateScore(this.score);
-      this.uiManager.showMessage("WAVE 1 - GET READY!", 2000);
+      const phaseName = this.environment.getCurrentPhaseName();
+      this.uiManager.showMessage(
+        `${
+          phaseName ? phaseName.toUpperCase() + "<br>" : ""
+        }WAVE 1 - GET READY!`,
+        2200
+      );
 
       console.log("✅ Game started successfully!");
     } catch (error) {
@@ -205,7 +212,7 @@ class GameMain {
 
     this.weaponManager.update(deltaTime);
     this.enemyManager.update(deltaTime);
-    this.environment.update(deltaTime);
+    this.environment.update(deltaTime, this.player.getPosition());
     this.particleSystem.update(deltaTime);
 
     this.checkCollisions();
@@ -316,10 +323,32 @@ class GameMain {
     setTimeout(() => {
       if (this.gameStarted) {
         this.waveManager.startWave();
-        this.uiManager.showMessage(
-          `WAVE ${this.waveManager.getCurrentWave()} - INCOMING!`,
-          2000
+        const phaseChanged = this.environment.setPhaseByWave(
+          this.waveManager.getCurrentWave()
         );
+        const phaseName = this.environment.getCurrentPhaseName();
+        const waveLabel = `WAVE ${this.waveManager.getCurrentWave()} - INCOMING!`;
+
+        if (phaseChanged) {
+          this.uiManager.showMessage(
+            `${phaseName ? phaseName.toUpperCase() : "NEW SECTOR"} ONLINE`,
+            2200
+          );
+          setTimeout(() => {
+            if (!this.gameStarted) return;
+            this.uiManager.showMessage(
+              `${
+                phaseName ? phaseName.toUpperCase() + "<br>" : ""
+              }${waveLabel}`,
+              2200
+            );
+          }, 2200);
+        } else {
+          this.uiManager.showMessage(
+            `${phaseName ? phaseName.toUpperCase() + "<br>" : ""}${waveLabel}`,
+            2200
+          );
+        }
       }
     }, 3000);
   }
