@@ -115,9 +115,7 @@ class GameMain {
     this.inputManager.on("weapon2", () => this.weaponManager.switchWeapon(1));
     this.inputManager.on("weapon3", () => this.weaponManager.switchWeapon(2));
     this.inputManager.on("weapon4", () => this.weaponManager.switchWeapon(3));
-    this.inputManager.on("weaponNext", () =>
-      this.weaponManager.cycleWeapon(1)
-    );
+    this.inputManager.on("weaponNext", () => this.weaponManager.cycleWeapon(1));
     this.inputManager.on("weaponPrev", () =>
       this.weaponManager.cycleWeapon(-1)
     );
