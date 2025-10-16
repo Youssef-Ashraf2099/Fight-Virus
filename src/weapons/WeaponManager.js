@@ -26,13 +26,21 @@ class WeaponManager {
     return this.weapons[this.currentWeaponIndex];
   }
 
-  fire(mousePos, camera) {
+  fire(mousePos, camera, muzzlePos, direction) {
     const weapon = this.getCurrentWeapon();
-    const playerPos = this.player.getPosition();
+    
+    // Use muzzle position if provided, otherwise fall back to player position
+    const firePosition = muzzlePos || this.player.getPosition();
+    const fireDirection = direction || this.player.getDirection();
 
     if (weapon.canFire()) {
       // In FPS mode, mousePos will be null - fire from camera direction
-      const projectile = weapon.fire(playerPos, mousePos, camera, this.player.getDirection());
+      const projectile = weapon.fire(
+        firePosition,
+        mousePos,
+        camera,
+        fireDirection
+      );
       if (projectile) {
         if (Array.isArray(projectile)) {
           this.projectiles.push(...projectile);

@@ -1,7 +1,8 @@
 class InputManager {
   constructor() {
     this.keys = {};
-    this.mouseDown = false;
+    this.mouseButtons = {}; // Track individual mouse buttons
+    this.mouseDown = false; // Legacy - keep for compatibility
     this.mousePosition = { x: 0, y: 0 };
     this.listeners = {};
 
@@ -30,11 +31,15 @@ class InputManager {
     });
 
     window.addEventListener("mousedown", (e) => {
-      this.mouseDown = true;
+      this.mouseButtons[e.button] = true;
+      this.mouseDown = true; // Legacy
     });
 
     window.addEventListener("mouseup", (e) => {
-      this.mouseDown = false;
+      this.mouseButtons[e.button] = false;
+      
+      // Check if any button is still down
+      this.mouseDown = Object.values(this.mouseButtons).some(v => v);
     });
 
     window.addEventListener("mousemove", (e) => {
@@ -61,6 +66,10 @@ class InputManager {
 
   isMouseDown() {
     return this.mouseDown;
+  }
+
+  isMouseButtonDown(button) {
+    return this.mouseButtons[button] || false;
   }
 
   getMousePosition() {

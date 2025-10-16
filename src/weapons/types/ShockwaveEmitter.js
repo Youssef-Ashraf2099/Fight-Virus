@@ -52,11 +52,11 @@ class ShockwaveEmitter extends BaseWeapon {
 
     spreadAngles.forEach((angleOffset) => {
       const spreadDirection = direction.clone();
-      
+
       // Get perpendicular vector for spread (works in 3D)
       const up = new THREE.Vector3(0, 1, 0);
       const perpendicular = new THREE.Vector3().crossVectors(direction, up);
-      
+
       spreadDirection.add(perpendicular.multiplyScalar(angleOffset));
       spreadDirection.normalize();
 

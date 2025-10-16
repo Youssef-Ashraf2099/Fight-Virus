@@ -133,6 +133,7 @@ class GameMain {
       document.getElementById("score").style.display = "block";
       document.getElementById("weaponInfo").style.display = "block";
       document.getElementById("minimap").style.display = "block";
+      document.getElementById("crosshair").style.display = "block";
 
       console.log("Setting game state...");
       this.gameStarted = true;
@@ -188,9 +189,12 @@ class GameMain {
     // In FPS mode, player controls camera position and rotation
     // No need to manually update camera - player does it
 
-    if (this.inputManager.isMouseDown() && this.gameStarted) {
-      // In FPS mode, fire from camera direction
-      this.weaponManager.fire(null, this.camera);
+    // Shooting with left mouse button (button 0)
+    if (this.inputManager.isMouseButtonDown(0) && this.gameStarted) {
+      // Fire from weapon muzzle position
+      const muzzlePos = this.player.getMuzzlePosition();
+      const direction = this.player.getMuzzleDirection();
+      this.weaponManager.fire(null, this.camera, muzzlePos, direction);
       this.player.onShoot(); // Trigger weapon recoil animation
     }
 

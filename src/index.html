@@ -192,6 +192,54 @@
         background: rgba(0, 20, 0, 0.5);
         box-shadow: 0 0 10px #0f0;
       }
+
+      /* Crosshair */
+      #crosshair {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 40px;
+        height: 40px;
+        pointer-events: none;
+        display: none;
+      }
+
+      #crosshair::before,
+      #crosshair::after {
+        content: '';
+        position: absolute;
+        background: #0f0;
+        box-shadow: 0 0 5px #0f0;
+      }
+
+      #crosshair::before {
+        left: 50%;
+        top: 0;
+        width: 2px;
+        height: 100%;
+        transform: translateX(-50%);
+      }
+
+      #crosshair::after {
+        top: 50%;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        transform: translateY(-50%);
+      }
+
+      #crosshair .center-dot {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 4px;
+        height: 4px;
+        background: #0f0;
+        border-radius: 50%;
+        box-shadow: 0 0 5px #0f0;
+      }
     </style>
   </head>
   <body>
@@ -208,7 +256,7 @@
         <button id="startButton">START MISSION</button>
         <div id="controls">
           <p>
-            WASD - Move | Mouse - Look Around | Left Click - Fire<br />
+            WASD - Move | Mouse - Look Around | Left Click - Fire | Right Click - Aim<br />
             1-4 - Switch Weapons | Space - Jump | Shift - Sprint | E - Special Ability
           </p>
         </div>
@@ -253,6 +301,10 @@
       </div>
 
       <canvas id="minimap" style="display: none"></canvas>
+
+      <div id="crosshair" style="display: none">
+        <div class="center-dot"></div>
+      </div>
 
       <div id="message"></div>
     </div>
