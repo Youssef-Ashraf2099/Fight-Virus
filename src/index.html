@@ -165,6 +165,15 @@
         }
       }
 
+      @keyframes damageFlash {
+        0% {
+          opacity: 0.5;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+
       #weaponInfo {
         position: absolute;
         bottom: 20px;
@@ -199,8 +208,8 @@
         <button id="startButton">START MISSION</button>
         <div id="controls">
           <p>
-            WASD - Move | Mouse - Aim | Left Click - Fire | 1-4 - Switch Weapons
-            | Space - Special Ability
+            WASD - Move | Mouse - Look Around | Left Click - Fire<br />
+            1-4 - Switch Weapons | Space - Jump | Shift - Sprint | E - Special Ability
           </p>
         </div>
       </div>

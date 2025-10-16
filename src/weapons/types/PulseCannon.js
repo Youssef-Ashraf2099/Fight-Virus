@@ -10,34 +10,41 @@ class PulseCannon extends BaseWeapon {
     this.projectileColor = 0x00ff00;
   }
 
-  fire(origin, target, camera) {
+  fire(origin, target, camera, cameraDirection) {
     if (!this.canFire()) return null;
 
     super.fire(origin, target, camera);
 
-    // Calculate direction from mouse position
-    const mouse = new THREE.Vector2(
-      (target.x / window.innerWidth) * 2 - 1,
-      -(target.y / window.innerHeight) * 2 + 1
-    );
+    let direction;
 
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(mouse, camera);
+    // FPS mode: use camera direction directly
+    if (cameraDirection) {
+      direction = cameraDirection.clone().normalize();
+    } else {
+      // Legacy top-down mode: Calculate direction from mouse position
+      const mouse = new THREE.Vector2(
+        (target.x / window.innerWidth) * 2 - 1,
+        -(target.y / window.innerHeight) * 2 + 1
+      );
 
-    const planeZ = origin.z;
-    const planeNormal = new THREE.Vector3(0, 1, 0);
-    const planePoint = new THREE.Vector3(0, 0, planeZ);
-    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
-      planeNormal,
-      planePoint
-    );
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, camera);
 
-    const intersectPoint = new THREE.Vector3();
-    raycaster.ray.intersectPlane(plane, intersectPoint);
+      const planeZ = origin.z;
+      const planeNormal = new THREE.Vector3(0, 1, 0);
+      const planePoint = new THREE.Vector3(0, 0, planeZ);
+      const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+        planeNormal,
+        planePoint
+      );
 
-    const direction = new THREE.Vector3()
-      .subVectors(intersectPoint, origin)
-      .normalize();
+      const intersectPoint = new THREE.Vector3();
+      raycaster.ray.intersectPlane(plane, intersectPoint);
+
+      direction = new THREE.Vector3()
+        .subVectors(intersectPoint, origin)
+        .normalize();
+    }
 
     // Muzzle flash effect
     this.particleSystem.createMuzzleFlash(origin, this.projectileColor);

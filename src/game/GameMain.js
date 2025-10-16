@@ -50,9 +50,8 @@ class GameMain {
   }
 
   init() {
-    // Setup camera
-    this.camera.position.set(0, 25, 30);
-    this.camera.lookAt(0, 0, 0);
+    // Setup camera for FPS (will be controlled by player)
+    this.camera.position.set(0, 1.8, 0);
 
     // Initialize systems
     this.inputManager = new InputManager();
@@ -63,7 +62,7 @@ class GameMain {
     // Create environment
     this.environment = new Environment(this.scene);
 
-    // Create player
+    // Create player (FPS mode - player controls camera)
     this.player = new Player(this.scene, this.camera);
 
     // Create weapon system
@@ -186,14 +185,13 @@ class GameMain {
     const moveInput = this.inputManager.getMoveInput();
     this.player.update(deltaTime, moveInput);
 
-    const playerPos = this.player.getPosition();
-    this.camera.position.x = playerPos.x;
-    this.camera.position.z = playerPos.z + 30;
-    this.camera.lookAt(playerPos.x, 0, playerPos.z);
+    // In FPS mode, player controls camera position and rotation
+    // No need to manually update camera - player does it
 
     if (this.inputManager.isMouseDown() && this.gameStarted) {
-      const mousePos = this.inputManager.getMousePosition();
-      this.weaponManager.fire(mousePos, this.camera);
+      // In FPS mode, fire from camera direction
+      this.weaponManager.fire(null, this.camera);
+      this.player.onShoot(); // Trigger weapon recoil animation
     }
 
     this.weaponManager.update(deltaTime);

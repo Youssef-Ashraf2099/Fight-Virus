@@ -31,7 +31,8 @@ class WeaponManager {
     const playerPos = this.player.getPosition();
 
     if (weapon.canFire()) {
-      const projectile = weapon.fire(playerPos, mousePos, camera);
+      // In FPS mode, mousePos will be null - fire from camera direction
+      const projectile = weapon.fire(playerPos, mousePos, camera, this.player.getDirection());
       if (projectile) {
         if (Array.isArray(projectile)) {
           this.projectiles.push(...projectile);

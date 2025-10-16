@@ -19,7 +19,7 @@ class InputManager {
       if (e.key === "4") this.emit("weapon4");
 
       // Special ability
-      if (e.key === " ") {
+      if (e.key === "e" || e.key === "E") {
         e.preventDefault();
         this.emit("special");
       }
@@ -54,6 +54,8 @@ class InputManager {
       backward: this.keys["s"] || false,
       left: this.keys["a"] || false,
       right: this.keys["d"] || false,
+      jump: this.keys[" "] || false,
+      sprint: this.keys["shift"] || false,
     };
   }
 
