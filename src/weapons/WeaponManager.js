@@ -13,12 +13,23 @@ class WeaponManager {
 
     this.currentWeaponIndex = 0;
     this.projectiles = [];
+
+    if (this.player.setWeaponViewModel) {
+      this.player.setWeaponViewModel(
+        this.getCurrentWeapon().viewModelId || this.getCurrentWeapon().name
+      );
+    }
   }
 
   switchWeapon(index) {
     if (index >= 0 && index < this.weapons.length) {
       this.currentWeaponIndex = index;
-      this.getCurrentWeapon().onEquip();
+      const weapon = this.getCurrentWeapon();
+      weapon.onEquip();
+
+      if (this.player.setWeaponViewModel) {
+        this.player.setWeaponViewModel(weapon.viewModelId || weapon.name);
+      }
     }
   }
 

@@ -203,6 +203,12 @@
         height: 40px;
         pointer-events: none;
         display: none;
+        transition: transform 0.2s ease-out, opacity 0.2s;
+      }
+
+      #crosshair.aiming {
+        transform: translate(-50%, -50%) scale(0.6);
+        opacity: 1;
       }
 
       #crosshair::before,

@@ -8,6 +8,7 @@ class PulseCannon extends BaseWeapon {
     this.projectileSpeed = 40;
     this.projectileLifetime = 2;
     this.projectileColor = 0x00ff00;
+    this.viewModelId = "pulseCannon";
   }
 
   fire(origin, target, camera, cameraDirection) {

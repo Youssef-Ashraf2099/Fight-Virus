@@ -9,6 +9,7 @@ class PlasmaLauncher extends BaseWeapon {
     this.projectileLifetime = 3;
     this.projectileColor = 0xff00ff;
     this.splashRadius = 5;
+    this.viewModelId = "plasmaLauncher";
   }
 
   fire(origin, target, camera, cameraDirection) {

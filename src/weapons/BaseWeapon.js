@@ -10,6 +10,7 @@ class BaseWeapon {
     this.projectileSpeed = 30;
     this.projectileLifetime = 3;
     this.projectileColor = 0x00ff00;
+    this.viewModelId = "pulseCannon";
     this.ammoType = "infinite"; // or 'limited'
     this.currentAmmo = Infinity;
     this.maxAmmo = Infinity;

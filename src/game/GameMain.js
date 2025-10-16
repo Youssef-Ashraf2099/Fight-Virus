@@ -11,9 +11,10 @@ class GameMain {
       this.camera = new THREE.PerspectiveCamera(
         75,
         window.innerWidth / window.innerHeight,
-        0.1,
+        0.01, // Reduced near plane for weapon viewmodel
         1000
       );
+      this.scene.add(this.camera); // ensure weapon viewmodel renders
 
       console.log("Getting canvas element...");
       const canvas = document.getElementById("gameCanvas");
