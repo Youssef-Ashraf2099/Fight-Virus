@@ -1,7 +1,8 @@
 class Player {
-  constructor(scene, camera) {
+  constructor(scene, camera, environment) {
     this.scene = scene;
     this.camera = camera;
+    this.environment = environment || null;
 
     // Stats
     this.maxHealth = 100;
@@ -18,6 +19,8 @@ class Player {
     this.height = 1.8; // Eye height
     this.position = new THREE.Vector3(0, this.height, 0);
     this.velocity = new THREE.Vector3(0, 0, 0);
+    this.currentGroundHeight = 0;
+    this.maxStepHeight = 1.4;
 
     // Mouse look
     this.yaw = 0; // Horizontal rotation
@@ -48,6 +51,14 @@ class Player {
 
     this.setupMouseLook();
     this.createWeaponViewModel();
+
+    if (this.environment) {
+      this.currentGroundHeight = this.environment.getFloorHeightAt(
+        this.position.x,
+        this.position.z
+      );
+      this.position.y = this.currentGroundHeight + this.height;
+    }
   }
 
   setupMouseLook() {
@@ -455,13 +466,12 @@ class Player {
     this.jumpVelocity += this.gravity * deltaTime;
     this.position.y += this.jumpVelocity * deltaTime;
 
-    // Simple ground collision
-    if (this.position.y <= this.height) {
-      this.position.y = this.height;
-      this.jumpVelocity = 0;
-      this.isGrounded = true;
-    }
+    const previousX = this.position.x;
+    const previousZ = this.position.z;
+    const previousGround = this.currentGroundHeight;
+    const wasGrounded = this.isGrounded;
 
+    // Simple ground collision
     // Apply horizontal movement
     this.position.x += this.velocity.x;
     this.position.z += this.velocity.z;
@@ -470,6 +480,36 @@ class Player {
     const boundary = 45;
     this.position.x = Math.max(-boundary, Math.min(boundary, this.position.x));
     this.position.z = Math.max(-boundary, Math.min(boundary, this.position.z));
+
+    let groundHeight = this.environment
+      ? this.environment.getFloorHeightAt(this.position.x, this.position.z)
+      : 0;
+    let targetHeight = groundHeight + this.height;
+    const landingTolerance = 0.05;
+
+    if (
+      this.jumpVelocity <= 0 &&
+      this.position.y <= targetHeight + landingTolerance
+    ) {
+      const heightIncrease = groundHeight - previousGround;
+      const attemptingBigStep =
+        heightIncrease > this.maxStepHeight && wasGrounded && !moveInput.jump;
+
+      if (attemptingBigStep) {
+        this.position.x = previousX;
+        this.position.z = previousZ;
+        groundHeight = previousGround;
+        targetHeight = groundHeight + this.height;
+      }
+
+      this.position.y = targetHeight;
+      this.jumpVelocity = 0;
+      this.isGrounded = true;
+      this.currentGroundHeight = groundHeight;
+    } else {
+      this.isGrounded = false;
+      this.currentGroundHeight = groundHeight;
+    }
 
     // Update camera position
     this.camera.position.copy(this.position);
@@ -694,6 +734,15 @@ class Player {
     this.health = this.maxHealth;
     this.energy = this.maxEnergy;
     this.position.set(0, this.height, 0);
+    if (this.environment) {
+      this.currentGroundHeight = this.environment.getFloorHeightAt(
+        this.position.x,
+        this.position.z
+      );
+      this.position.y = this.currentGroundHeight + this.height;
+    } else {
+      this.currentGroundHeight = 0;
+    }
     this.velocity.set(0, 0, 0);
     this.yaw = 0;
     this.pitch = 0;

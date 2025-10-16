@@ -1,7 +1,8 @@
 class EnemyManager {
-  constructor(scene, particleSystem) {
+  constructor(scene, particleSystem, environment) {
     this.scene = scene;
     this.particleSystem = particleSystem;
+    this.environment = environment || null;
     this.enemies = [];
     this.enemyClasses = {
       trojan: TrojanVirus,
@@ -20,12 +21,32 @@ class EnemyManager {
       return null;
     }
 
+    const spawnPosition = position ? position.clone() : new THREE.Vector3();
+
+    if (this.environment) {
+      spawnPosition.y = this.environment.getFloorHeightAt(
+        spawnPosition.x,
+        spawnPosition.z
+      );
+    }
+
     const enemy = new EnemyClass(
       this.scene,
-      position,
+      spawnPosition,
       this.particleSystem,
       difficulty
     );
+
+    if (enemy) {
+      const radius =
+        typeof enemy.collisionRadius === "number" ? enemy.collisionRadius : 1;
+      const lift = Math.max(0.5, radius);
+      enemy.position.y = spawnPosition.y + lift;
+      if (enemy.group) {
+        enemy.group.position.copy(enemy.position);
+      }
+    }
+
     this.enemies.push(enemy);
     return enemy;
   }

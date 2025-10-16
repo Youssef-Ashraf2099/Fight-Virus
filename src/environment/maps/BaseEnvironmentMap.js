@@ -5,6 +5,8 @@ class BaseEnvironmentMap {
     this.group = new THREE.Group();
     this.animators = [];
     this.displayName = "System Sector";
+    this.baseFloorHeight = 0;
+    this.colliders = [];
   }
 
   build(parentGroup) {
@@ -26,6 +28,38 @@ class BaseEnvironmentMap {
     if (typeof fn === "function") {
       this.animators.push(fn);
     }
+  }
+
+  setBaseFloorHeight(height) {
+    this.baseFloorHeight = typeof height === "number" ? height : 0;
+  }
+
+  addCollider(bounds) {
+    if (!bounds) return;
+    const collider = {
+      minX: bounds.minX ?? bounds.x ?? 0,
+      maxX: bounds.maxX ?? bounds.x ?? 0,
+      minZ: bounds.minZ ?? bounds.z ?? 0,
+      maxZ: bounds.maxZ ?? bounds.z ?? 0,
+      height: bounds.height ?? 0,
+    };
+
+    if (collider.minX > collider.maxX) {
+      [collider.minX, collider.maxX] = [collider.maxX, collider.minX];
+    }
+    if (collider.minZ > collider.maxZ) {
+      [collider.minZ, collider.maxZ] = [collider.maxZ, collider.minZ];
+    }
+
+    this.colliders.push(collider);
+  }
+
+  getBaseFloorHeight() {
+    return this.baseFloorHeight;
+  }
+
+  getColliders() {
+    return this.colliders.slice();
   }
 
   update(deltaTime, timeElapsed, playerPosition) {
@@ -61,5 +95,6 @@ class BaseEnvironmentMap {
 
     this.animators = [];
     this.group = null;
+    this.colliders = [];
   }
 }

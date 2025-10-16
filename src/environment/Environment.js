@@ -18,6 +18,11 @@ class Environment {
     this.currentMap = null;
     this.previousMap = null;
     this.transitionState = null;
+    this.physicsMap = null;
+    this.physicsColliders = [];
+    this.baseFloorHeight = 0;
+    this.nextPhysicsColliders = [];
+    this.nextBaseFloorHeight = 0;
 
     this.phaseConfigs = [
       { key: "cpu", factory: () => new CPUEnvironment(this) },
@@ -129,15 +134,49 @@ class Environment {
     }
 
     newMap.build(this.mapGroup);
-    if (newMap.group) {
-      newMap.group.position.set(0, -90, 0);
-      newMap.group.scale.setScalar(0.6);
-    }
-
+    const isInitialMap = !prevMap;
     this.currentMap = newMap;
     this.phaseIndex = clamped;
     this.currentPhaseName = newMap.displayName;
     this.applyPalette(palette);
+
+    if (isInitialMap) {
+      if (newMap.group) {
+        newMap.group.position.set(0, 0, 0);
+        newMap.group.scale.setScalar(1);
+        newMap.group.rotation.set(0, 0, 0);
+      }
+      this.physicsMap = newMap;
+      this.physicsColliders = newMap.getColliders();
+      this.baseFloorHeight =
+        typeof newMap.getBaseFloorHeight === "function"
+          ? newMap.getBaseFloorHeight()
+          : 0;
+      this.transitionState = null;
+      return true;
+    }
+
+    if (newMap.group) {
+      newMap.group.position.set(0, -90, 0);
+      newMap.group.scale.setScalar(0.6);
+      newMap.group.rotation.set(0, 0, 0);
+    }
+
+    this.physicsMap = this.previousMap;
+    this.physicsColliders = this.previousMap
+      ? this.previousMap.getColliders()
+      : [];
+    this.baseFloorHeight =
+      this.previousMap &&
+      typeof this.previousMap.getBaseFloorHeight === "function"
+        ? this.previousMap.getBaseFloorHeight()
+        : 0;
+
+    this.nextPhysicsColliders = newMap.getColliders();
+    this.nextBaseFloorHeight =
+      typeof newMap.getBaseFloorHeight === "function"
+        ? newMap.getBaseFloorHeight()
+        : 0;
 
     this.transitionState = {
       elapsed: 0,
@@ -222,6 +261,13 @@ class Environment {
     }
 
     if (t >= 1) {
+      if (state.incoming) {
+        this.physicsMap = state.incoming;
+        this.physicsColliders = this.nextPhysicsColliders || [];
+        this.baseFloorHeight = this.nextBaseFloorHeight || 0;
+        this.nextPhysicsColliders = [];
+        this.nextBaseFloorHeight = 0;
+      }
       if (state.outgoing) {
         state.outgoing.dispose();
       }
@@ -276,5 +322,25 @@ class Environment {
 
   getCurrentPhaseName() {
     return this.currentPhaseName;
+  }
+
+  getFloorHeightAt(x, z) {
+    let height = this.baseFloorHeight || 0;
+    if (this.physicsColliders && this.physicsColliders.length) {
+      for (let i = 0; i < this.physicsColliders.length; i++) {
+        const collider = this.physicsColliders[i];
+        if (
+          x >= collider.minX &&
+          x <= collider.maxX &&
+          z >= collider.minZ &&
+          z <= collider.maxZ
+        ) {
+          if (collider.height > height) {
+            height = collider.height;
+          }
+        }
+      }
+    }
+    return height;
   }
 }

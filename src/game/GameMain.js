@@ -64,7 +64,7 @@ class GameMain {
     this.environment = new Environment(this.scene);
 
     // Create player (FPS mode - player controls camera)
-    this.player = new Player(this.scene, this.camera);
+    this.player = new Player(this.scene, this.camera, this.environment);
 
     // Create weapon system
     this.weaponManager = new WeaponManager(
@@ -74,7 +74,11 @@ class GameMain {
     );
 
     // Create enemy manager
-    this.enemyManager = new EnemyManager(this.scene, this.particleSystem);
+    this.enemyManager = new EnemyManager(
+      this.scene,
+      this.particleSystem,
+      this.environment
+    );
 
     // Create wave manager
     this.waveManager = new WaveManager(this.enemyManager, this.uiManager);
