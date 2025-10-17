@@ -135,9 +135,9 @@ class UIManager {
         const enemyPos = enemy.getPosition();
         const relX = (enemyPos.x - playerPosition.x) * this.minimapScale;
         const relZ = (enemyPos.z - playerPosition.z) * this.minimapScale;
-        // Flip Z axis to match player's forward view (negative Z is forward)
+        // Map enemy position using same orientation as player arrow (negative Z is up)
         const mapX = centerX + relX;
-        const mapY = centerY - relZ;
+        const mapY = centerY + relZ;
 
         // Skip if enemy is off minimap
         if (
