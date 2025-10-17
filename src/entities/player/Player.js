@@ -490,10 +490,7 @@ class Player {
       );
     } else {
       groundHeight = this.environment
-        ? this.environment.getFloorHeightAt(
-            this.position.x,
-            this.position.z
-          )
+        ? this.environment.getFloorHeightAt(this.position.x, this.position.z)
         : 0;
     }
 

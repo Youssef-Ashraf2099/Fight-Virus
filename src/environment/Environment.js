@@ -136,6 +136,10 @@ class Environment {
   setPhase(index) {
     const clamped = Math.max(0, Math.min(this.phaseConfigs.length - 1, index));
 
+    if (this.transitionState) {
+      this._forceCompleteTransition();
+    }
+
     console.log(
       `🔄 Environment.setPhase called with index: ${index}, clamped: ${clamped}`
     );
@@ -166,10 +170,6 @@ class Environment {
     if (prevMap) {
       console.log(`   Cleaning up previous map: ${prevMap.displayName}`);
       this.previousMap = prevMap;
-      // Clean up previous map
-      if (prevMap.onExit) {
-        prevMap.onExit();
-      }
     }
 
     console.log(`   Building new map...`);
@@ -189,6 +189,9 @@ class Environment {
         newMap.group.scale.setScalar(1);
         newMap.group.rotation.set(0, 0, 0);
       }
+      if (prevMap) {
+        prevMap.dispose();
+      }
       this.physicsMap = newMap;
       this.physicsColliders = newMap.getColliders();
       this.baseFloorHeight =
@@ -196,6 +199,9 @@ class Environment {
           ? newMap.getBaseFloorHeight()
           : 0;
       this.transitionState = null;
+      this.previousMap = null;
+      this.nextPhysicsColliders = [];
+      this.nextBaseFloorHeight = 0;
       return true;
     }
 
@@ -227,6 +233,10 @@ class Environment {
       incoming: newMap,
       outgoing: this.previousMap,
     };
+
+    if (this.interactiveMode) {
+      this._forceCompleteTransition();
+    }
 
     return true;
   }
@@ -304,24 +314,35 @@ class Environment {
     }
 
     if (t >= 1) {
-      if (state.incoming) {
-        this.physicsMap = state.incoming;
-        this.physicsColliders = this.nextPhysicsColliders || [];
-        this.baseFloorHeight = this.nextBaseFloorHeight || 0;
-        this.nextPhysicsColliders = [];
-        this.nextBaseFloorHeight = 0;
-      }
-      if (state.outgoing) {
-        state.outgoing.dispose();
-      }
-      if (state.incoming && state.incoming.group) {
+      this._forceCompleteTransition();
+    }
+  }
+
+  _forceCompleteTransition() {
+    const state = this.transitionState;
+    if (!state) {
+      return;
+    }
+
+    if (state.incoming) {
+      this.physicsMap = state.incoming;
+      this.physicsColliders = this.nextPhysicsColliders || [];
+      this.baseFloorHeight = this.nextBaseFloorHeight || 0;
+      if (state.incoming.group) {
         state.incoming.group.position.set(0, 0, 0);
         state.incoming.group.scale.setScalar(1);
         state.incoming.group.rotation.set(0, 0, 0);
       }
-      this.previousMap = null;
-      this.transitionState = null;
     }
+
+    if (state.outgoing) {
+      state.outgoing.dispose();
+    }
+
+    this.nextPhysicsColliders = [];
+    this.nextBaseFloorHeight = 0;
+    this.previousMap = null;
+    this.transitionState = null;
   }
 
   updateBackground(deltaTime) {
