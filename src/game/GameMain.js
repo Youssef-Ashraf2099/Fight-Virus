@@ -34,6 +34,10 @@ class GameMain {
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
+      this.loadingOverlay = document.getElementById("loadingOverlay");
+      this.loadingTitle = document.getElementById("loadingTitle");
+      this.loadingMessage = document.getElementById("loadingMessage");
+
       this.clock = new THREE.Clock();
       this.isRunning = false;
       this.gameStarted = false;
@@ -160,78 +164,97 @@ class GameMain {
   startGame() {
     console.log("🚀 startGame() called");
 
-    try {
-      console.log("Hiding start screen...");
-      document.getElementById("startScreen").style.display = "none";
-      document.getElementById("hud").style.display = "block";
-      document.getElementById("score").style.display = "block";
-      document.getElementById("weaponInfo").style.display = "block";
-      document.getElementById("minimap").style.display = "block";
-      document.getElementById("crosshair").style.display = "block";
+    this.showLoadingOverlay(
+      "DEPLOYING GUARDIAN",
+      "Calibrating weapon systems and uplinking environment..."
+    );
 
-      console.log("Setting game state...");
-      this.gameStarted = true;
-      this.isRunning = true;
-      this.score = 0;
+    setTimeout(() => {
+      try {
+        console.log("Hiding start screen...");
+        document.getElementById("startScreen").style.display = "none";
+        document.getElementById("hud").style.display = "block";
+        document.getElementById("score").style.display = "block";
+        document.getElementById("weaponInfo").style.display = "block";
+        document.getElementById("minimap").style.display = "block";
+        document.getElementById("crosshair").style.display = "block";
 
-      console.log("Resetting player...");
-      this.player.reset();
+        console.log("Setting game state...");
+        this.gameStarted = true;
+        this.isRunning = true;
+        this.score = 0;
 
-      console.log("Starting wave...");
-      this.waveManager.startWave();
-      this.environment.setPhaseByWave(this.waveManager.getCurrentWave());
+        console.log("Resetting player...");
+        this.player.reset();
 
-      console.log("Updating UI...");
-      this.uiManager.updateScore(this.score);
-      const phaseName = this.environment.getCurrentPhaseName();
-      this.uiManager.showMessage(
-        `${
-          phaseName ? phaseName.toUpperCase() + "<br>" : ""
-        }WAVE 1 - GET READY!`,
-        2200
-      );
+        console.log("Starting wave...");
+        this.waveManager.startWave();
+        this.environment.setPhaseByWave(this.waveManager.getCurrentWave());
+        this.environment.setInteractiveMode(true);
 
-      console.log("✅ Game started successfully!");
-    } catch (error) {
-      console.error("❌ Error starting game:", error);
-      alert(
-        "Error starting game: " +
-          error.message +
-          "\n\nCheck console for details."
-      );
-    }
+        console.log("Updating UI...");
+        this.uiManager.updateScore(this.score);
+        const phaseName = this.environment.getCurrentPhaseName();
+        this.uiManager.showMessage(
+          `${
+            phaseName ? phaseName.toUpperCase() + "<br>" : ""
+          }WAVE 1 - GET READY!`,
+          2200
+        );
+
+        console.log("✅ Game started successfully!");
+      } catch (error) {
+        console.error("❌ Error starting game:", error);
+        alert(
+          "Error starting game: " +
+            error.message +
+            "\n\nCheck console for details."
+        );
+      } finally {
+        this.hideLoadingOverlay();
+      }
+    }, 120);
   }
 
   startSpectatorMode() {
     console.log("👁️ startSpectatorMode() called");
 
-    try {
-      console.log("Hiding start screen...");
-      document.getElementById("startScreen").style.display = "none";
+    this.showLoadingOverlay(
+      "SPECTATOR MODE",
+      "Preparing sandbox environments for exploration..."
+    );
 
-      // Hide all game UI
-      document.getElementById("hud").style.display = "none";
-      document.getElementById("score").style.display = "none";
-      document.getElementById("weaponInfo").style.display = "none";
-      document.getElementById("minimap").style.display = "none";
-      document.getElementById("crosshair").style.display = "none";
+    setTimeout(() => {
+      try {
+        console.log("Hiding start screen...");
+        document.getElementById("startScreen").style.display = "none";
 
-      console.log("Setting spectator state...");
-      this.gameStarted = false;
-      this.isRunning = false;
+        // Hide all game UI
+        document.getElementById("hud").style.display = "none";
+        document.getElementById("score").style.display = "none";
+        document.getElementById("weaponInfo").style.display = "none";
+        document.getElementById("minimap").style.display = "none";
+        document.getElementById("crosshair").style.display = "none";
 
-      console.log("Starting spectator mode...");
-      this.spectatorMode.start();
+        console.log("Setting spectator state...");
+        this.gameStarted = false;
+        this.isRunning = false;
 
-      console.log("✅ Spectator mode started successfully!");
-    } catch (error) {
-      console.error("❌ Error starting spectator mode:", error);
-      alert(
-        "Error starting spectator mode: " +
-          error.message +
-          "\n\nCheck console for details."
-      );
-    }
+        console.log("Starting spectator mode...");
+        this.spectatorMode.start();
+
+        console.log("✅ Spectator mode started successfully!");
+      } catch (error) {
+        console.error("❌ Error starting spectator mode:", error);
+        alert(
+          "Error starting spectator mode: " +
+            error.message +
+            "\n\nCheck console for details."
+        );
+      } finally {
+        this.hideLoadingOverlay();
+      }
+    }, 120);
   }
 
   handleSpecialAbility() {
@@ -443,44 +466,58 @@ class GameMain {
   restartGame() {
     console.log("🔄 Restarting game...");
 
-    // Clear existing game state
-    this.enemyManager.clear();
-    this.weaponManager.clear();
-    this.uiManager.hideMessage();
-
-    // Reset score and difficulty
-    this.score = 0;
-    this.difficulty = 1;
-
-    // Reset player
-    this.player.reset();
-
-    // Reset weapon manager
-    this.weaponManager.switchWeapon(0); // Switch back to first weapon
-
-    // Reset environment to first phase
-    this.environment.setPhase(0);
-
-    // Reset wave manager
-    this.waveManager.reset();
-
-    // Start game
-    this.gameStarted = true;
-    this.isRunning = true;
-
-    // Start first wave
-    this.waveManager.startWave();
-    this.environment.setPhaseByWave(this.waveManager.getCurrentWave());
-
-    // Update UI
-    this.uiManager.updateScore(this.score);
-    const phaseName = this.environment.getCurrentPhaseName();
-    this.uiManager.showMessage(
-      `${phaseName ? phaseName.toUpperCase() + "<br>" : ""}WAVE 1 - GET READY!`,
-      2200
+    this.showLoadingOverlay(
+      "REINITIALIZING",
+      "Resetting wave manager and respawning systems..."
     );
 
-    console.log("✅ Game restarted successfully!");
+    try {
+      // Clear existing game state
+      this.enemyManager.clear();
+      this.weaponManager.clear();
+      this.uiManager.hideMessage();
+
+      // Reset score and difficulty
+      this.score = 0;
+      this.difficulty = 1;
+
+      // Reset player
+      this.player.reset();
+
+      // Reset weapon manager
+      this.weaponManager.switchWeapon(0); // Switch back to first weapon
+
+      // Reset environment to first phase
+      this.environment.setPhase(0);
+
+      // Reset wave manager
+      this.waveManager.reset();
+
+      // Start game
+      this.gameStarted = true;
+      this.isRunning = true;
+
+      // Start first wave
+      this.waveManager.startWave();
+      this.environment.setPhaseByWave(this.waveManager.getCurrentWave());
+
+      // Update UI
+      this.uiManager.updateScore(this.score);
+      const phaseName = this.environment.getCurrentPhaseName();
+      this.uiManager.showMessage(
+        `${
+          phaseName ? phaseName.toUpperCase() + "<br>" : ""
+        }WAVE 1 - GET READY!`,
+        2200
+      );
+
+      console.log("✅ Game restarted successfully!");
+    } catch (error) {
+      console.error("❌ Error restarting game:", error);
+      alert("Error restarting game: " + error.message);
+    } finally {
+      setTimeout(() => this.hideLoadingOverlay(), 80);
+    }
   }
 
   animate() {
@@ -489,6 +526,22 @@ class GameMain {
     const deltaTime = this.clock.getDelta();
     this.update(deltaTime);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  showLoadingOverlay(title, message) {
+    if (!this.loadingOverlay) return;
+    if (this.loadingTitle && title) {
+      this.loadingTitle.textContent = title;
+    }
+    if (this.loadingMessage && message) {
+      this.loadingMessage.textContent = message;
+    }
+    this.loadingOverlay.style.display = "flex";
+  }
+
+  hideLoadingOverlay() {
+    if (!this.loadingOverlay) return;
+    this.loadingOverlay.style.display = "none";
   }
 }
 

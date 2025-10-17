@@ -46,6 +46,7 @@ class SpectatorMode {
     this.active = true;
     this.currentPhase = 0;
     this.interactiveMode = true; // Ensure we start in interactive mode
+    this.environment.setInteractiveMode(this.interactiveMode);
 
     // Show spectator UI
     const spectatorUI = document.getElementById("spectatorUI");
@@ -101,6 +102,8 @@ class SpectatorMode {
     if (this.environment.currentEnvironment) {
       this.environment.currentEnvironment.onExit();
     }
+
+    this.environment.setInteractiveMode(true);
   }
 
   setupEventListeners() {
@@ -118,6 +121,7 @@ class SpectatorMode {
 
   toggleInteractive() {
     this.interactiveMode = !this.interactiveMode;
+    this.environment.setInteractiveMode(this.interactiveMode);
     this.updateInteractiveButton();
     this.updateInteractiveHint();
     console.log("Interactive mode:", this.interactiveMode ? "ON" : "OFF");
@@ -235,6 +239,7 @@ class SpectatorMode {
         console.log("Calling setPhase with:", phase);
         this.environment.setPhase(phase);
         console.log("Environment loaded:", this.environment.currentPhaseName);
+        this.environment.setInteractiveMode(this.interactiveMode);
 
         // Update UI
         if (envLabel) {
@@ -264,6 +269,8 @@ class SpectatorMode {
     if (this.interactiveMode) {
       hint.style.display = "none";
     } else {
+      hint.innerHTML =
+        'INTERACTIVE MODE PAUSED<br><span style="font-size:18px; color:#ff0">Press I or the button to resume full-speed animations.</span>';
       hint.style.display = "block";
     }
   }
@@ -289,10 +296,9 @@ class SpectatorMode {
     // Update spectator camera
     this.spectatorCamera.update(delta);
 
-    if (this.interactiveMode) {
-      const cameraPosition = this.spectatorCamera.getPosition();
-      this.environment.update(delta, cameraPosition);
-    }
+    const cameraPosition = this.spectatorCamera.getPosition();
+    this.environment.setInteractiveMode(this.interactiveMode);
+    this.environment.update(delta, cameraPosition);
   }
 
   isActive() {

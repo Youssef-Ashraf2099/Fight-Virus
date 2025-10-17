@@ -4,6 +4,7 @@ class CPUEnvironment extends BaseEnvironmentMap {
     this.displayName = "CPU CORE CHAMBER";
     this.binarySprites = [];
     this.binaryTextures = [];
+    this.dieTexture = null;
   }
 
   getPalette() {
@@ -16,6 +17,116 @@ class CPUEnvironment extends BaseEnvironmentMap {
       fogDensity: 0.018,
       background: 0x020408,
     };
+  }
+
+  getDieTexture() {
+    if (!this.dieTexture) {
+      this.dieTexture = this.createDiePatternTexture();
+    }
+    return this.dieTexture;
+  }
+
+  createDiePatternTexture() {
+    const size = 1024;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+
+    // Base fill
+    ctx.fillStyle = "#0a1f18";
+    ctx.fillRect(0, 0, size, size);
+
+    const cols = 16;
+    const rows = 10;
+    const cellW = size / cols;
+    const cellH = size / rows;
+
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const x = col * cellW;
+        const y = row * cellH;
+        const hueBase = 25 + (col / cols) * 240;
+        const hueShift = (row / rows) * 40;
+        const gradient = ctx.createLinearGradient(x, y, x + cellW, y + cellH);
+        gradient.addColorStop(
+          0,
+          `hsl(${(hueBase + hueShift) % 360}, 85%, 60%)`
+        );
+        gradient.addColorStop(
+          0.5,
+          `hsl(${(hueBase + hueShift + 20) % 360}, 80%, 55%)`
+        );
+        gradient.addColorStop(
+          1,
+          `hsl(${(hueBase + hueShift + 40) % 360}, 90%, 65%)`
+        );
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x, y, cellW, cellH);
+
+        // Sub-structures inside each cell
+        ctx.fillStyle = "rgba(12, 40, 32, 0.35)";
+        const subdivisions = 3;
+        const subW = cellW / subdivisions;
+        const subH = cellH / subdivisions;
+        for (let sy = 0; sy < subdivisions; sy++) {
+          for (let sx = 0; sx < subdivisions; sx++) {
+            if ((sx + sy) % 2 === 0) {
+              ctx.fillRect(
+                x + sx * subW + subW * 0.15,
+                y + sy * subH + subH * 0.15,
+                subW * 0.7,
+                subH * 0.7
+              );
+            }
+          }
+        }
+
+        // Highlight lines
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, cellW - 1, cellH - 1);
+      }
+    }
+
+    // Horizontal bus lines
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+    ctx.lineWidth = 2;
+    for (let r = 1; r < rows; r++) {
+      const y = r * cellH;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(size, y);
+      ctx.stroke();
+    }
+
+    // Vertical bus lines
+    ctx.lineWidth = 2;
+    for (let c = 1; c < cols; c++) {
+      const x = c * cellW;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, size);
+      ctx.stroke();
+    }
+
+    // Add subtle noise
+    const noiseDensity = 12000;
+    for (let i = 0; i < noiseDensity; i++) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const brightness = 0.4 + Math.random() * 0.35;
+      ctx.fillStyle = `rgba(255, 255, 255, ${brightness * 0.05})`;
+      ctx.fillRect(x, y, 1, 1);
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(1.5, 1.5);
+    texture.anisotropy = 4;
+    texture.needsUpdate = true;
+    return texture;
   }
 
   create() {
@@ -68,6 +179,41 @@ class CPUEnvironment extends BaseEnvironmentMap {
       pos.setZ(i, ripple);
     }
     pos.needsUpdate = true;
+
+    const dieOverlayMaterial = new THREE.MeshPhongMaterial({
+      color: 0xffffff,
+      map: this.getDieTexture(),
+      emissive: 0x0a2d1f,
+      emissiveIntensity: 0.22,
+      shininess: 95,
+      transparent: true,
+      opacity: 0.95,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    });
+    if (dieOverlayMaterial.map) {
+      dieOverlayMaterial.map.wrapS = THREE.RepeatWrapping;
+      dieOverlayMaterial.map.wrapT = THREE.RepeatWrapping;
+      dieOverlayMaterial.map.repeat.set(1.8, 1.8);
+    }
+    const dieOverlayGeometry = new THREE.PlaneGeometry(118, 118, 30, 30);
+    const overlayPos = dieOverlayGeometry.attributes.position;
+    for (let i = 0; i < overlayPos.count; i++) {
+      const x = overlayPos.getX(i);
+      const z = overlayPos.getY(i);
+      const ripple = Math.sin(x * 0.045) * Math.cos(z * 0.045) * 0.3;
+      overlayPos.setZ(i, ripple + 0.06);
+    }
+    overlayPos.needsUpdate = true;
+
+    const dieOverlay = new THREE.Mesh(dieOverlayGeometry, dieOverlayMaterial);
+    dieOverlay.rotation.x = -Math.PI / 2;
+    dieOverlay.position.y = 0.16;
+    dieOverlay.receiveShadow = true;
+    this.group.add(dieOverlay);
 
     const perimeterMaterial = new THREE.MeshPhongMaterial({
       color: 0x092017,
@@ -584,6 +730,11 @@ class CPUEnvironment extends BaseEnvironmentMap {
     if (this.binaryTextures) {
       this.binaryTextures.forEach((texture) => texture.dispose());
       this.binaryTextures = [];
+    }
+
+    if (this.dieTexture) {
+      this.dieTexture.dispose();
+      this.dieTexture = null;
     }
   }
 }

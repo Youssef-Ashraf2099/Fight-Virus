@@ -1,3 +1,138 @@
+const MOTHERBOARD_TEXTURE_SCOPE_OV =
+  typeof window !== "undefined" ? window : globalThis;
+
+if (!MOTHERBOARD_TEXTURE_SCOPE_OV.getMotherboardFloorTexture) {
+  MOTHERBOARD_TEXTURE_SCOPE_OV.getMotherboardFloorTexture = function () {
+    if (MOTHERBOARD_TEXTURE_SCOPE_OV.__motherboardFloorTexture) {
+      return MOTHERBOARD_TEXTURE_SCOPE_OV.__motherboardFloorTexture;
+    }
+
+    const size = 2048;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+
+    ctx.fillStyle = "#010402";
+    ctx.fillRect(0, 0, size, size);
+
+    const drawTrace = (points, width, glow, alpha) => {
+      ctx.save();
+      ctx.strokeStyle = `rgba(64, 255, 128, ${alpha || 0.8})`;
+      ctx.lineWidth = width;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.shadowColor = `rgba(0, 255, 120, ${glow || 0.6})`;
+      ctx.shadowBlur = width * 2.5;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    };
+
+    const majorSpacing = size / 7;
+    for (let i = 0; i <= size; i += majorSpacing) {
+      drawTrace(
+        [
+          { x: 0, y: i },
+          { x: size, y: i },
+        ],
+        size * 0.01,
+        0.45,
+        0.65
+      );
+      drawTrace(
+        [
+          { x: i, y: 0 },
+          { x: i, y: size },
+        ],
+        size * 0.01,
+        0.45,
+        0.65
+      );
+    }
+
+    const secondarySpacing = size / 14;
+    for (let i = 0; i <= size; i += secondarySpacing) {
+      drawTrace(
+        [
+          { x: 0, y: i },
+          { x: size, y: i },
+        ],
+        size * 0.0045,
+        0.3,
+        0.45
+      );
+      drawTrace(
+        [
+          { x: i, y: 0 },
+          { x: i, y: size },
+        ],
+        size * 0.0045,
+        0.3,
+        0.45
+      );
+    }
+
+    const createCornerArc = (sx, sy, ex, ey, dir) => {
+      const radius = size * (0.08 + Math.random() * 0.05);
+      const cx = dir > 0 ? Math.max(sx, ex) : Math.min(sx, ex);
+      const cy = dir > 0 ? Math.max(sy, ey) : Math.min(sy, ey);
+      ctx.save();
+      ctx.strokeStyle = "rgba(80, 255, 150, 0.75)";
+      ctx.lineWidth = size * 0.008;
+      ctx.lineCap = "round";
+      ctx.shadowColor = "rgba(0, 255, 160, 0.6)";
+      ctx.shadowBlur = size * 0.01;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, dir > 0 ? Math.PI / 2 : -Math.PI / 2, dir < 0);
+      ctx.stroke();
+      ctx.restore();
+    };
+
+    for (let i = 0; i < 12; i++) {
+      const sx = (Math.random() * 0.8 + 0.1) * size;
+      const sy = (Math.random() * 0.8 + 0.1) * size;
+      const ex = sx + (Math.random() * 0.12 + 0.08) * size;
+      const ey = sy + (Math.random() * 0.12 + 0.08) * size;
+      createCornerArc(sx, sy, ex, ey, Math.random() > 0.5 ? 1 : -1);
+    }
+
+    ctx.fillStyle = "rgba(80, 255, 150, 0.9)";
+    const nodeSpacing = size / 18;
+    for (let x = nodeSpacing / 2; x < size; x += nodeSpacing) {
+      for (let y = nodeSpacing / 2; y < size; y += nodeSpacing) {
+        if ((x + y) % 2 > 0.5) continue;
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.006, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    const highlightDensity = 4000;
+    for (let i = 0; i < highlightDensity; i++) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const alpha = 0.1 + Math.random() * 0.15;
+      ctx.fillStyle = `rgba(120, 255, 160, ${alpha})`;
+      ctx.fillRect(x, y, 1, 1);
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(1.6, 1.6);
+    texture.anisotropy = 8;
+    texture.needsUpdate = true;
+
+    MOTHERBOARD_TEXTURE_SCOPE_OV.__motherboardFloorTexture = texture;
+    return texture;
+  };
+}
+
 class SystemOverviewEnvironment extends BaseEnvironmentMap {
   constructor(environment) {
     super(environment);
@@ -59,32 +194,42 @@ class SystemOverviewEnvironment extends BaseEnvironmentMap {
     pcb.position.y = 0.5;
     this.group.add(pcb);
 
-    // Circuit traces
     const traceMaterial = new THREE.MeshPhongMaterial({
-      color: 0x33ff88,
-      emissive: 0x22dd66,
-      emissiveIntensity: 0.4,
+      color: 0xffffff,
+      map: getMotherboardFloorTexture(),
+      emissive: 0x16ff82,
+      emissiveIntensity: 0.22,
+      transparent: true,
+      opacity: 0.92,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
     });
-
-    // Horizontal traces
-    for (let i = -40; i <= 40; i += 10) {
-      const trace = new THREE.Mesh(
-        new THREE.BoxGeometry(90, 0.2, 0.5),
-        traceMaterial.clone()
-      );
-      trace.position.set(0, 1.2, i);
-      this.group.add(trace);
+    if (traceMaterial.map) {
+      traceMaterial.map.wrapS = THREE.RepeatWrapping;
+      traceMaterial.map.wrapT = THREE.RepeatWrapping;
+      traceMaterial.map.repeat.set(1.4, 1.4);
     }
 
-    // Vertical traces
-    for (let i = -40; i <= 40; i += 10) {
-      const trace = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5, 0.2, 90),
-        traceMaterial.clone()
-      );
-      trace.position.set(i, 1.2, 0);
-      this.group.add(trace);
+    const tracePlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(98, 98, 32, 32),
+      traceMaterial
+    );
+    tracePlane.rotation.x = -Math.PI / 2;
+    tracePlane.position.y = 1.1;
+    tracePlane.receiveShadow = true;
+    this.group.add(tracePlane);
+
+    const pos = tracePlane.geometry.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const z = pos.getY(i);
+      const ripple = Math.sin(x * 0.06) * Math.cos(z * 0.06) * 0.18;
+      pos.setZ(i, ripple + 0.04);
     }
+    pos.needsUpdate = true;
 
     // Base collider
     this.addCollider({

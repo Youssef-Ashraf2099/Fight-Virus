@@ -21,6 +21,41 @@
           crosshair;
       }
 
+      #loadingOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.92);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        z-index: 200000;
+        pointer-events: all;
+        text-align: center;
+      }
+
+      #loadingOverlay .loading-content {
+        border: 2px solid #00ff88;
+        padding: 30px 50px;
+        background: rgba(0, 20, 10, 0.7);
+        box-shadow: 0 0 30px rgba(0, 255, 136, 0.4);
+        text-shadow: 0 0 12px #00ff88;
+      }
+
+      #loadingOverlay .loading-title {
+        font-size: 28px;
+        margin-bottom: 12px;
+        animation: loadingPulse 1.6s infinite;
+      }
+
+      #loadingOverlay .loading-message {
+        font-size: 18px;
+        opacity: 0.8;
+      }
+
       #gameCanvas {
         display: block;
         width: 100vw;
@@ -177,6 +212,16 @@
         }
       }
 
+      @keyframes loadingPulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
       #weaponInfo {
         position: absolute;
         bottom: 20px;
@@ -265,6 +310,15 @@
     </style>
   </head>
   <body>
+    <div id="loadingOverlay">
+      <div class="loading-content">
+        <div class="loading-title" id="loadingTitle">INITIALIZING SYSTEM</div>
+        <div class="loading-message" id="loadingMessage">
+          Preparing secure core environment...
+        </div>
+      </div>
+    </div>
+
     <canvas id="gameCanvas"></canvas>
 
     <div id="ui">

@@ -24,6 +24,7 @@ class Environment {
     this.nextPhysicsColliders = [];
     this.nextBaseFloorHeight = 0;
     this.currentEnvironment = null; // Track current environment for spectator mode
+    this.interactiveMode = true;
 
     this.phaseConfigs = [
       { key: "cpu", factory: () => new CPUEnvironment(this) },
@@ -121,6 +122,14 @@ class Environment {
   initFog() {
     this.fog = new THREE.FogExp2(0x020507, 0.018);
     this.scene.fog = this.fog;
+  }
+
+  setInteractiveMode(enabled) {
+    this.interactiveMode = !!enabled;
+  }
+
+  getInteractiveMode() {
+    return this.interactiveMode;
   }
 
   setPhase(index) {
@@ -338,18 +347,30 @@ class Environment {
   }
 
   update(deltaTime, playerPosition) {
-    this.time += deltaTime;
+    const speedMultiplier = this.interactiveMode ? 1 : 0.35;
+    const effectiveDelta = deltaTime * speedMultiplier;
+    this.time += effectiveDelta;
     const playerPos = playerPosition || this._tempPlayerPos.set(0, 0, 0);
 
-    this.updateBackground(deltaTime);
-    this.updateTransition(deltaTime);
+    this.updateBackground(effectiveDelta);
+    this.updateTransition(effectiveDelta);
 
     if (this.previousMap && this.previousMap !== this.currentMap) {
-      this.previousMap.update(deltaTime, this.time, playerPos);
+      this.previousMap.update(
+        effectiveDelta,
+        this.time,
+        playerPos,
+        this.interactiveMode
+      );
     }
 
     if (this.currentMap) {
-      this.currentMap.update(deltaTime, this.time, playerPos);
+      this.currentMap.update(
+        effectiveDelta,
+        this.time,
+        playerPos,
+        this.interactiveMode
+      );
     }
   }
 
