@@ -28,6 +28,7 @@ class Environment {
 
     this.phaseConfigs = [
       { key: "cpu", factory: () => new CPUEnvironment(this) },
+      { key: "kernel", factory: () => new KernelEnvironment(this) },
       { key: "memory", factory: () => new MemoryEnvironment(this) },
       { key: "gpu", factory: () => new GPUEnvironment(this) },
       { key: "motherboard", factory: () => new MotherboardEnvironment(this) },

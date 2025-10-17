@@ -27,6 +27,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     // Environment
     "./environment/maps/BaseEnvironmentMap.js",
     "./environment/maps/CPUEnvironment.js",
+    "./environment/maps/KernelEnvironment.js",
     "./environment/maps/MemoryEnvironment.js",
     "./environment/maps/GPUEnvironment.js",
     "./environment/maps/MotherboardEnvironment.js",
