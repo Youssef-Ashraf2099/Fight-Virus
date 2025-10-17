@@ -15,6 +15,10 @@ class RetroTerminalEnvironment extends BaseEnvironmentMap {
     this.screenCtx = null;
     this.screenTexture = null;
     this.screenOverlay = null;
+    this.virusCanvas = null;
+    this.virusCtx = null;
+    this.virusTexture = null;
+    this.virusOverlay = null;
     this.boundHandleKeyDown = null;
     this.boundHandleKeyUp = null;
   }
@@ -284,187 +288,214 @@ class RetroTerminalEnvironment extends BaseEnvironmentMap {
     mouseGroup.rotation.y = -Math.PI / 11;
     this.group.add(mouseGroup);
 
-    // Main body material - sleek and modern
+    // Main body material - cream/beige retro color with enhanced sheen
     const bodyMaterial = new THREE.MeshPhongMaterial({
-      color: 0x2a3340,
-      emissive: 0x0f141a,
-      emissiveIntensity: 0.4,
+      color: 0xe0d4c0,
+      emissive: 0x7a6a58,
+      emissiveIntensity: 0.35,
       shininess: 180,
-      specular: 0x4a6b8f,
+      specular: 0xb0a090,
     });
 
-    // Left button - distinct, smooth surface
-    const leftButtonMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(2.3, 0.8, 5.2),
-      new THREE.MeshPhongMaterial({
-        color: 0x3a4a5c,
-        emissive: 0x1a2a3c,
-        emissiveIntensity: 0.6,
-        shininess: 240,
-        specular: 0x6a8baf,
-      })
-    );
-    leftButtonMesh.position.set(-1.35, 2.8, -0.8);
-    leftButtonMesh.rotation.x = -Math.PI / 18;
-    leftButtonMesh.castShadow = true;
-    mouseGroup.add(leftButtonMesh);
+    // Base body - lower portion
+    const baseGeometry = new THREE.BoxGeometry(5.4, 1.0, 8.2);
+    const base = new THREE.Mesh(baseGeometry, bodyMaterial);
+    base.position.set(0, 0.8, -0.5);
+    base.castShadow = true;
+    base.receiveShadow = true;
+    mouseGroup.add(base);
 
-    // Right button - distinct, smooth surface
-    const rightButtonMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(2.3, 0.8, 5.2),
-      new THREE.MeshPhongMaterial({
-        color: 0x3a4a5c,
-        emissive: 0x1a2a3c,
-        emissiveIntensity: 0.6,
-        shininess: 240,
-        specular: 0x6a8baf,
-      })
-    );
-    rightButtonMesh.position.set(1.35, 2.8, -0.8);
-    rightButtonMesh.rotation.x = -Math.PI / 18;
-    rightButtonMesh.castShadow = true;
-    mouseGroup.add(rightButtonMesh);
-
-    // Button separator - visible gap
-    const separatorMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(0.15, 0.9, 5.4),
-      new THREE.MeshPhongMaterial({
-        color: 0x0d1017,
-        emissive: 0x050810,
-        emissiveIntensity: 0.8,
-        shininess: 120,
-      })
-    );
-    separatorMesh.position.set(0, 2.85, -0.8);
-    separatorMesh.rotation.x = -Math.PI / 18;
-    mouseGroup.add(separatorMesh);
-
-    // Curved back/palm rest area
-    const palmGeometry = new THREE.SphereGeometry(
-      2.8,
-      28,
-      28,
+    // LEFT BUTTON - Full curved shell
+    const leftShellGeometry = new THREE.SphereGeometry(
+      3.0,
+      36,
+      24,
       0,
-      Math.PI * 2,
+      Math.PI,
       0,
-      Math.PI * 0.6
+      Math.PI * 0.55
     );
-    palmGeometry.scale(1.4, 1.0, 1.6);
-    const palmShell = new THREE.Mesh(
-      palmGeometry,
+    leftShellGeometry.scale(1.35, 0.95, 2.1);
+    const leftShell = new THREE.Mesh(
+      leftShellGeometry,
       new THREE.MeshPhongMaterial({
-        color: 0x313f4d,
-        emissive: 0x141d27,
-        emissiveIntensity: 0.5,
+        color: 0xd8c8b0,
+        emissive: 0x6a5a48,
+        emissiveIntensity: 0.4,
         shininess: 200,
-        specular: 0x5a7a9f,
+        specular: 0xa8987f,
       })
     );
-    palmShell.position.set(0, 2.2, -2.8);
-    palmShell.rotation.x = Math.PI / 14;
-    palmShell.castShadow = true;
-    mouseGroup.add(palmShell);
+    leftShell.position.set(-1.45, 1.95, -0.5);
+    leftShell.castShadow = true;
+    mouseGroup.add(leftShell);
 
-    // Rear thumb rest area
-    const thumbRestGeometry = new THREE.BoxGeometry(3.8, 1.6, 2.4);
-    const thumbRest = new THREE.Mesh(thumbRestGeometry, bodyMaterial);
-    thumbRest.position.set(-2.2, 1.4, -3.5);
-    thumbRest.rotation.x = -Math.PI / 16;
-    thumbRest.rotation.z = Math.PI / 12;
-    thumbRest.castShadow = true;
-    mouseGroup.add(thumbRest);
+    // RIGHT BUTTON - Full curved shell
+    const rightShellGeometry = new THREE.SphereGeometry(
+      3.0,
+      36,
+      24,
+      Math.PI,
+      Math.PI,
+      0,
+      Math.PI * 0.55
+    );
+    rightShellGeometry.scale(1.35, 0.95, 2.1);
+    const rightShell = new THREE.Mesh(
+      rightShellGeometry,
+      new THREE.MeshPhongMaterial({
+        color: 0xd8c8b0,
+        emissive: 0x6a5a48,
+        emissiveIntensity: 0.4,
+        shininess: 200,
+        specular: 0xa8987f,
+      })
+    );
+    rightShell.position.set(1.45, 1.95, -0.5);
+    rightShell.castShadow = true;
+    mouseGroup.add(rightShell);
 
-    // Scroll wheel - centered with grip
+    // Center dividing ridge - pronounced separation
+    const ridgeMaterial = new THREE.MeshPhongMaterial({
+      color: 0x4a3a28,
+      emissive: 0x2a1a18,
+      emissiveIntensity: 0.6,
+      shininess: 130,
+    });
+
+    const centerRidge = new THREE.Mesh(
+      new THREE.BoxGeometry(0.25, 1.8, 7.8),
+      ridgeMaterial
+    );
+    centerRidge.position.set(0, 1.95, -0.5);
+    centerRidge.castShadow = true;
+    mouseGroup.add(centerRidge);
+
+    // Left button raised surface - interactive clickable area
+    const leftButtonMaterial = new THREE.MeshPhongMaterial({
+      color: 0xc8b8a0,
+      emissive: 0x6a5a48,
+      emissiveIntensity: 0.45,
+      shininess: 200,
+      specular: 0x98886f,
+    });
+
+    const leftButton = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 0.7, 5.8),
+      leftButtonMaterial
+    );
+    leftButton.position.set(-1.45, 3.2, -0.4);
+    leftButton.rotation.x = -Math.PI / 26;
+    leftButton.castShadow = true;
+    mouseGroup.add(leftButton);
+
+    // Right button raised surface - interactive clickable area
+    const rightButton = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 0.7, 5.8),
+      leftButtonMaterial
+    );
+    rightButton.position.set(1.45, 3.2, -0.4);
+    rightButton.rotation.x = -Math.PI / 26;
+    rightButton.castShadow = true;
+    mouseGroup.add(rightButton);
+
+    // Scroll wheel - centered between buttons, slightly raised
     const scrollMaterial = new THREE.MeshPhongMaterial({
-      color: 0x4a6a88,
-      emissive: 0x2a4a68,
-      emissiveIntensity: 0.7,
-      shininess: 220,
+      color: 0x8a7a68,
+      emissive: 0x4a3a28,
+      emissiveIntensity: 0.55,
+      shininess: 160,
     });
     const scrollWheel = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.55, 0.55, 2.0, 18),
+      new THREE.CylinderGeometry(0.5, 0.5, 2.3, 18),
       scrollMaterial
     );
     scrollWheel.rotation.z = Math.PI / 2;
-    scrollWheel.position.set(0, 2.7, -0.5);
+    scrollWheel.position.set(0, 2.75, -0.3);
     scrollWheel.castShadow = true;
     mouseGroup.add(scrollWheel);
 
-    // Scroll wheel grip ridges
+    // Scroll wheel grip bands - more detailed
     for (let i = 0; i < 6; i++) {
-      const ridge = new THREE.Mesh(
-        new THREE.BoxGeometry(0.06, 2.1, 0.15),
+      const gripBand = new THREE.Mesh(
+        new THREE.BoxGeometry(0.06, 2.4, 0.14),
         new THREE.MeshPhongMaterial({
-          color: 0x1a2a3a,
-          emissive: 0x0a1a2a,
-          emissiveIntensity: 0.5,
+          color: 0x2a1a08,
+          emissive: 0x0a0a00,
+          emissiveIntensity: 0.7,
+          shininess: 80,
         })
       );
       const angle = (i / 6) * Math.PI * 2;
-      ridge.position.set(
-        Math.cos(angle) * 0.52,
-        2.7,
-        -0.5 + Math.sin(angle) * 0.52
+      gripBand.position.set(
+        Math.cos(angle) * 0.48,
+        2.75,
+        -0.3 + Math.sin(angle) * 0.48
       );
-      mouseGroup.add(ridge);
+      mouseGroup.add(gripBand);
     }
 
-    // Side grip accents - left
-    const leftGripAccent = new THREE.Mesh(
-      new THREE.BoxGeometry(0.3, 1.4, 4.8),
-      new THREE.MeshPhongMaterial({
-        color: 0x1f2835,
-        emissive: 0x0a0f17,
-        emissiveIntensity: 0.45,
-        shininess: 60,
-      })
+    // Left rear curved section for palm rest
+    const leftRearGeometry = new THREE.SphereGeometry(
+      2.4,
+      32,
+      18,
+      0,
+      Math.PI,
+      Math.PI * 0.35,
+      Math.PI * 0.55
     );
-    leftGripAccent.position.set(-2.25, 1.6, -1.2);
-    leftGripAccent.rotation.y = Math.PI / 20;
-    leftGripAccent.castShadow = true;
-    mouseGroup.add(leftGripAccent);
+    leftRearGeometry.scale(1.25, 0.75, 1.5);
+    const leftRear = new THREE.Mesh(leftRearGeometry, bodyMaterial);
+    leftRear.position.set(-1.45, 1.9, -3.6);
+    leftRear.castShadow = true;
+    mouseGroup.add(leftRear);
 
-    // Side grip accents - right
-    const rightGripAccent = new THREE.Mesh(
-      new THREE.BoxGeometry(0.3, 1.4, 4.8),
-      new THREE.MeshPhongMaterial({
-        color: 0x1f2835,
-        emissive: 0x0a0f17,
-        emissiveIntensity: 0.45,
-        shininess: 60,
-      })
+    // Right rear curved section for palm rest
+    const rightRearGeometry = new THREE.SphereGeometry(
+      2.4,
+      32,
+      18,
+      Math.PI,
+      Math.PI,
+      Math.PI * 0.35,
+      Math.PI * 0.55
     );
-    rightGripAccent.position.set(2.25, 1.6, -1.2);
-    rightGripAccent.rotation.y = -Math.PI / 20;
-    rightGripAccent.castShadow = true;
-    mouseGroup.add(rightGripAccent);
+    rightRearGeometry.scale(1.25, 0.75, 1.5);
+    const rightRear = new THREE.Mesh(rightRearGeometry, bodyMaterial);
+    rightRear.position.set(1.45, 1.9, -3.6);
+    rightRear.castShadow = true;
+    mouseGroup.add(rightRear);
 
-    // Optical sensor at front bottom
-    const sensor = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.45, 0.45, 0.3, 16),
+    // Front lip/edge - left side
+    const leftFrontLipGeometry = new THREE.BoxGeometry(2.4, 0.3, 1.2);
+    const leftFrontLip = new THREE.Mesh(
+      leftFrontLipGeometry,
       new THREE.MeshPhongMaterial({
-        color: 0x0a1820,
-        emissive: 0x051015,
-        emissiveIntensity: 0.8,
-        shininess: 160,
+        color: 0xd0c0a8,
+        emissive: 0x5a4a38,
+        emissiveIntensity: 0.35,
+        shininess: 170,
       })
     );
-    sensor.rotation.x = Math.PI / 2;
-    sensor.position.set(0, 0.5, 1.6);
-    mouseGroup.add(sensor);
+    leftFrontLip.position.set(-1.45, 1.65, 2.8);
+    leftFrontLip.castShadow = true;
+    mouseGroup.add(leftFrontLip);
 
-    // Subtle accent line along the spine
-    const accentLine = new THREE.Mesh(
-      new THREE.BoxGeometry(0.2, 0.4, 4.8),
+    // Front lip/edge - right side
+    const rightFrontLipGeometry = new THREE.BoxGeometry(2.4, 0.3, 1.2);
+    const rightFrontLip = new THREE.Mesh(
+      rightFrontLipGeometry,
       new THREE.MeshPhongMaterial({
-        color: 0x2a5a7a,
-        emissive: 0x1a3a5a,
-        emissiveIntensity: 0.7,
-        shininess: 200,
+        color: 0xd0c0a8,
+        emissive: 0x5a4a38,
+        emissiveIntensity: 0.35,
+        shininess: 170,
       })
     );
-    accentLine.position.set(0, 1.8, -1.2);
-    mouseGroup.add(accentLine);
+    rightFrontLip.position.set(1.45, 1.65, 2.8);
+    rightFrontLip.castShadow = true;
+    mouseGroup.add(rightFrontLip);
 
     const sensorGlow = new THREE.PointLight(0x42ffbe, 0.25, 10);
     sensorGlow.position.set(0, 0.7, 1.8);
@@ -608,8 +639,48 @@ class RetroTerminalEnvironment extends BaseEnvironmentMap {
     this.screenOverlay.position.set(0, 32, -26.6);
     this.group.add(this.screenOverlay);
 
+    this.createVirusOverlay();
+
     this.markScreenDirty();
     this.updateTerminalDisplay(true);
+    this.updateVirusOverlay();
+  }
+
+  createVirusOverlay() {
+    if (this.virusOverlay) {
+      return;
+    }
+
+    this.virusCanvas = document.createElement("canvas");
+    this.virusCanvas.width = 512;
+    this.virusCanvas.height = 512;
+    this.virusCtx = this.virusCanvas.getContext("2d");
+
+    this.virusTexture = new THREE.CanvasTexture(this.virusCanvas);
+    this.virusTexture.anisotropy = 4;
+    this.virusTexture.wrapS = THREE.ClampToEdgeWrapping;
+    this.virusTexture.wrapT = THREE.ClampToEdgeWrapping;
+    this.virusTexture.needsUpdate = true;
+
+    const virusMaterial = new THREE.MeshBasicMaterial({
+      map: this.virusTexture,
+      transparent: true,
+      opacity: 1,
+      color: 0xffffff,
+      depthTest: false,
+      depthWrite: false,
+    });
+    virusMaterial.blending = THREE.AdditiveBlending;
+
+    this.virusOverlay = new THREE.Mesh(
+      new THREE.PlaneGeometry(40, 40),
+      virusMaterial
+    );
+    this.virusOverlay.position.set(0, 32, -26.45);
+    this.virusOverlay.renderOrder = 5;
+    this.group.add(this.virusOverlay);
+
+    this.updateVirusOverlay();
   }
 
   markScreenDirty() {
@@ -691,6 +762,128 @@ class RetroTerminalEnvironment extends BaseEnvironmentMap {
 
     if (this.screenTexture) {
       this.screenTexture.needsUpdate = true;
+    }
+  }
+
+  updateVirusOverlay(glitchIntensity = 0) {
+    if (!this.virusCtx || !this.virusCanvas) {
+      return;
+    }
+
+    const ctx = this.virusCtx;
+    const width = this.virusCanvas.width;
+    const height = this.virusCanvas.height;
+
+    ctx.clearRect(0, 0, width, height);
+
+    ctx.save();
+
+    const backgroundGradient = ctx.createRadialGradient(
+      width / 2,
+      height / 2 - 40,
+      40,
+      width / 2,
+      height / 2 - 40,
+      240
+    );
+    backgroundGradient.addColorStop(0, "rgba(90, 0, 0, 0.85)");
+    backgroundGradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = backgroundGradient;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.shadowColor = "rgba(255, 60, 60, 0.9)";
+    ctx.shadowBlur = 45;
+    this.drawVirusLogo(ctx, width / 2, height / 2 - 40);
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = "#ff4d4d";
+    ctx.textAlign = "center";
+    ctx.font = "bold 58px 'Courier New', monospace";
+    ctx.fillText("SECURITY BREACH", width / 2, height - 150);
+    ctx.font = "bold 42px 'Courier New', monospace";
+    ctx.fillText("SYSTEM COMPROMISED", width / 2, height - 95);
+    ctx.font = "30px 'Courier New', monospace";
+    ctx.fillStyle = "rgba(255, 160, 160, 0.9)";
+    ctx.fillText(">> CORE PROCESSES SEIZED <<", width / 2, height - 40);
+
+    if (glitchIntensity > 0) {
+      const slices = Math.min(glitchIntensity, 12);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+      for (let i = 0; i < slices; i++) {
+        const sliceHeight = 6 + Math.random() * 14;
+        const sliceY = Math.random() * height;
+        ctx.fillRect(0, sliceY, width, sliceHeight);
+      }
+    }
+    ctx.restore();
+    ctx.textAlign = "left";
+
+    if (this.virusTexture) {
+      this.virusTexture.needsUpdate = true;
+    }
+  }
+
+  drawVirusLogo(ctx, centerX, centerY) {
+    ctx.save();
+    try {
+      // Draw virus particle with spikes
+      const virusRadius = 50;
+      const spikeLength = 35;
+      const numSpikes = 12;
+
+      ctx.fillStyle = "rgba(255, 30, 30, 0.2)";
+      ctx.fillRect(
+        centerX - virusRadius - 30,
+        centerY - virusRadius - 30,
+        (virusRadius + 30) * 2,
+        (virusRadius + 30) * 2
+      );
+
+      // Main virus sphere - bright red
+      ctx.fillStyle = "#ff3333";
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, virusRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Virus glow - lighter red
+      ctx.fillStyle = "rgba(255, 100, 100, 0.5)";
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, virusRadius + 15, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw spikes around the virus
+      ctx.strokeStyle = "#ff3333";
+      ctx.lineWidth = 6;
+      for (let i = 0; i < numSpikes; i++) {
+        const angle = (i / numSpikes) * Math.PI * 2;
+        const x1 = centerX + Math.cos(angle) * virusRadius;
+        const y1 = centerY + Math.sin(angle) * virusRadius;
+        const x2 = centerX + Math.cos(angle) * (virusRadius + spikeLength);
+        const y2 = centerY + Math.sin(angle) * (virusRadius + spikeLength);
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        // Spike caps
+        ctx.fillStyle = "#ff5555";
+        ctx.beginPath();
+        ctx.arc(x2, y2, 8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Warning text
+      ctx.font = "bold 48px 'Courier New', monospace";
+      ctx.fillStyle = "#ff0000";
+      ctx.textAlign = "center";
+      ctx.fillText("!!! SYSTEM INFECTED !!!", centerX, centerY + 140);
+      ctx.fillText("VIRUS DETECTED", centerX, centerY + 200);
+    } catch (e) {
+      console.error("Error drawing virus logo:", e);
+    } finally {
+      ctx.textAlign = "left";
+      ctx.restore();
     }
   }
 
@@ -802,6 +995,21 @@ class RetroTerminalEnvironment extends BaseEnvironmentMap {
           }, 150);
         }
       }
+
+      if (this.virusOverlay && this.virusOverlay.material) {
+        const pulse = 0.82 + Math.sin(time * 2.4) * 0.12;
+        this.virusOverlay.material.opacity = THREE.MathUtils.clamp(
+          pulse,
+          0.65,
+          1
+        );
+        this.virusOverlay.rotation.z = Math.sin(time * 0.7) * 0.07;
+
+        if (this.virusCtx && Math.random() < 0.08) {
+          const glitch = 6 + Math.floor(Math.random() * 10);
+          this.updateVirusOverlay(glitch);
+        }
+      }
     });
   }
 
@@ -817,6 +1025,7 @@ class RetroTerminalEnvironment extends BaseEnvironmentMap {
 
     this.markScreenDirty();
     this.updateTerminalDisplay(true);
+    this.updateVirusOverlay();
   }
 
   onExit() {
