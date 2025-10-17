@@ -19,25 +19,29 @@ class SpectatorMode {
 
     // Environment names
     this.environmentNames = [
-      "CPU CORE",
+      "CPU CORE CHAMBER",
+      "KERNEL NEXUS",
       "RAM MEMORY BANKS",
       "GPU ACCELERATOR",
-      "MOTHERBOARD CIRCUIT",
+      "MOTHERBOARD EXPANSE",
       "HARD DRIVE SECTOR",
-      "RETRO TERMINAL",
+      "RETRO TERMINAL INTERFACE",
       "NETWORK HUB NEXUS",
-      "SYSTEM OVERVIEW",
+      "AI NEURAL NETWORK CORE",
+      "SYSTEM OVERVIEW - ALL SECTORS",
     ];
 
     // Starting positions for each environment
     this.startPositions = [
       new THREE.Vector3(0, 15, 40), // CPU
+      new THREE.Vector3(0, 22, 35), // Kernel
       new THREE.Vector3(0, 20, 40), // Memory
       new THREE.Vector3(0, 25, 50), // GPU
       new THREE.Vector3(0, 30, 60), // Motherboard
       new THREE.Vector3(0, 35, 50), // Hard Drive
       new THREE.Vector3(0, 20, 50), // Retro Terminal
       new THREE.Vector3(0, 40, 60), // Network Hub
+      new THREE.Vector3(0, 32, 45), // AI Neural Network
       new THREE.Vector3(0, 60, 80), // System Overview
     ];
   }
@@ -61,7 +65,9 @@ class SpectatorMode {
     }
 
     // Activate spectator camera first
-    this.spectatorCamera.activate(this.startPositions[0]);
+    const initialPosition =
+      this.startPositions[0] || new THREE.Vector3(0, 20, 40);
+    this.spectatorCamera.activate(initialPosition);
 
     // Then set up environment switching listeners (so they get priority)
     this.setupEventListeners();
@@ -172,15 +178,19 @@ class SpectatorMode {
       return;
     }
 
-    // Number keys 1-8 to switch environments
-    if (event.code >= "Digit1" && event.code <= "Digit8") {
-      const phase = parseInt(event.code.replace("Digit", "")) - 1;
-      console.log(
-        "Switching to environment:",
-        phase,
-        this.environmentNames[phase]
-      );
+    // Number keys: 1-9 select environments, 0 jumps to the final map
+    const digitMatch = event.code.match(/^(Digit|Numpad)([0-9])$/);
+    if (digitMatch) {
+      let numeric = parseInt(digitMatch[2], 10);
+      let phase =
+        numeric === 0 ? this.environmentNames.length - 1 : numeric - 1;
+
       if (phase >= 0 && phase < this.environmentNames.length) {
+        console.log(
+          "Switching to environment:",
+          phase,
+          this.environmentNames[phase]
+        );
         this.loadEnvironment(phase);
       }
       event.preventDefault();
@@ -233,7 +243,9 @@ class SpectatorMode {
         }
 
         // Move camera to starting position
-        this.spectatorCamera.setPosition(this.startPositions[phase]);
+        const targetPosition =
+          this.startPositions[phase] || new THREE.Vector3(0, 25, 45);
+        this.spectatorCamera.setPosition(targetPosition);
 
         console.log("✅ Environment switch complete");
       } catch (error) {

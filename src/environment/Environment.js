@@ -35,6 +35,7 @@ class Environment {
       { key: "harddrive", factory: () => new HardDriveEnvironment(this) },
       { key: "terminal", factory: () => new RetroTerminalEnvironment(this) },
       { key: "network", factory: () => new NetworkHubEnvironment(this) },
+      { key: "ai-core", factory: () => new AINeuralNetworkEnvironment(this) },
       { key: "overview", factory: () => new SystemOverviewEnvironment(this) },
     ];
 
