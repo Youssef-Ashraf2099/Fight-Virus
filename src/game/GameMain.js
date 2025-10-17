@@ -37,6 +37,7 @@ class GameMain {
       this.clock = new THREE.Clock();
       this.isRunning = false;
       this.gameStarted = false;
+      this.spectatorMode = null;
 
       this.score = 0;
       this.difficulty = 1;
@@ -83,6 +84,14 @@ class GameMain {
     // Create wave manager
     this.waveManager = new WaveManager(this.enemyManager, this.uiManager);
 
+    // Create spectator mode
+    this.spectatorMode = new SpectatorMode(
+      this.scene,
+      this.camera,
+      this.inputManager,
+      this.environment
+    );
+
     // Setup event listeners
     this.setupEventListeners();
 
@@ -94,7 +103,9 @@ class GameMain {
     console.log("Setting up event listeners...");
 
     const startButton = document.getElementById("startButton");
+    const spectatorButton = document.getElementById("spectatorButton");
     console.log("Start button element:", startButton);
+    console.log("Spectator button element:", spectatorButton);
 
     if (!startButton) {
       console.error("Start button not found!");
@@ -106,7 +117,14 @@ class GameMain {
       this.startGame();
     });
 
-    console.log("✓ Start button listener attached");
+    if (spectatorButton) {
+      spectatorButton.addEventListener("click", () => {
+        console.log("👁️ SPECTATOR BUTTON CLICKED!");
+        this.startSpectatorMode();
+      });
+    }
+
+    console.log("✓ Button listeners attached");
 
     window.addEventListener("resize", () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -184,6 +202,38 @@ class GameMain {
     }
   }
 
+  startSpectatorMode() {
+    console.log("👁️ startSpectatorMode() called");
+
+    try {
+      console.log("Hiding start screen...");
+      document.getElementById("startScreen").style.display = "none";
+
+      // Hide all game UI
+      document.getElementById("hud").style.display = "none";
+      document.getElementById("score").style.display = "none";
+      document.getElementById("weaponInfo").style.display = "none";
+      document.getElementById("minimap").style.display = "none";
+      document.getElementById("crosshair").style.display = "none";
+
+      console.log("Setting spectator state...");
+      this.gameStarted = false;
+      this.isRunning = false;
+
+      console.log("Starting spectator mode...");
+      this.spectatorMode.start();
+
+      console.log("✅ Spectator mode started successfully!");
+    } catch (error) {
+      console.error("❌ Error starting spectator mode:", error);
+      alert(
+        "Error starting spectator mode: " +
+          error.message +
+          "\n\nCheck console for details."
+      );
+    }
+  }
+
   handleSpecialAbility() {
     const enemies = this.enemyManager.getEnemies();
     const playerPos = this.player.getPosition();
@@ -204,6 +254,12 @@ class GameMain {
   }
 
   update(deltaTime) {
+    // Update spectator mode if active
+    if (this.spectatorMode && this.spectatorMode.isActive()) {
+      this.spectatorMode.update(deltaTime);
+      return; // Skip game updates in spectator mode
+    }
+
     if (!this.isRunning) return;
 
     const moveInput = this.inputManager.getMoveInput();

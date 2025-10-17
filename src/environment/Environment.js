@@ -23,12 +23,17 @@ class Environment {
     this.baseFloorHeight = 0;
     this.nextPhysicsColliders = [];
     this.nextBaseFloorHeight = 0;
+    this.currentEnvironment = null; // Track current environment for spectator mode
 
     this.phaseConfigs = [
       { key: "cpu", factory: () => new CPUEnvironment(this) },
       { key: "memory", factory: () => new MemoryEnvironment(this) },
       { key: "gpu", factory: () => new GPUEnvironment(this) },
       { key: "motherboard", factory: () => new MotherboardEnvironment(this) },
+      { key: "harddrive", factory: () => new HardDriveEnvironment(this) },
+      { key: "terminal", factory: () => new RetroTerminalEnvironment(this) },
+      { key: "network", factory: () => new NetworkHubEnvironment(this) },
+      { key: "overview", factory: () => new SystemOverviewEnvironment(this) },
     ];
 
     this.setPhase(0);
@@ -120,22 +125,50 @@ class Environment {
 
   setPhase(index) {
     const clamped = Math.max(0, Math.min(this.phaseConfigs.length - 1, index));
-    if (clamped === this.phaseIndex) {
+
+    console.log(
+      `🔄 Environment.setPhase called with index: ${index}, clamped: ${clamped}`
+    );
+    console.log(`   Current phase index: ${this.phaseIndex}`);
+
+    // Allow re-setting the same phase (for spectator mode)
+    // if (clamped === this.phaseIndex) {
+    //   return false;
+    // }
+
+    const config = this.phaseConfigs[clamped];
+    console.log(`   Config key: ${config.key}`);
+
+    let newMap;
+    try {
+      newMap = config.factory();
+      console.log(
+        `   ✅ Factory created map: ${newMap.constructor.name}, displayName: ${newMap.displayName}`
+      );
+    } catch (error) {
+      console.error(`   ❌ Error creating environment:`, error);
       return false;
     }
 
-    const config = this.phaseConfigs[clamped];
-    const newMap = config.factory();
     const palette = newMap.getPalette();
 
     const prevMap = this.currentMap;
     if (prevMap) {
+      console.log(`   Cleaning up previous map: ${prevMap.displayName}`);
       this.previousMap = prevMap;
+      // Clean up previous map
+      if (prevMap.onExit) {
+        prevMap.onExit();
+      }
     }
 
+    console.log(`   Building new map...`);
     newMap.build(this.mapGroup);
-    const isInitialMap = !prevMap;
+    console.log(`   ✅ Map built successfully`);
+
+    const isInitialMap = !prevMap || clamped !== this.phaseIndex;
     this.currentMap = newMap;
+    this.currentEnvironment = newMap; // Track for spectator mode
     this.phaseIndex = clamped;
     this.currentPhaseName = newMap.displayName;
     this.applyPalette(palette);

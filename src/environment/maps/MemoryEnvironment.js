@@ -1,7 +1,7 @@
 class MemoryEnvironment extends BaseEnvironmentMap {
   constructor(environment) {
     super(environment);
-    this.displayName = "MEMORY VAULT";
+    this.displayName = "RAM MEMORY BANKS";
   }
 
   getPalette() {

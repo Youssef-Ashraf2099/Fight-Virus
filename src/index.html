@@ -275,14 +275,110 @@
           Eliminate all viruses before they corrupt the data!<br />
           Different virus types require different strategies.
         </p>
-        <button id="startButton">START MISSION</button>
+        <div
+          style="
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+          "
+        >
+          <button id="startButton">PLAY MODE</button>
+          <button id="spectatorButton">SPECTATOR MODE</button>
+        </div>
         <div id="controls">
           <p>
-            WASD - Move | Mouse - Look Around | Left Click - Fire | Right Click
-            - Aim<br />
+            <strong>Play Mode:</strong> WASD - Move | Mouse - Look Around | Left
+            Click - Fire | Right Click - Aim<br />
             1-4 - Switch Weapons | Space - Jump | Shift - Sprint | E - Special
             Ability
           </p>
+          <p style="margin-top: 10px">
+            <strong>Spectator Mode:</strong> WASD - Move Camera | Mouse - Look
+            Around | Space/Shift - Up/Down<br />
+            1-8 - Jump to Environment | ESC - Return to Menu
+          </p>
+        </div>
+      </div>
+
+      <div id="spectatorUI" style="display: none">
+        <div
+          style="
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            text-shadow: 0 0 10px #0f0;
+          "
+        >
+          <div>MODE: SPECTATOR</div>
+          <div style="font-size: 18px; margin-top: 10px">
+            ENVIRONMENT: <span id="spectatorEnvironment">CPU CORE</span>
+          </div>
+          <div style="font-size: 14px; margin-top: 20px; opacity: 0.7">
+            <div>1 - CPU Core Chamber</div>
+            <div>2 - RAM Memory Banks</div>
+            <div>3 - GPU Accelerator</div>
+            <div>4 - Motherboard Circuit</div>
+            <div>5 - Hard Drive Sector</div>
+            <div>6 - Retro Terminal</div>
+            <div>7 - Network Hub Nexus</div>
+            <div>8 - System Overview</div>
+            <div style="margin-top: 10px">ESC - Exit Spectator</div>
+            <div style="margin-top: 10px">I - Toggle Interactive Mode</div>
+          </div>
+        </div>
+
+        <!-- Interactive Mode Toggle Button -->
+        <div
+          style="
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+          "
+        >
+          <button
+            id="interactiveToggle"
+            style="
+              font-family: 'Courier New', monospace;
+              font-size: 18px;
+              padding: 12px 30px;
+              background: rgba(0, 255, 136, 0.2);
+              color: #0f0;
+              border: 2px solid #0f0;
+              cursor: pointer;
+              text-shadow: 0 0 10px #0f0;
+              box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+              transition: all 0.3s;
+              pointer-events: all;
+              border-radius: 5px;
+            "
+          >
+            ▶ ACTIVATE INTERACTIVE MODE
+          </button>
+        </div>
+
+        <div
+          id="interactiveHint"
+          style="
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 30px;
+            border: 2px solid #0f0;
+            background: rgba(0, 0, 0, 0.8);
+            color: #0f0;
+            font-size: 22px;
+            text-shadow: 0 0 12px #0f0;
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.5);
+            display: none;
+            pointer-events: none;
+          "
+        >
+          PRESS <span style="color: #ff0">I</span> OR CLICK THE BUTTON TO RESUME
+          INTERACTIVE MODE
         </div>
       </div>
 

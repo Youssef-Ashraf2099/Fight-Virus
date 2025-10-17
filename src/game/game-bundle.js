@@ -30,6 +30,10 @@ window.addEventListener("DOMContentLoaded", async () => {
     "./environment/maps/MemoryEnvironment.js",
     "./environment/maps/GPUEnvironment.js",
     "./environment/maps/MotherboardEnvironment.js",
+    "./environment/maps/HardDriveEnvironment.js",
+    "./environment/maps/RetroTerminalEnvironment.js",
+    "./environment/maps/NetworkHubEnvironment.js",
+    "./environment/maps/SystemOverviewEnvironment.js",
     "./environment/Environment.js",
 
     // Entities
@@ -53,7 +57,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     "./weapons/types/ShockwaveEmitter.js",
     "./weapons/WeaponManager.js",
 
-    // Main Game
+    // Game & Spectator
+    "./game/SpectatorCamera.js",
+    "./game/SpectatorMode.js",
     "./game/GameMain.js",
   ];
 
