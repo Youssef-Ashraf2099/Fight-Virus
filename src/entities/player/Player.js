@@ -471,19 +471,44 @@ class Player {
     const previousGround = this.currentGroundHeight;
     const wasGrounded = this.isGrounded;
 
-    // Simple ground collision
     // Apply horizontal movement
     this.position.x += this.velocity.x;
     this.position.z += this.velocity.z;
 
-    // Constrain to play area
-    const boundary = 45;
-    this.position.x = Math.max(-boundary, Math.min(boundary, this.position.x));
-    this.position.z = Math.max(-boundary, Math.min(boundary, this.position.z));
+    let groundHeight = 0;
+    if (
+      this.environment &&
+      typeof this.environment.resolvePlayerCollision === "function"
+    ) {
+      groundHeight = this.environment.resolvePlayerCollision(
+        this.position,
+        this.collisionRadius,
+        this.height,
+        { x: previousX, z: previousZ },
+        previousGround,
+        this.maxStepHeight
+      );
+    } else {
+      groundHeight = this.environment
+        ? this.environment.getFloorHeightAt(
+            this.position.x,
+            this.position.z
+          )
+        : 0;
+    }
 
-    let groundHeight = this.environment
-      ? this.environment.getFloorHeightAt(this.position.x, this.position.z)
-      : 0;
+    // Constrain to play area after collision resolution
+    const boundary = 45;
+    const clampedX = Math.max(-boundary, Math.min(boundary, this.position.x));
+    const clampedZ = Math.max(-boundary, Math.min(boundary, this.position.z));
+    if (clampedX !== this.position.x || clampedZ !== this.position.z) {
+      this.position.x = clampedX;
+      this.position.z = clampedZ;
+      groundHeight = this.environment
+        ? this.environment.getFloorHeightAt(this.position.x, this.position.z)
+        : 0;
+    }
+
     let targetHeight = groundHeight + this.height;
     const landingTolerance = 0.05;
 

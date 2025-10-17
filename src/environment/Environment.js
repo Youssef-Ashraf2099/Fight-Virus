@@ -379,6 +379,98 @@ class Environment {
     return this.currentPhaseName;
   }
 
+  resolvePlayerCollision(
+    position,
+    radius,
+    playerHeight,
+    previousPosition,
+    previousGroundHeight,
+    maxStepHeight
+  ) {
+    if (!position) {
+      return this.getFloorHeightAt(0, 0);
+    }
+
+    const colliders = this.physicsColliders || [];
+    const stepAllowance = typeof maxStepHeight === "number" ? maxStepHeight : 0;
+    const prevPos = previousPosition || { x: position.x, z: position.z };
+    const prevGround =
+      typeof previousGroundHeight === "number"
+        ? previousGroundHeight
+        : this.baseFloorHeight || 0;
+    const separation = 0.001;
+    const tolerance = 0.05;
+
+    if (!colliders.length) {
+      return this.getFloorHeightAt(position.x, position.z);
+    }
+
+    for (let i = 0; i < colliders.length; i++) {
+      const collider = colliders[i];
+      const expandedMinX = collider.minX - radius;
+      const expandedMaxX = collider.maxX + radius;
+      const expandedMinZ = collider.minZ - radius;
+      const expandedMaxZ = collider.maxZ + radius;
+
+      if (
+        position.x < expandedMinX ||
+        position.x > expandedMaxX ||
+        position.z < expandedMinZ ||
+        position.z > expandedMaxZ
+      ) {
+        continue;
+      }
+
+      const footY = position.y - playerHeight;
+      const verticalDifference = collider.height - prevGround;
+
+      if (footY >= collider.height - tolerance) {
+        continue;
+      }
+
+      if (verticalDifference <= stepAllowance + tolerance) {
+        continue;
+      }
+
+      const distLeft = position.x - expandedMinX;
+      const distRight = expandedMaxX - position.x;
+      const distBack = position.z - expandedMinZ;
+      const distFront = expandedMaxZ - position.z;
+
+      if (distLeft <= 0 || distRight <= 0 || distBack <= 0 || distFront <= 0) {
+        continue;
+      }
+
+      const overlapX = Math.min(distLeft, distRight);
+      const overlapZ = Math.min(distBack, distFront);
+      const moveX = position.x - prevPos.x;
+      const moveZ = position.z - prevPos.z;
+
+      let pushAlongX;
+      if (Math.abs(overlapX - overlapZ) < 0.0001) {
+        pushAlongX = Math.abs(moveX) >= Math.abs(moveZ);
+      } else {
+        pushAlongX = overlapX < overlapZ;
+      }
+
+      if (pushAlongX) {
+        if (distLeft < distRight) {
+          position.x = expandedMinX - separation;
+        } else {
+          position.x = expandedMaxX + separation;
+        }
+      } else {
+        if (distBack < distFront) {
+          position.z = expandedMinZ - separation;
+        } else {
+          position.z = expandedMaxZ + separation;
+        }
+      }
+    }
+
+    return this.getFloorHeightAt(position.x, position.z);
+  }
+
   getFloorHeightAt(x, z) {
     let height = this.baseFloorHeight || 0;
     if (this.physicsColliders && this.physicsColliders.length) {
