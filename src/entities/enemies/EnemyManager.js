@@ -7,8 +7,8 @@ class EnemyManager {
     this.spawnQueue = [];
     this.maxSpawnsPerFrame = 5;
     this.safeSpawnDistance = 18;
-  this.lastPlayerPosition = null;
-  this._spawnOffset = new THREE.Vector3();
+    this.lastPlayerPosition = null;
+    this._spawnOffset = new THREE.Vector3();
     this.enemyClasses = {
       trojan: TrojanVirus,
       worm: WormVirus,
@@ -123,9 +123,7 @@ class EnemyManager {
   }
 
   update(deltaTime, playerPosition) {
-    this.lastPlayerPosition = playerPosition
-      ? playerPosition.clone()
-      : null;
+    this.lastPlayerPosition = playerPosition ? playerPosition.clone() : null;
 
     if (this.spawnQueue.length) {
       // Spread queued spawns across frames to avoid hitches
