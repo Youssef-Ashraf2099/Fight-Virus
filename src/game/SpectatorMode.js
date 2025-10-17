@@ -217,27 +217,11 @@ class SpectatorMode {
       try {
         this.currentPhase = phase;
 
-        // Clean up current environment properly
-        if (this.environment.currentEnvironment) {
-          console.log("Cleaning up previous environment");
-          if (this.environment.currentEnvironment.onExit) {
-            this.environment.currentEnvironment.onExit();
-          }
-          if (this.environment.currentEnvironment.dispose) {
-            this.environment.currentEnvironment.dispose();
-          }
-        }
-
-        // Force load new environment by clearing the mapGroup
-        while (this.environment.mapGroup.children.length > 0) {
-          this.environment.mapGroup.remove(
-            this.environment.mapGroup.children[0]
-          );
-        }
-
-        // Load new environment
         console.log("Calling setPhase with:", phase);
-        this.environment.setPhase(phase);
+        const loaded = this.environment.setPhase(phase);
+        if (!loaded) {
+          throw new Error("Environment refused to load phase " + phase);
+        }
         console.log("Environment loaded:", this.environment.currentPhaseName);
         this.environment.setInteractiveMode(this.interactiveMode);
 
