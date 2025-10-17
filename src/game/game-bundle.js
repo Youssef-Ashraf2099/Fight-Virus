@@ -25,6 +25,17 @@ window.addEventListener("DOMContentLoaded", async () => {
     "./effects/ParticleSystem.js",
 
     // Environment
+    "./environment/maps/BaseEnvironmentMap.js",
+    "./environment/maps/CPUEnvironment.js",
+    "./environment/maps/KernelEnvironment.js",
+    "./environment/maps/MemoryEnvironment.js",
+    "./environment/maps/GPUEnvironment.js",
+    "./environment/maps/MotherboardEnvironment.js",
+    "./environment/maps/HardDriveEnvironment.js",
+    "./environment/maps/RetroTerminalEnvironment.js",
+    "./environment/maps/NetworkHubEnvironment.js",
+    "./environment/maps/AINeuralNetworkEnvironment.js",
+    "./environment/maps/SystemOverviewEnvironment.js",
     "./environment/Environment.js",
 
     // Entities
@@ -48,7 +59,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     "./weapons/types/ShockwaveEmitter.js",
     "./weapons/WeaponManager.js",
 
-    // Main Game
+    // Game & Spectator
+    "./game/SpectatorCamera.js",
+    "./game/SpectatorMode.js",
     "./game/GameMain.js",
   ];
 

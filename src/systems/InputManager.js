@@ -1,7 +1,8 @@
 class InputManager {
   constructor() {
     this.keys = {};
-    this.mouseDown = false;
+    this.mouseButtons = {}; // Track individual mouse buttons
+    this.mouseDown = false; // Legacy - keep for compatibility
     this.mousePosition = { x: 0, y: 0 };
     this.listeners = {};
 
@@ -19,9 +20,14 @@ class InputManager {
       if (e.key === "4") this.emit("weapon4");
 
       // Special ability
-      if (e.key === " ") {
+      if (e.key === "e" || e.key === "E") {
         e.preventDefault();
         this.emit("special");
+      }
+
+      // Restart game
+      if (e.key === "r" || e.key === "R") {
+        this.emit("restart");
       }
     });
 
@@ -30,11 +36,15 @@ class InputManager {
     });
 
     window.addEventListener("mousedown", (e) => {
-      this.mouseDown = true;
+      this.mouseButtons[e.button] = true;
+      this.mouseDown = true; // Legacy
     });
 
     window.addEventListener("mouseup", (e) => {
-      this.mouseDown = false;
+      this.mouseButtons[e.button] = false;
+
+      // Check if any button is still down
+      this.mouseDown = Object.values(this.mouseButtons).some((v) => v);
     });
 
     window.addEventListener("mousemove", (e) => {
@@ -46,6 +56,24 @@ class InputManager {
     window.addEventListener("contextmenu", (e) => {
       e.preventDefault();
     });
+
+    // Mouse wheel weapon cycling
+    window.addEventListener(
+      "wheel",
+      (e) => {
+        // Allow scrolling to change weapons when pointer lock is active
+        if (document.pointerLockElement) {
+          e.preventDefault();
+        }
+
+        if (e.deltaY < 0) {
+          this.emit("weaponPrev");
+        } else if (e.deltaY > 0) {
+          this.emit("weaponNext");
+        }
+      },
+      { passive: false }
+    );
   }
 
   getMoveInput() {
@@ -54,11 +82,17 @@ class InputManager {
       backward: this.keys["s"] || false,
       left: this.keys["a"] || false,
       right: this.keys["d"] || false,
+      jump: this.keys[" "] || false,
+      sprint: this.keys["shift"] || false,
     };
   }
 
   isMouseDown() {
     return this.mouseDown;
+  }
+
+  isMouseButtonDown(button) {
+    return this.mouseButtons[button] || false;
   }
 
   getMousePosition() {
@@ -72,9 +106,9 @@ class InputManager {
     this.listeners[event].push(callback);
   }
 
-  emit(event) {
+  emit(event, ...args) {
     if (this.listeners[event]) {
-      this.listeners[event].forEach((callback) => callback());
+      this.listeners[event].forEach((callback) => callback(...args));
     }
   }
 }

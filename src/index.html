@@ -16,6 +16,44 @@
         overflow: hidden;
         background: #000;
         color: #0f0;
+        cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2232%22%20height%3D%2232%22%20viewBox%3D%220%200%2032%2032%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%2300ff88%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M16%202v6M16%2024v6M2%2016h6M24%2016h6%22%2F%3E%3Ccircle%20cx%3D%2216%22%20cy%3D%2216%22%20r%3D%225%22%20stroke%3D%22%2300ff88%22%20fill%3D%22rgba%280%2C255%2C136%2C0.25%29%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E")
+            16 16,
+          crosshair;
+      }
+
+      #loadingOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.92);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        z-index: 200000;
+        pointer-events: all;
+        text-align: center;
+      }
+
+      #loadingOverlay .loading-content {
+        border: 2px solid #00ff88;
+        padding: 30px 50px;
+        background: rgba(0, 20, 10, 0.7);
+        box-shadow: 0 0 30px rgba(0, 255, 136, 0.4);
+        text-shadow: 0 0 12px #00ff88;
+      }
+
+      #loadingOverlay .loading-title {
+        font-size: 28px;
+        margin-bottom: 12px;
+        animation: loadingPulse 1.6s infinite;
+      }
+
+      #loadingOverlay .loading-message {
+        font-size: 18px;
+        opacity: 0.8;
       }
 
       #gameCanvas {
@@ -128,7 +166,7 @@
         background: transparent;
         color: #0f0;
         border: 3px solid #0f0;
-        cursor: pointer;
+        cursor: inherit;
         text-shadow: 0 0 10px #0f0;
         box-shadow: 0 0 20px #0f0;
         transition: all 0.3s;
@@ -165,6 +203,25 @@
         }
       }
 
+      @keyframes damageFlash {
+        0% {
+          opacity: 0.5;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+
+      @keyframes loadingPulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
       #weaponInfo {
         position: absolute;
         bottom: 20px;
@@ -179,13 +236,89 @@
         right: 20px;
         width: 200px;
         height: 200px;
-        border: 2px solid #0f0;
-        background: rgba(0, 20, 0, 0.5);
-        box-shadow: 0 0 10px #0f0;
+        border: 3px solid #00ff88;
+        background: rgba(0, 20, 10, 0.7);
+        box-shadow: 0 0 15px #00ff88, inset 0 0 20px rgba(0, 255, 136, 0.1);
+        border-radius: 4px;
+      }
+
+      #minimap::before {
+        content: "";
+        position: absolute;
+        top: -3px;
+        left: -3px;
+        right: -3px;
+        bottom: -3px;
+        border: 1px solid rgba(0, 255, 136, 0.3);
+        border-radius: 4px;
+        pointer-events: none;
+      }
+
+      /* Crosshair */
+      #crosshair {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 40px;
+        height: 40px;
+        pointer-events: none;
+        display: none;
+        transition: transform 0.2s ease-out, opacity 0.2s;
+      }
+
+      #crosshair.aiming {
+        transform: translate(-50%, -50%) scale(0.6);
+        opacity: 1;
+      }
+
+      #crosshair::before,
+      #crosshair::after {
+        content: "";
+        position: absolute;
+        background: #0f0;
+        box-shadow: 0 0 5px #0f0;
+      }
+
+      #crosshair::before {
+        left: 50%;
+        top: 0;
+        width: 2px;
+        height: 100%;
+        transform: translateX(-50%);
+      }
+
+      #crosshair::after {
+        top: 50%;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        transform: translateY(-50%);
+      }
+
+      #crosshair .center-dot {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 4px;
+        height: 4px;
+        background: #0f0;
+        border-radius: 50%;
+        box-shadow: 0 0 5px #0f0;
       }
     </style>
   </head>
   <body>
+    <div id="loadingOverlay">
+      <div class="loading-content">
+        <div class="loading-title" id="loadingTitle">INITIALIZING SYSTEM</div>
+        <div class="loading-message" id="loadingMessage">
+          Preparing secure core environment...
+        </div>
+      </div>
+    </div>
+
     <canvas id="gameCanvas"></canvas>
 
     <div id="ui">
@@ -196,12 +329,112 @@
           Eliminate all viruses before they corrupt the data!<br />
           Different virus types require different strategies.
         </p>
-        <button id="startButton">START MISSION</button>
+        <div
+          style="
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+          "
+        >
+          <button id="startButton">PLAY MODE</button>
+          <button id="spectatorButton">SPECTATOR MODE</button>
+        </div>
         <div id="controls">
           <p>
-            WASD - Move | Mouse - Aim | Left Click - Fire | 1-4 - Switch Weapons
-            | Space - Special Ability
+            <strong>Play Mode:</strong> WASD - Move | Mouse - Look Around | Left
+            Click - Fire | Right Click - Aim<br />
+            1-4 - Switch Weapons | Space - Jump | Shift - Sprint | E - Special
+            Ability
           </p>
+          <p style="margin-top: 10px">
+            <strong>Spectator Mode:</strong> WASD - Move Camera | Mouse - Look
+            Around | Space/Shift - Up/Down<br />
+            1-9 / 0 - Jump to Environment | ESC - Return to Menu
+          </p>
+        </div>
+      </div>
+
+      <div id="spectatorUI" style="display: none">
+        <div
+          style="
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            text-shadow: 0 0 10px #0f0;
+          "
+        >
+          <div>MODE: SPECTATOR</div>
+          <div style="font-size: 18px; margin-top: 10px">
+            ENVIRONMENT: <span id="spectatorEnvironment">CPU CORE</span>
+          </div>
+          <div style="font-size: 14px; margin-top: 20px; opacity: 0.7">
+            <div>1 - CPU Core Chamber</div>
+            <div>2 - Kernel Nexus</div>
+            <div>3 - RAM Memory Banks</div>
+            <div>4 - GPU Accelerator</div>
+            <div>5 - Motherboard Expanse</div>
+            <div>6 - Hard Drive Sector</div>
+            <div>7 - Retro Terminal Interface</div>
+            <div>8 - Network Hub Nexus</div>
+            <div>9 - AI Neural Network Core</div>
+            <div>0 - System Overview</div>
+            <div style="margin-top: 10px">ESC - Exit Spectator</div>
+            <div style="margin-top: 10px">I - Toggle Interactive Mode</div>
+          </div>
+        </div>
+
+        <!-- Interactive Mode Toggle Button -->
+        <div
+          style="
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+          "
+        >
+          <button
+            id="interactiveToggle"
+            style="
+              font-family: 'Courier New', monospace;
+              font-size: 18px;
+              padding: 12px 30px;
+              background: rgba(0, 255, 136, 0.2);
+              color: #0f0;
+              border: 2px solid #0f0;
+              cursor: pointer;
+              text-shadow: 0 0 10px #0f0;
+              box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+              transition: all 0.3s;
+              pointer-events: all;
+              border-radius: 5px;
+            "
+          >
+            ▶ ACTIVATE INTERACTIVE MODE
+          </button>
+        </div>
+
+        <div
+          id="interactiveHint"
+          style="
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 30px;
+            border: 2px solid #0f0;
+            background: rgba(0, 0, 0, 0.8);
+            color: #0f0;
+            font-size: 22px;
+            text-shadow: 0 0 12px #0f0;
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.5);
+            display: none;
+            pointer-events: none;
+          "
+        >
+          PRESS <span style="color: #ff0">I</span> OR CLICK THE BUTTON TO RESUME
+          INTERACTIVE MODE
         </div>
       </div>
 
@@ -244,6 +477,10 @@
       </div>
 
       <canvas id="minimap" style="display: none"></canvas>
+
+      <div id="crosshair" style="display: none">
+        <div class="center-dot"></div>
+      </div>
 
       <div id="message"></div>
     </div>

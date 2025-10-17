@@ -13,25 +13,52 @@ class WeaponManager {
 
     this.currentWeaponIndex = 0;
     this.projectiles = [];
+
+    if (this.player.setWeaponViewModel) {
+      this.player.setWeaponViewModel(
+        this.getCurrentWeapon().viewModelId || this.getCurrentWeapon().name
+      );
+    }
   }
 
   switchWeapon(index) {
     if (index >= 0 && index < this.weapons.length) {
       this.currentWeaponIndex = index;
-      this.getCurrentWeapon().onEquip();
+      const weapon = this.getCurrentWeapon();
+      weapon.onEquip();
+
+      if (this.player.setWeaponViewModel) {
+        this.player.setWeaponViewModel(weapon.viewModelId || weapon.name);
+      }
     }
+  }
+
+  cycleWeapon(step) {
+    if (!this.weapons.length) return;
+    const total = this.weapons.length;
+    const nextIndex = (this.currentWeaponIndex + step + total) % total;
+    this.switchWeapon(nextIndex);
   }
 
   getCurrentWeapon() {
     return this.weapons[this.currentWeaponIndex];
   }
 
-  fire(mousePos, camera) {
+  fire(mousePos, camera, muzzlePos, direction) {
     const weapon = this.getCurrentWeapon();
-    const playerPos = this.player.getPosition();
+
+    // Use muzzle position if provided, otherwise fall back to player position
+    const firePosition = muzzlePos || this.player.getPosition();
+    const fireDirection = direction || this.player.getDirection();
 
     if (weapon.canFire()) {
-      const projectile = weapon.fire(playerPos, mousePos, camera);
+      // In FPS mode, mousePos will be null - fire from camera direction
+      const projectile = weapon.fire(
+        firePosition,
+        mousePos,
+        camera,
+        fireDirection
+      );
       if (projectile) {
         if (Array.isArray(projectile)) {
           this.projectiles.push(...projectile);

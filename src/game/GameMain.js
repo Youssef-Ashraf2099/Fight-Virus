@@ -11,9 +11,10 @@ class GameMain {
       this.camera = new THREE.PerspectiveCamera(
         75,
         window.innerWidth / window.innerHeight,
-        0.1,
+        0.01, // Reduced near plane for weapon viewmodel
         1000
       );
+      this.scene.add(this.camera); // ensure weapon viewmodel renders
 
       console.log("Getting canvas element...");
       const canvas = document.getElementById("gameCanvas");
@@ -33,9 +34,14 @@ class GameMain {
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
+      this.loadingOverlay = document.getElementById("loadingOverlay");
+      this.loadingTitle = document.getElementById("loadingTitle");
+      this.loadingMessage = document.getElementById("loadingMessage");
+
       this.clock = new THREE.Clock();
       this.isRunning = false;
       this.gameStarted = false;
+      this.spectatorMode = null;
 
       this.score = 0;
       this.difficulty = 1;
@@ -50,9 +56,8 @@ class GameMain {
   }
 
   init() {
-    // Setup camera
-    this.camera.position.set(0, 25, 30);
-    this.camera.lookAt(0, 0, 0);
+    // Setup camera for FPS (will be controlled by player)
+    this.camera.position.set(0, 1.8, 0);
 
     // Initialize systems
     this.inputManager = new InputManager();
@@ -63,8 +68,8 @@ class GameMain {
     // Create environment
     this.environment = new Environment(this.scene);
 
-    // Create player
-    this.player = new Player(this.scene, this.camera);
+    // Create player (FPS mode - player controls camera)
+    this.player = new Player(this.scene, this.camera, this.environment);
 
     // Create weapon system
     this.weaponManager = new WeaponManager(
@@ -74,10 +79,22 @@ class GameMain {
     );
 
     // Create enemy manager
-    this.enemyManager = new EnemyManager(this.scene, this.particleSystem);
+    this.enemyManager = new EnemyManager(
+      this.scene,
+      this.particleSystem,
+      this.environment
+    );
 
     // Create wave manager
     this.waveManager = new WaveManager(this.enemyManager, this.uiManager);
+
+    // Create spectator mode
+    this.spectatorMode = new SpectatorMode(
+      this.scene,
+      this.camera,
+      this.inputManager,
+      this.environment
+    );
 
     // Setup event listeners
     this.setupEventListeners();
@@ -90,7 +107,9 @@ class GameMain {
     console.log("Setting up event listeners...");
 
     const startButton = document.getElementById("startButton");
+    const spectatorButton = document.getElementById("spectatorButton");
     console.log("Start button element:", startButton);
+    console.log("Spectator button element:", spectatorButton);
 
     if (!startButton) {
       console.error("Start button not found!");
@@ -102,7 +121,14 @@ class GameMain {
       this.startGame();
     });
 
-    console.log("✓ Start button listener attached");
+    if (spectatorButton) {
+      spectatorButton.addEventListener("click", () => {
+        console.log("👁️ SPECTATOR BUTTON CLICKED!");
+        this.startSpectatorMode();
+      });
+    }
+
+    console.log("✓ Button listeners attached");
 
     window.addEventListener("resize", () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -115,6 +141,10 @@ class GameMain {
     this.inputManager.on("weapon2", () => this.weaponManager.switchWeapon(1));
     this.inputManager.on("weapon3", () => this.weaponManager.switchWeapon(2));
     this.inputManager.on("weapon4", () => this.weaponManager.switchWeapon(3));
+    this.inputManager.on("weaponNext", () => this.weaponManager.cycleWeapon(1));
+    this.inputManager.on("weaponPrev", () =>
+      this.weaponManager.cycleWeapon(-1)
+    );
 
     // Special ability
     this.inputManager.on("special", () => {
@@ -122,43 +152,109 @@ class GameMain {
         this.handleSpecialAbility();
       }
     });
+
+    // Restart game
+    this.inputManager.on("restart", () => {
+      if (!this.isRunning && !this.gameStarted) {
+        this.restartGame();
+      }
+    });
   }
 
   startGame() {
     console.log("🚀 startGame() called");
 
-    try {
-      console.log("Hiding start screen...");
-      document.getElementById("startScreen").style.display = "none";
-      document.getElementById("hud").style.display = "block";
-      document.getElementById("score").style.display = "block";
-      document.getElementById("weaponInfo").style.display = "block";
-      document.getElementById("minimap").style.display = "block";
+    this.showLoadingOverlay(
+      "DEPLOYING GUARDIAN",
+      "Calibrating weapon systems and uplinking environment..."
+    );
 
-      console.log("Setting game state...");
-      this.gameStarted = true;
-      this.isRunning = true;
-      this.score = 0;
+    setTimeout(() => {
+      try {
+        console.log("Hiding start screen...");
+        document.getElementById("startScreen").style.display = "none";
+        document.getElementById("hud").style.display = "block";
+        document.getElementById("score").style.display = "block";
+        document.getElementById("weaponInfo").style.display = "block";
+        document.getElementById("minimap").style.display = "block";
+        document.getElementById("crosshair").style.display = "block";
 
-      console.log("Resetting player...");
-      this.player.reset();
+        console.log("Setting game state...");
+        this.gameStarted = true;
+        this.isRunning = true;
+        this.score = 0;
 
-      console.log("Starting wave...");
-      this.waveManager.startWave();
+        console.log("Resetting player...");
+        this.player.reset();
 
-      console.log("Updating UI...");
-      this.uiManager.updateScore(this.score);
-      this.uiManager.showMessage("WAVE 1 - GET READY!", 2000);
+        console.log("Starting wave...");
+        this.waveManager.startWave();
+        this.environment.setPhaseByWave(this.waveManager.getCurrentWave());
+        this.environment.setInteractiveMode(true);
 
-      console.log("✅ Game started successfully!");
-    } catch (error) {
-      console.error("❌ Error starting game:", error);
-      alert(
-        "Error starting game: " +
-          error.message +
-          "\n\nCheck console for details."
-      );
-    }
+        console.log("Updating UI...");
+        this.uiManager.updateScore(this.score);
+        const phaseName = this.environment.getCurrentPhaseName();
+        this.uiManager.showMessage(
+          `${
+            phaseName ? phaseName.toUpperCase() + "<br>" : ""
+          }WAVE 1 - GET READY!`,
+          2200
+        );
+
+        console.log("✅ Game started successfully!");
+      } catch (error) {
+        console.error("❌ Error starting game:", error);
+        alert(
+          "Error starting game: " +
+            error.message +
+            "\n\nCheck console for details."
+        );
+      } finally {
+        this.hideLoadingOverlay();
+      }
+    }, 120);
+  }
+
+  startSpectatorMode() {
+    console.log("👁️ startSpectatorMode() called");
+
+    this.showLoadingOverlay(
+      "SPECTATOR MODE",
+      "Preparing sandbox environments for exploration..."
+    );
+
+    setTimeout(() => {
+      try {
+        console.log("Hiding start screen...");
+        document.getElementById("startScreen").style.display = "none";
+
+        // Hide all game UI
+        document.getElementById("hud").style.display = "none";
+        document.getElementById("score").style.display = "none";
+        document.getElementById("weaponInfo").style.display = "none";
+        document.getElementById("minimap").style.display = "none";
+        document.getElementById("crosshair").style.display = "none";
+
+        console.log("Setting spectator state...");
+        this.gameStarted = false;
+        this.isRunning = false;
+
+        console.log("Starting spectator mode...");
+        this.spectatorMode.start();
+
+        console.log("✅ Spectator mode started successfully!");
+      } catch (error) {
+        console.error("❌ Error starting spectator mode:", error);
+        alert(
+          "Error starting spectator mode: " +
+            error.message +
+            "\n\nCheck console for details."
+        );
+      } finally {
+        this.hideLoadingOverlay();
+      }
+    }, 120);
   }
 
   handleSpecialAbility() {
@@ -181,24 +277,32 @@ class GameMain {
   }
 
   update(deltaTime) {
+    // Update spectator mode if active
+    if (this.spectatorMode && this.spectatorMode.isActive()) {
+      this.spectatorMode.update(deltaTime);
+      return; // Skip game updates in spectator mode
+    }
+
     if (!this.isRunning) return;
 
     const moveInput = this.inputManager.getMoveInput();
     this.player.update(deltaTime, moveInput);
 
-    const playerPos = this.player.getPosition();
-    this.camera.position.x = playerPos.x;
-    this.camera.position.z = playerPos.z + 30;
-    this.camera.lookAt(playerPos.x, 0, playerPos.z);
+    // In FPS mode, player controls camera position and rotation
+    // No need to manually update camera - player does it
 
-    if (this.inputManager.isMouseDown() && this.gameStarted) {
-      const mousePos = this.inputManager.getMousePosition();
-      this.weaponManager.fire(mousePos, this.camera);
+    // Shooting with left mouse button (button 0)
+    if (this.inputManager.isMouseButtonDown(0) && this.gameStarted) {
+      // Fire from weapon muzzle position
+      const muzzlePos = this.player.getMuzzlePosition();
+      const direction = this.player.getMuzzleDirection();
+      this.weaponManager.fire(null, this.camera, muzzlePos, direction);
+      this.player.onShoot(); // Trigger weapon recoil animation
     }
 
     this.weaponManager.update(deltaTime);
     this.enemyManager.update(deltaTime);
-    this.environment.update(deltaTime);
+    this.environment.update(deltaTime, this.player.getPosition());
     this.particleSystem.update(deltaTime);
 
     this.checkCollisions();
@@ -212,6 +316,13 @@ class GameMain {
     this.uiManager.updateWeapon(
       currentWeapon.name,
       currentWeapon.getAmmoDisplay()
+    );
+
+    // Update minimap
+    this.uiManager.updateMinimap(
+      this.player.getPosition(),
+      this.enemyManager.getEnemies(),
+      this.environment.getCurrentPhaseName()
     );
 
     if (this.waveManager.update(deltaTime)) {
@@ -309,10 +420,32 @@ class GameMain {
     setTimeout(() => {
       if (this.gameStarted) {
         this.waveManager.startWave();
-        this.uiManager.showMessage(
-          `WAVE ${this.waveManager.getCurrentWave()} - INCOMING!`,
-          2000
+        const phaseChanged = this.environment.setPhaseByWave(
+          this.waveManager.getCurrentWave()
         );
+        const phaseName = this.environment.getCurrentPhaseName();
+        const waveLabel = `WAVE ${this.waveManager.getCurrentWave()} - INCOMING!`;
+
+        if (phaseChanged) {
+          this.uiManager.showMessage(
+            `${phaseName ? phaseName.toUpperCase() : "NEW SECTOR"} ONLINE`,
+            2200
+          );
+          setTimeout(() => {
+            if (!this.gameStarted) return;
+            this.uiManager.showMessage(
+              `${
+                phaseName ? phaseName.toUpperCase() + "<br>" : ""
+              }${waveLabel}`,
+              2200
+            );
+          }, 2200);
+        } else {
+          this.uiManager.showMessage(
+            `${phaseName ? phaseName.toUpperCase() + "<br>" : ""}${waveLabel}`,
+            2200
+          );
+        }
       }
     }, 3000);
   }
@@ -322,12 +455,69 @@ class GameMain {
     this.gameStarted = false;
 
     this.uiManager.showMessage(
-      `GAME OVER<br>FINAL SCORE: ${this.score}<br><small>Refresh to play again</small>`,
+      `GAME OVER<br>FINAL SCORE: ${this.score}<br><small>Press R to Restart</small>`,
       0
     );
 
     this.enemyManager.clear();
     this.weaponManager.clear();
+  }
+
+  restartGame() {
+    console.log("🔄 Restarting game...");
+
+    this.showLoadingOverlay(
+      "REINITIALIZING",
+      "Resetting wave manager and respawning systems..."
+    );
+
+    try {
+      // Clear existing game state
+      this.enemyManager.clear();
+      this.weaponManager.clear();
+      this.uiManager.hideMessage();
+
+      // Reset score and difficulty
+      this.score = 0;
+      this.difficulty = 1;
+
+      // Reset player
+      this.player.reset();
+
+      // Reset weapon manager
+      this.weaponManager.switchWeapon(0); // Switch back to first weapon
+
+      // Reset environment to first phase
+      this.environment.setPhase(0);
+
+      // Reset wave manager
+      this.waveManager.reset();
+
+      // Start game
+      this.gameStarted = true;
+      this.isRunning = true;
+
+      // Start first wave
+      this.waveManager.startWave();
+      this.environment.setPhaseByWave(this.waveManager.getCurrentWave());
+
+      // Update UI
+      this.uiManager.updateScore(this.score);
+      const phaseName = this.environment.getCurrentPhaseName();
+      this.uiManager.showMessage(
+        `${
+          phaseName ? phaseName.toUpperCase() + "<br>" : ""
+        }WAVE 1 - GET READY!`,
+        2200
+      );
+
+      console.log("✅ Game restarted successfully!");
+    } catch (error) {
+      console.error("❌ Error restarting game:", error);
+      alert("Error restarting game: " + error.message);
+    } finally {
+      setTimeout(() => this.hideLoadingOverlay(), 80);
+    }
   }
 
   animate() {
@@ -336,6 +526,22 @@ class GameMain {
     const deltaTime = this.clock.getDelta();
     this.update(deltaTime);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  showLoadingOverlay(title, message) {
+    if (!this.loadingOverlay) return;
+    if (this.loadingTitle && title) {
+      this.loadingTitle.textContent = title;
+    }
+    if (this.loadingMessage && message) {
+      this.loadingMessage.textContent = message;
+    }
+    this.loadingOverlay.style.display = "flex";
+  }
+
+  hideLoadingOverlay() {
+    if (!this.loadingOverlay) return;
+    this.loadingOverlay.style.display = "none";
   }
 }
 

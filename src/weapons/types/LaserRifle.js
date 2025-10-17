@@ -4,39 +4,48 @@ class LaserRifle extends BaseWeapon {
 
     this.name = "LASER RIFLE";
     this.damage = 15;
-    this.fireRate = 0.08; // Very fast
+    this.fireRate = 0.15; // Reduced fire rate to prevent lag
     this.projectileSpeed = 60;
     this.projectileLifetime = 1.5;
     this.projectileColor = 0x00ffff;
+    this.viewModelId = "laserRifle";
   }
 
-  fire(origin, target, camera) {
+  fire(origin, target, camera, cameraDirection) {
     if (!this.canFire()) return null;
 
     super.fire(origin, target, camera);
 
-    const mouse = new THREE.Vector2(
-      (target.x / window.innerWidth) * 2 - 1,
-      -(target.y / window.innerHeight) * 2 + 1
-    );
+    let direction;
 
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(mouse, camera);
+    // FPS mode: use camera direction directly
+    if (cameraDirection) {
+      direction = cameraDirection.clone().normalize();
+    } else {
+      // Legacy top-down mode
+      const mouse = new THREE.Vector2(
+        (target.x / window.innerWidth) * 2 - 1,
+        -(target.y / window.innerHeight) * 2 + 1
+      );
 
-    const planeZ = origin.z;
-    const planeNormal = new THREE.Vector3(0, 1, 0);
-    const planePoint = new THREE.Vector3(0, 0, planeZ);
-    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
-      planeNormal,
-      planePoint
-    );
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, camera);
 
-    const intersectPoint = new THREE.Vector3();
-    raycaster.ray.intersectPlane(plane, intersectPoint);
+      const planeZ = origin.z;
+      const planeNormal = new THREE.Vector3(0, 1, 0);
+      const planePoint = new THREE.Vector3(0, 0, planeZ);
+      const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+        planeNormal,
+        planePoint
+      );
 
-    const direction = new THREE.Vector3()
-      .subVectors(intersectPoint, origin)
-      .normalize();
+      const intersectPoint = new THREE.Vector3();
+      raycaster.ray.intersectPlane(plane, intersectPoint);
+
+      direction = new THREE.Vector3()
+        .subVectors(intersectPoint, origin)
+        .normalize();
+    }
 
     // Create laser beam projectile
     return new LaserBeam(
