@@ -1,5 +1,12 @@
 // Game initialization module
-console.log("=== GAME INIT MODULE LOADING ===");
+// Lightweight debug flag - set to true only when debugging to avoid log overhead
+const DEBUG = false;
+const SHOW_FPS = true; // set to true to display FPS overlay
+const dbg = (...args) => {
+  if (DEBUG) console.log(...args);
+};
+
+dbg("=== GAME INIT MODULE LOADING ===");
 
 import * as THREE from "../lib/three.module.js";
 import { Player } from "../entities/player/Player.js";
@@ -12,21 +19,24 @@ import { InputManager } from "../systems/InputManager.js";
 import { UIManager } from "../systems/UIManager.js";
 import { WaveManager } from "../systems/WaveManager.js";
 
-console.log("All modules imported successfully!");
-console.log("THREE:", THREE);
+dbg("All modules imported successfully!");
+dbg("THREE:", THREE);
 
 // Make THREE globally available
 window.THREE = THREE;
 
+// Diagnostic flag to print WebGL/renderer info to console
+const DIAGNOSTIC = true;
+
 class Game {
   constructor() {
-    console.log("Game constructor called");
+    dbg("Game constructor called");
 
     try {
-      console.log("Creating scene...");
+      dbg("Creating scene...");
       this.scene = new THREE.Scene();
 
-      console.log("Creating camera...");
+      dbg("Creating camera...");
       this.camera = new THREE.PerspectiveCamera(
         75,
         window.innerWidth / window.innerHeight,
@@ -34,34 +44,99 @@ class Game {
         1000
       );
 
-      console.log("Getting canvas element...");
+      dbg("Getting canvas element...");
       const canvas = document.getElementById("gameCanvas");
       if (!canvas) {
         throw new Error("Canvas element not found!");
       }
-      console.log("Canvas found:", canvas);
+      dbg("Canvas found:", canvas);
 
-      console.log("Creating renderer...");
+      dbg("Creating renderer...");
+      // Reduce expensive features by default for better perf during testing
       this.renderer = new THREE.WebGLRenderer({
         canvas: canvas,
-        antialias: true,
+        antialias: false, // disable antialias to reduce GPU cost
       });
 
-      console.log("Setting up renderer...");
+      dbg("Setting up renderer...");
+      // Cap pixel ratio to avoid huge render targets on HiDPI displays
+      const cappedPixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+      this.renderer.setPixelRatio(cappedPixelRatio);
       this.renderer.setSize(window.innerWidth, window.innerHeight);
-      this.renderer.shadowMap.enabled = true;
-      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      // Disable shadows initially (can be enabled behind a quality setting)
+      if (this.renderer.shadowMap) this.renderer.shadowMap.enabled = false;
+
+      // Diagnostic: print GL renderer/vendor/version and three.js info
+      if (DIAGNOSTIC) {
+        try {
+          const gl = this.renderer.getContext();
+          const dbgLines = [];
+          dbgLines.push("--- WEBGL DIAGNOSTIC ---");
+          if (gl) {
+            const vendor = gl.getParameter(gl.VENDOR);
+            const rendererStr = gl.getParameter(gl.RENDERER);
+            const version = gl.getParameter(gl.VERSION);
+            dbgLines.push(`GL VENDOR: ${vendor}`);
+            dbgLines.push(`GL RENDERER: ${rendererStr}`);
+            dbgLines.push(`GL VERSION: ${version}`);
+          } else {
+            dbgLines.push("No WebGL context available");
+          }
+          if (this.renderer && this.renderer.info) {
+            dbgLines.push("THREE.INFO:", JSON.stringify(this.renderer.info));
+          }
+          dbgLines.push("------------------------");
+          dbgLines.forEach((l) => console.log(l));
+        } catch (e) {
+          console.warn("WebGL diagnostic failed:", e);
+        }
+      }
 
       this.clock = new THREE.Clock();
       this.isRunning = false;
       this.gameStarted = false;
 
+      // Bind animation method once to avoid per-frame closure allocation
+      this._boundAnimate = this.animate.bind(this);
+
+      // FPS overlay (lightweight)
+      if (SHOW_FPS) {
+        try {
+          this._fpsEl = document.createElement("div");
+          this._fpsEl.style.cssText =
+            "position:fixed;left:8px;top:8px;padding:6px 10px;background:rgba(0,0,0,0.6);color:#0f0;font-family:monospace;z-index:99999;border:1px solid rgba(0,255,136,0.2);";
+          this._fpsEl.textContent = "FPS: --";
+          document.body.appendChild(this._fpsEl);
+
+          this._fpsFrames = 0;
+          this._fpsLast = performance.now();
+          this._fpsLastUpdate = this._fpsLast;
+          this._fpsTick = () => {
+            this._fpsFrames++;
+            const now = performance.now();
+            if (now - this._fpsLastUpdate >= 1000) {
+              const fps = Math.round(
+                (this._fpsFrames * 1000) / (now - this._fpsLastUpdate)
+              );
+              this._fpsEl.textContent = `FPS: ${fps}`;
+              this._fpsFrames = 0;
+              this._fpsLastUpdate = now;
+            }
+          };
+        } catch (e) {
+          // ignore DOM errors
+          this._fpsTick = null;
+        }
+      } else {
+        this._fpsTick = null;
+      }
+
       this.score = 0;
       this.difficulty = 1;
 
-      console.log("Calling init()...");
+      dbg("Calling init()...");
       this.init();
-      console.log("Game constructor completed successfully");
+      dbg("Game constructor completed successfully");
     } catch (error) {
       console.error("Error in Game constructor:", error);
       throw error;
@@ -106,10 +181,10 @@ class Game {
   }
 
   setupEventListeners() {
-    console.log("Setting up event listeners...");
+    dbg("Setting up event listeners...");
 
     const startButton = document.getElementById("startButton");
-    console.log("Start button element:", startButton);
+    dbg("Start button element:", startButton);
 
     if (!startButton) {
       console.error("Start button not found!");
@@ -117,11 +192,11 @@ class Game {
     }
 
     startButton.addEventListener("click", () => {
-      console.log("START BUTTON CLICKED!");
+      dbg("START BUTTON CLICKED!");
       this.startGame();
     });
 
-    console.log("Start button listener attached");
+    dbg("Start button listener attached");
 
     window.addEventListener("resize", () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -144,32 +219,32 @@ class Game {
   }
 
   startGame() {
-    console.log("startGame() called");
+    dbg("startGame() called");
 
     try {
-      console.log("Hiding start screen...");
+      dbg("Hiding start screen...");
       document.getElementById("startScreen").style.display = "none";
       document.getElementById("hud").style.display = "block";
       document.getElementById("score").style.display = "block";
       document.getElementById("weaponInfo").style.display = "block";
       document.getElementById("minimap").style.display = "block";
 
-      console.log("Setting game state...");
+      dbg("Setting game state...");
       this.gameStarted = true;
       this.isRunning = true;
       this.score = 0;
 
-      console.log("Resetting player...");
+      dbg("Resetting player...");
       this.player.reset();
 
-      console.log("Starting wave...");
+      dbg("Starting wave...");
       this.waveManager.startWave();
 
-      console.log("Updating UI...");
+      dbg("Updating UI...");
       this.uiManager.updateScore(this.score);
       this.uiManager.showMessage("WAVE 1 - GET READY!", 2000);
 
-      console.log("Game started successfully!");
+      dbg("Game started successfully!");
     } catch (error) {
       console.error("Error starting game:", error);
       alert("Error starting game: " + error.message);
@@ -259,9 +334,24 @@ class Game {
     const projectiles = this.weaponManager.getProjectiles();
     const playerPos = this.player.getPosition();
 
-    // Check projectile-enemy collisions
+    // Build spatial index for enemies for faster nearby queries
+    try {
+      this.collisionManager.buildIndex(enemies);
+    } catch (e) {
+      // if indexing fails, fall back to brute-force
+      dbg("Collision index build failed, falling back to brute-force", e);
+    }
+
+    // Check projectile-enemy collisions using spatial queries
     projectiles.forEach((projectile) => {
-      enemies.forEach((enemy) => {
+      const projPos = projectile.getPosition();
+      // query nearby enemies within a reasonable radius (projectile collision radius + max enemy radius)
+      const nearby = this.collisionManager.queryNearby(
+        projPos,
+        projectile.collisionRadius + 50
+      );
+
+      for (const enemy of nearby) {
         if (this.collisionManager.checkCollision(projectile, enemy)) {
           enemy.takeDamage(projectile.damage);
           this.particleSystem.createImpact(
@@ -274,10 +364,13 @@ class Game {
           if (enemy.health <= 0) {
             this.onEnemyKilled(enemy);
           }
-        }
-      });
 
-      // Check enemy projectiles
+          // projectile destroyed — stop checking further
+          break;
+        }
+      }
+
+      // Check enemy projectiles (brute force for now)
       enemies.forEach((enemy) => {
         if (enemy.getProjectiles) {
           enemy.getProjectiles().forEach((enemyProjectile) => {
@@ -369,12 +462,17 @@ class Game {
     this.weaponManager.clear();
   }
 
+  // Stable animation loop: avoid creating a new closure every frame
   animate() {
-    requestAnimationFrame(() => this.animate());
+    // schedule next frame
+    this._rafId = requestAnimationFrame(this._boundAnimate);
 
     const deltaTime = this.clock.getDelta();
     this.update(deltaTime);
     this.renderer.render(this.scene, this.camera);
+
+    // update FPS monitor if enabled
+    if (this._fpsTick) this._fpsTick();
   }
 }
 
