@@ -24,22 +24,27 @@ class SpywareVirus extends BaseEnemy {
 
     // Main body - crystalline structure
     const angularVertices = new Float32Array([
-      0, 1.5, 0, // top
-      1, 0, 1, // front-right
-      -1, 0, 1, // front-left
-      1, 0, -1, // back-right
-      -1, 0, -1, // back-left
-      0, -1.5, 0, // bottom
+      0,
+      1.5,
+      0, // top
+      1,
+      0,
+      1, // front-right
+      -1,
+      0,
+      1, // front-left
+      1,
+      0,
+      -1, // back-right
+      -1,
+      0,
+      -1, // back-left
+      0,
+      -1.5,
+      0, // bottom
     ]);
     const angularIndices = [
-      0, 1, 2,
-      0, 2, 4,
-      0, 4, 3,
-      0, 3, 1,
-      5, 2, 1,
-      5, 4, 2,
-      5, 3, 4,
-      5, 1, 3,
+      0, 1, 2, 0, 2, 4, 0, 4, 3, 0, 3, 1, 5, 2, 1, 5, 4, 2, 5, 3, 4, 5, 1, 3,
     ];
 
     const geometry = new THREE.BufferGeometry();

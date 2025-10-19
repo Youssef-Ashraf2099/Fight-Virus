@@ -417,14 +417,20 @@ class Environment {
         this.mapCache.set(config.key, { map });
         console.log(`   ✅ Preloaded environment: ${config.key}`);
       } catch (error) {
-        console.warn(`   ⚠️ Failed to preload environment ${config.key}:`, error);
+        console.warn(
+          `   ⚠️ Failed to preload environment ${config.key}:`,
+          error
+        );
       } finally {
         this._idlePreloadHandle = null;
         this._scheduleNextPreload(160);
       }
     };
 
-    if (typeof window !== "undefined" && typeof window.requestIdleCallback === "function") {
+    if (
+      typeof window !== "undefined" &&
+      typeof window.requestIdleCallback === "function"
+    ) {
       this._idlePreloadHandle = window.requestIdleCallback(() => buildMap());
     } else {
       this._pendingBuildTimeout = setTimeout(() => {
@@ -439,7 +445,11 @@ class Environment {
       clearTimeout(this._preloadTimer);
       this._preloadTimer = null;
     }
-    if (this._idlePreloadHandle && typeof window !== "undefined" && typeof window.cancelIdleCallback === "function") {
+    if (
+      this._idlePreloadHandle &&
+      typeof window !== "undefined" &&
+      typeof window.cancelIdleCallback === "function"
+    ) {
       window.cancelIdleCallback(this._idlePreloadHandle);
       this._idlePreloadHandle = null;
     }
