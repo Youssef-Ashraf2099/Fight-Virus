@@ -25,6 +25,11 @@ class Environment {
     this.nextBaseFloorHeight = 0;
     this.currentEnvironment = null; // Track current environment for spectator mode
     this.interactiveMode = true;
+    this.mapCache = new Map();
+    this._preloadQueue = [];
+    this._preloadTimer = null;
+    this._idlePreloadHandle = null;
+    this._pendingBuildTimeout = null;
 
     this.phaseConfigs = [
       { key: "cpu", factory: () => new CPUEnvironment(this) },
@@ -40,6 +45,7 @@ class Environment {
     ];
 
     this.setPhase(0);
+    this._preparePreloadQueue();
   }
 
   createLightingRig() {
@@ -134,7 +140,7 @@ class Environment {
     return this.interactiveMode;
   }
 
-  setPhase(index) {
+  setPhase(index, forceReload = false) {
     const clamped = Math.max(0, Math.min(this.phaseConfigs.length - 1, index));
 
     if (this.transitionState) {
@@ -146,98 +152,86 @@ class Environment {
     );
     console.log(`   Current phase index: ${this.phaseIndex}`);
 
-    // Allow re-setting the same phase (for spectator mode)
-    // if (clamped === this.phaseIndex) {
-    //   return false;
-    // }
+    if (!forceReload && clamped === this.phaseIndex && this.currentMap) {
+      console.log("   Phase unchanged; skipping rebuild");
+      return false;
+    }
 
     const config = this.phaseConfigs[clamped];
     console.log(`   Config key: ${config.key}`);
 
-    let newMap;
-    try {
-      newMap = config.factory();
-      console.log(
-        `   ✅ Factory created map: ${newMap.constructor.name}, displayName: ${newMap.displayName}`
-      );
-    } catch (error) {
-      console.error(`   ❌ Error creating environment:`, error);
-      return false;
+    const prevMap = this.currentMap;
+
+    let cachedEntry = this.mapCache.get(config.key);
+    const prevMapWasCached = cachedEntry && cachedEntry.map === prevMap;
+
+    if (forceReload && cachedEntry) {
+      console.log("   Force reloading map; disposing cached instance");
+      this._disposeMap(cachedEntry.map);
+      this.mapCache.delete(config.key);
+      cachedEntry = null;
+    }
+
+    let newMap = cachedEntry ? cachedEntry.map : null;
+
+    if (!newMap) {
+      try {
+        newMap = config.factory();
+        console.log(
+          `   ✅ Factory created map: ${newMap.constructor.name}, displayName: ${newMap.displayName}`
+        );
+      } catch (error) {
+        console.error(`   ❌ Error creating environment:`, error);
+        return false;
+      }
+
+      console.log(`   Building new map instance...`);
+      newMap.build(this.mapGroup);
+      console.log(`   ✅ Map built successfully`);
+      this.mapCache.set(config.key, { map: newMap });
+    } else {
+      console.log("   Reusing cached map instance");
+      if (typeof newMap.onEnter === "function") {
+        newMap.onEnter();
+      }
+    }
+
+    if (prevMap && prevMap !== newMap) {
+      console.log(`   Deactivating previous map: ${prevMap.displayName}`);
+      if (!prevMapWasCached && typeof prevMap.onExit === "function") {
+        prevMap.onExit();
+      }
+      if (prevMap.group) {
+        prevMap.group.visible = false;
+      }
+    }
+
+    if (newMap.group) {
+      newMap.group.visible = true;
+      newMap.group.position.set(0, 0, 0);
+      newMap.group.scale.setScalar(1);
+      newMap.group.rotation.set(0, 0, 0);
     }
 
     const palette = newMap.getPalette();
 
-    const prevMap = this.currentMap;
-    if (prevMap) {
-      console.log(`   Cleaning up previous map: ${prevMap.displayName}`);
-      this.previousMap = prevMap;
-    }
-
-    console.log(`   Building new map...`);
-    newMap.build(this.mapGroup);
-    console.log(`   ✅ Map built successfully`);
-
-    const isInitialMap = !prevMap || clamped !== this.phaseIndex;
     this.currentMap = newMap;
-    this.currentEnvironment = newMap; // Track for spectator mode
+    this.currentEnvironment = newMap;
     this.phaseIndex = clamped;
     this.currentPhaseName = newMap.displayName;
     this.applyPalette(palette);
 
-    if (isInitialMap) {
-      if (newMap.group) {
-        newMap.group.position.set(0, 0, 0);
-        newMap.group.scale.setScalar(1);
-        newMap.group.rotation.set(0, 0, 0);
-      }
-      if (prevMap) {
-        prevMap.dispose();
-      }
-      this.physicsMap = newMap;
-      this.physicsColliders = newMap.getColliders();
-      this.baseFloorHeight =
-        typeof newMap.getBaseFloorHeight === "function"
-          ? newMap.getBaseFloorHeight()
-          : 0;
-      this.transitionState = null;
-      this.previousMap = null;
-      this.nextPhysicsColliders = [];
-      this.nextBaseFloorHeight = 0;
-      return true;
-    }
-
-    if (newMap.group) {
-      newMap.group.position.set(0, -90, 0);
-      newMap.group.scale.setScalar(0.6);
-      newMap.group.rotation.set(0, 0, 0);
-    }
-
-    this.physicsMap = this.previousMap;
-    this.physicsColliders = this.previousMap
-      ? this.previousMap.getColliders()
-      : [];
+    this.physicsMap = newMap;
+    this.physicsColliders = newMap.getColliders();
     this.baseFloorHeight =
-      this.previousMap &&
-      typeof this.previousMap.getBaseFloorHeight === "function"
-        ? this.previousMap.getBaseFloorHeight()
-        : 0;
-
-    this.nextPhysicsColliders = newMap.getColliders();
-    this.nextBaseFloorHeight =
       typeof newMap.getBaseFloorHeight === "function"
         ? newMap.getBaseFloorHeight()
         : 0;
-
-    this.transitionState = {
-      elapsed: 0,
-      duration: 2.8,
-      incoming: newMap,
-      outgoing: this.previousMap,
-    };
-
-    if (this.interactiveMode) {
-      this._forceCompleteTransition();
-    }
+    this.transitionState = null;
+    this.previousMap = null;
+    this.nextPhysicsColliders = [];
+    this.nextBaseFloorHeight = 0;
+    this._preparePreloadQueue();
 
     return true;
   }
@@ -344,6 +338,125 @@ class Environment {
     this.nextBaseFloorHeight = 0;
     this.previousMap = null;
     this.transitionState = null;
+  }
+
+  _disposeMap(map) {
+    if (!map) {
+      return;
+    }
+
+    try {
+      if (typeof map.dispose === "function") {
+        map.dispose();
+      } else if (map.group && this.mapGroup) {
+        this.mapGroup.remove(map.group);
+      }
+    } catch (error) {
+      console.warn("Error disposing map", error);
+    }
+  }
+
+  _preparePreloadQueue() {
+    this._clearPreloadTimers();
+    this._preloadQueue = [];
+    for (let i = 0; i < this.phaseConfigs.length; i++) {
+      if (i === this.phaseIndex) {
+        continue;
+      }
+      const config = this.phaseConfigs[i];
+      if (!config || this.mapCache.has(config.key)) {
+        continue;
+      }
+      this._preloadQueue.push({ index: i, config });
+    }
+
+    if (this._preloadQueue.length) {
+      this._scheduleNextPreload(300);
+    }
+  }
+
+  _scheduleNextPreload(delay = 120) {
+    if (!this._preloadQueue.length) {
+      this._clearPreloadTimers();
+      return;
+    }
+
+    this._clearPreloadTimers();
+    this._preloadTimer = setTimeout(() => {
+      this._preloadTimer = null;
+      this._preloadNextMap();
+    }, Math.max(0, delay));
+  }
+
+  _preloadNextMap() {
+    if (!this._preloadQueue.length) {
+      return;
+    }
+
+    const { config } = this._preloadQueue.shift();
+    if (!config) {
+      this._scheduleNextPreload();
+      return;
+    }
+
+    if (this.mapCache.has(config.key)) {
+      this._scheduleNextPreload();
+      return;
+    }
+
+    const buildMap = () => {
+      try {
+        const map = config.factory();
+        map.build(this.mapGroup);
+        if (map.group) {
+          map.group.visible = false;
+        }
+        if (typeof map.onExit === "function") {
+          map.onExit();
+        }
+        this.mapCache.set(config.key, { map });
+        console.log(`   ✅ Preloaded environment: ${config.key}`);
+      } catch (error) {
+        console.warn(
+          `   ⚠️ Failed to preload environment ${config.key}:`,
+          error
+        );
+      } finally {
+        this._idlePreloadHandle = null;
+        this._scheduleNextPreload(160);
+      }
+    };
+
+    if (
+      typeof window !== "undefined" &&
+      typeof window.requestIdleCallback === "function"
+    ) {
+      this._idlePreloadHandle = window.requestIdleCallback(() => buildMap());
+    } else {
+      this._pendingBuildTimeout = setTimeout(() => {
+        this._pendingBuildTimeout = null;
+        buildMap();
+      }, 0);
+    }
+  }
+
+  _clearPreloadTimers() {
+    if (this._preloadTimer) {
+      clearTimeout(this._preloadTimer);
+      this._preloadTimer = null;
+    }
+    if (
+      this._idlePreloadHandle &&
+      typeof window !== "undefined" &&
+      typeof window.cancelIdleCallback === "function"
+    ) {
+      window.cancelIdleCallback(this._idlePreloadHandle);
+      this._idlePreloadHandle = null;
+    }
+    if (this._pendingBuildTimeout) {
+      clearTimeout(this._pendingBuildTimeout);
+      this._pendingBuildTimeout = null;
+    }
   }
 
   updateBackground(deltaTime) {

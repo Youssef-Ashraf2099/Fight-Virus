@@ -23,20 +23,37 @@ class SpywareVirus extends BaseEnemy {
     // Create stealthy, angular virus
 
     // Main body - crystalline structure
-    const vertices = [];
-    const faces = [];
+    const angularVertices = new Float32Array([
+      0,
+      1.5,
+      0, // top
+      1,
+      0,
+      1, // front-right
+      -1,
+      0,
+      1, // front-left
+      1,
+      0,
+      -1, // back-right
+      -1,
+      0,
+      -1, // back-left
+      0,
+      -1.5,
+      0, // bottom
+    ]);
+    const angularIndices = [
+      0, 1, 2, 0, 2, 4, 0, 4, 3, 0, 3, 1, 5, 2, 1, 5, 4, 2, 5, 3, 4, 5, 1, 3,
+    ];
 
-    // Create custom geometry - angular stealth shape
-    vertices.push(
-      new THREE.Vector3(0, 1.5, 0), // top
-      new THREE.Vector3(1, 0, 1), // front-right
-      new THREE.Vector3(-1, 0, 1), // front-left
-      new THREE.Vector3(1, 0, -1), // back-right
-      new THREE.Vector3(-1, 0, -1), // back-left
-      new THREE.Vector3(0, -1.5, 0) // bottom
+    const geometry = new THREE.BufferGeometry();
+    geometry.setIndex(angularIndices);
+    geometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(angularVertices, 3)
     );
-
-    const geometry = new THREE.ConvexGeometry(vertices);
+    geometry.computeVertexNormals();
     const material = this.createGlowMaterial(this.color, 0.7);
 
     this.mesh = new THREE.Mesh(geometry, material);

@@ -228,7 +228,7 @@ class SpectatorMode {
         this.currentPhase = phase;
 
         console.log("Calling setPhase with:", phase);
-        const loaded = this.environment.setPhase(phase);
+        const loaded = this.environment.setPhase(phase, true);
         if (!loaded) {
           throw new Error("Environment refused to load phase " + phase);
         }

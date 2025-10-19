@@ -288,6 +288,8 @@ class GameMain {
     const moveInput = this.inputManager.getMoveInput();
     this.player.update(deltaTime, moveInput);
 
+    const playerPosition = this.player.getPosition();
+
     // In FPS mode, player controls camera position and rotation
     // No need to manually update camera - player does it
 
@@ -301,8 +303,8 @@ class GameMain {
     }
 
     this.weaponManager.update(deltaTime);
-    this.enemyManager.update(deltaTime);
-    this.environment.update(deltaTime, this.player.getPosition());
+    this.enemyManager.update(deltaTime, playerPosition);
+    this.environment.update(deltaTime, playerPosition);
     this.particleSystem.update(deltaTime);
 
     this.checkCollisions();
@@ -320,7 +322,7 @@ class GameMain {
 
     // Update minimap
     this.uiManager.updateMinimap(
-      this.player.getPosition(),
+      playerPosition,
       this.enemyManager.getEnemies(),
       this.environment.getCurrentPhaseName()
     );
