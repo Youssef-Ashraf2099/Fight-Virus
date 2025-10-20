@@ -49,6 +49,11 @@ class Player {
 
     this.time = 0;
 
+    // Contact damage cooldown (ms) to prevent per-frame instant kills when
+    // enemies overlap the player. Default: 1000ms (1 second).
+    this.contactDamageCooldownMs = 1000;
+    this._lastContactDamageTime = 0;
+
     this.setupMouseLook();
     this.createWeaponViewModel();
 
@@ -703,14 +708,26 @@ class Player {
   }
 
   useSpecialAbility() {
-    if (this.specialCooldown > 0 || this.energy < this.specialEnergyCost) {
-      return false;
-    }
+    // Remove cooldown gating for the special ability. Only require sufficient energy.
+    if (this.energy < this.specialEnergyCost) return false;
 
     this.energy -= this.specialEnergyCost;
-    this.specialCooldown = this.specialCooldownMax;
+    // Do not set specialCooldown so player can use EMP repeatedly as long as they have energy.
+    this.specialCooldown = 0;
 
     return true;
+  }
+
+  // Contact damage cooldown helpers
+  canTakeContactDamage() {
+    const now = performance.now();
+    return (
+      now - (this._lastContactDamageTime || 0) >= this.contactDamageCooldownMs
+    );
+  }
+
+  recordContactDamageTime() {
+    this._lastContactDamageTime = performance.now();
   }
 
   applyKnockback(enemyPosition) {

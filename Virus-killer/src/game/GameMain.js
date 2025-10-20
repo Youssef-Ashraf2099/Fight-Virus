@@ -136,6 +136,20 @@ class GameMain {
       this.renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
+    // Debug: toggle static enemies for testing with F6
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "F6") {
+        this._debugStaticEnemies = !this._debugStaticEnemies;
+        if (this.enemyManager)
+          this.enemyManager.setStaticMode(this._debugStaticEnemies);
+        console.log("Debug static enemies:", this._debugStaticEnemies);
+        this.uiManager.showMessage(
+          `Static enemies: ${this._debugStaticEnemies ? "ON" : "OFF"}`,
+          1200
+        );
+      }
+    });
+
     // Weapon switching
     this.inputManager.on("weapon1", () => this.weaponManager.switchWeapon(0));
     this.inputManager.on("weapon2", () => this.weaponManager.switchWeapon(1));
@@ -187,7 +201,22 @@ class GameMain {
         console.log("Resetting player...");
         this.player.reset();
 
+        // Ensure enemy manager knows last player position so enemies won't spawn
+        // exactly on top of the player when the first wave is queued.
+        if (this.enemyManager) {
+          const playerPos = this.player.getPosition();
+          this.enemyManager.lastPlayerPosition = playerPos.clone();
+        }
+
         console.log("Starting wave...");
+        // If running in debug/test mode, start waves with static enemies
+        // so they don't immediately attack or move. You can toggle this
+        // by setting `this.enemyManager.setStaticMode(true)` from the console
+        // or adding a UI toggle later.
+        if (this.enemyManager && this._debugStaticEnemies) {
+          this.enemyManager.setStaticMode(true);
+        }
+
         this.waveManager.startWave();
         this.environment.setPhaseByWave(this.waveManager.getCurrentWave());
         this.environment.setInteractiveMode(true);
@@ -379,7 +408,13 @@ class GameMain {
 
     enemies.forEach((enemy) => {
       if (this.collisionManager.checkCollision(enemy, this.player)) {
-        this.player.takeDamage(enemy.contactDamage);
+        // Apply contact damage only if player is not on contact cooldown
+        if (this.player.canTakeContactDamage()) {
+          // Reduce contact damage to avoid instant kills (use 50% by default)
+          const reduced = Math.max(1, Math.floor(enemy.contactDamage * 0.5));
+          this.player.takeDamage(reduced);
+          this.player.recordContactDamageTime();
+        }
         this.player.applyKnockback(enemy.getPosition());
         this.particleSystem.createImpact(playerPos, 0xff0000, 15);
       }

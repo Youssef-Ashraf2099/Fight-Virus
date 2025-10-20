@@ -5,10 +5,17 @@ class EnemyManager {
     this.environment = environment || null;
     this.enemies = [];
     this.spawnQueue = [];
-    this.maxSpawnsPerFrame = 5;
+    // Spawn throttling: prefer a small time budget (ms) per frame for creating
+    // enemies instead of a fixed-per-frame count. This smooths creation cost
+    // and avoids long frame hitches when many enemies are queued.
+    this.maxSpawnsPerFrame = 3; // kept as a fallback
+    this.spawnTimeBudgetMs = 6; // milliseconds per frame allowed for spawning
     this.safeSpawnDistance = 18;
     this.lastPlayerPosition = null;
     this._spawnOffset = new THREE.Vector3();
+    // Debug/testing flags
+    // When staticMode is true, enemies won't move or deal contact damage.
+    this.staticMode = false;
     this.enemyClasses = {
       trojan: TrojanVirus,
       worm: WormVirus,
@@ -57,7 +64,68 @@ class EnemyManager {
     }
 
     this.enemies.push(enemy);
+
+    // If static/testing mode is enabled, make this enemy inert so it won't
+    // immediately move/attack the player during debugging sessions.
+    if (this.staticMode && enemy) {
+      // Store originals so we can restore later
+      if (typeof enemy.updateBehavior === "function") {
+        enemy._originalUpdateBehavior = enemy.updateBehavior.bind(enemy);
+      }
+      enemy._originalSpeed = enemy.speed;
+      enemy._originalContactDamage = enemy.contactDamage;
+      enemy._originalDamage = enemy.damage;
+
+      // Make inert
+      enemy.updateBehavior = function () {};
+      enemy.speed = 0;
+      enemy.contactDamage = 0;
+      enemy.damage = 0;
+      enemy.isStaticDebug = true;
+    }
     return enemy;
+  }
+
+  // Toggle static/debug mode for all current and future enemies. When enabled,
+  // enemies stop moving and won't deal contact damage. When disabled, original
+  // behavior is restored where possible.
+  setStaticMode(enabled) {
+    this.staticMode = !!enabled;
+    this.enemies.forEach((enemy) => {
+      if (this.staticMode) {
+        if (typeof enemy.updateBehavior === "function") {
+          enemy._originalUpdateBehavior = enemy.updateBehavior.bind(enemy);
+        }
+        enemy._originalSpeed = enemy.speed;
+        enemy._originalContactDamage = enemy.contactDamage;
+        enemy._originalDamage = enemy.damage;
+
+        enemy.updateBehavior = function () {};
+        enemy.speed = 0;
+        enemy.contactDamage = 0;
+        enemy.damage = 0;
+        enemy.isStaticDebug = true;
+      } else {
+        // Restore original values if present
+        if (enemy._originalUpdateBehavior) {
+          enemy.updateBehavior = enemy._originalUpdateBehavior;
+          delete enemy._originalUpdateBehavior;
+        }
+        if (typeof enemy._originalSpeed === "number") {
+          enemy.speed = enemy._originalSpeed;
+          delete enemy._originalSpeed;
+        }
+        if (typeof enemy._originalContactDamage === "number") {
+          enemy.contactDamage = enemy._originalContactDamage;
+          delete enemy._originalContactDamage;
+        }
+        if (typeof enemy._originalDamage === "number") {
+          enemy.damage = enemy._originalDamage;
+          delete enemy._originalDamage;
+        }
+        delete enemy.isStaticDebug;
+      }
+    });
   }
 
   spawnRandomEnemy(position, difficulty = 1, allowedTypes = null) {
@@ -131,17 +199,16 @@ class EnemyManager {
         request.delay = Math.max(0, request.delay - deltaTime);
       });
 
+      const start = performance.now();
       let spawnsThisFrame = 0;
-      for (let i = 0; i < this.spawnQueue.length; ) {
-        if (spawnsThisFrame >= this.maxSpawnsPerFrame) {
-          break;
-        }
+      // Drain queue while under time budget and under fallback max count
+      while (this.spawnQueue.length > 0) {
+        const elapsed = performance.now() - start;
+        if (elapsed >= this.spawnTimeBudgetMs) break;
+        if (spawnsThisFrame >= this.maxSpawnsPerFrame) break;
 
-        const request = this.spawnQueue[i];
-        if (request.delay > 0) {
-          i++;
-          continue;
-        }
+        const request = this.spawnQueue[0];
+        if (request.delay > 0) break;
 
         const spawnPosition = request.position.clone();
         if (playerPosition) {
@@ -149,7 +216,7 @@ class EnemyManager {
         }
 
         this.spawnEnemy(request.type, spawnPosition, request.difficulty);
-        this.spawnQueue.splice(i, 1);
+        this.spawnQueue.shift();
         spawnsThisFrame++;
       }
     }

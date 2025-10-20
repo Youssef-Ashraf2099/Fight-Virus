@@ -15,6 +15,11 @@ class WormVirus extends BaseEnemy {
     this.segmentCount = 8;
     this.segments = [];
 
+    // Reusable temp vectors to avoid allocations in update loop
+    this._tmpDir = new THREE.Vector3();
+    this._tmpPerp = new THREE.Vector3();
+    this._previousPosIndex = 0;
+
     this.createMesh();
   }
 
@@ -83,11 +88,13 @@ class WormVirus extends BaseEnemy {
     this.group.position.copy(this.position);
     this.scene.add(this.group);
 
-    // Store previous positions for segment following
-    this.previousPositions = [];
-    for (let i = 0; i < this.segmentCount + 5; i++) {
-      this.previousPositions.push(this.position.clone());
+    // Preallocate a ring buffer of previous positions for segment following
+    const historyLength = this.segmentCount + 10;
+    this.previousPositions = new Array(historyLength);
+    for (let i = 0; i < historyLength; i++) {
+      this.previousPositions[i] = this.position.clone();
     }
+    this._previousPosIndex = 0;
   }
 
   animate(deltaTime) {
@@ -132,24 +139,25 @@ class WormVirus extends BaseEnemy {
       return;
     }
 
-    // Snake-like movement
-    const direction = new THREE.Vector3()
-      .subVectors(playerPosition, this.position)
-      .normalize();
+    // Snake-like movement (reuse temp vectors)
+    const dir = this._tmpDir;
+    dir.copy(playerPosition).sub(this.position).normalize();
 
-    // Add sinusoidal movement for snake-like motion
-    const perpendicular = new THREE.Vector3(-direction.z, 0, direction.x);
+    const perp = this._tmpPerp;
+    perp.set(-dir.z, 0, dir.x);
+
     const wave = Math.sin(this.time * 5) * 2;
 
-    const movement = direction.multiplyScalar(this.speed * deltaTime);
-    movement.add(perpendicular.multiplyScalar(wave * deltaTime));
+    // movement = dir * speed + perp * wave
+    dir.multiplyScalar(this.speed * deltaTime);
+    perp.multiplyScalar(wave * deltaTime);
+    this.position.add(dir).add(perp);
 
-    this.position.add(movement);
-
-    // Update position history
-    this.previousPositions.unshift(this.position.clone());
-    if (this.previousPositions.length > this.segmentCount + 10) {
-      this.previousPositions.pop();
-    }
+    // Update ring buffer of previous positions
+    this._previousPosIndex =
+      (this._previousPosIndex - 1 + this.previousPositions.length) %
+      this.previousPositions.length;
+    const writeIndex = this._previousPosIndex;
+    this.previousPositions[writeIndex].copy(this.position);
   }
 }

@@ -23,6 +23,9 @@ class BaseEnemy {
     this.group = new THREE.Group();
     this.time = 0;
     this.alive = true;
+
+    // Reusable temporary vectors to avoid allocations in update loop
+    this._tmpDirection = new THREE.Vector3();
   }
 
   update(deltaTime, playerPosition) {
@@ -47,11 +50,11 @@ class BaseEnemy {
 
   updateBehavior(deltaTime, playerPosition) {
     // Default behavior: move toward player
-    const direction = new THREE.Vector3()
-      .subVectors(playerPosition, this.position)
-      .normalize();
+    if (!playerPosition) return;
 
-    this.position.add(direction.multiplyScalar(this.speed * deltaTime));
+    const dir = this._tmpDirection;
+    dir.copy(playerPosition).sub(this.position).normalize();
+    this.position.add(dir.multiplyScalar(this.speed * deltaTime));
   }
 
   animate(deltaTime) {
