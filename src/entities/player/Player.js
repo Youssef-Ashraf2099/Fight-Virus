@@ -57,8 +57,13 @@ class Player {
 
     this.time = 0;
 
+    // Damage indicator system
+    this.damageIndicators = [];
+    this.damageVignetteIntensity = 0;
+
     this.setupMouseLook();
     this.createWeaponViewModel();
+    this.createDamageIndicatorElements();
 
     if (this.environment) {
       this.currentGroundHeight = this.environment.getFloorHeightAt(
@@ -143,6 +148,71 @@ class Player {
     this.setWeaponViewModel("pulseCannon");
 
     console.log("✓ Weapon viewmodel system initialized");
+  }
+
+  createDamageIndicatorElements() {
+    // Create damage vignette overlay with radial pulse
+    this.damageVignette = document.createElement("div");
+    this.damageVignette.id = "damageVignette";
+    this.damageVignette.style.cssText = `
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 1000;
+      background: radial-gradient(circle at center, transparent 0%, transparent 40%, rgba(255, 0, 0, 0) 60%, rgba(255, 0, 0, 0.6) 100%);
+      opacity: 0;
+      transition: opacity 0.15s ease-out;
+    `;
+    document.body.appendChild(this.damageVignette);
+
+    // Create directional damage indicators container
+    this.damageDirectionContainer = document.createElement("div");
+    this.damageDirectionContainer.id = "damageDirectionContainer";
+    this.damageDirectionContainer.style.cssText = `
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 1001;
+    `;
+    document.body.appendChild(this.damageDirectionContainer);
+
+    // Add CSS animations
+    if (!document.getElementById("damageIndicatorStyles")) {
+      const style = document.createElement("style");
+      style.id = "damageIndicatorStyles";
+      style.textContent = `
+        @keyframes damageFlash {
+          0% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        @keyframes damageArrowPulse {
+          0% {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1.5);
+            opacity: 0;
+          }
+        }
+        .damage-arrow {
+          position: absolute;
+          width: 0;
+          height: 0;
+          border-left: 20px solid transparent;
+          border-right: 20px solid transparent;
+          border-bottom: 40px solid rgba(255, 0, 0, 0.9);
+          filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.8));
+          animation: damageArrowPulse 0.6s ease-out forwards;
+          pointer-events: none;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    console.log("✓ Damage indicator system initialized");
   }
 
   setWeaponViewModel(weaponId) {
@@ -705,7 +775,7 @@ class Player {
     // Camera shake could be added here
   }
 
-  takeDamage(amount) {
+  takeDamage(amount, damageSourcePosition = null) {
     // Check invulnerability frames to prevent instant death from multiple hits
     const currentTime = performance.now() / 1000;
     if (
@@ -730,6 +800,9 @@ class Player {
       this.isInvulnerable = false;
     }, this.invulnerabilityDuration * 1000);
 
+    // Visual damage feedback with direction
+    this.showDamageIndicators(finalDamage, damageSourcePosition);
+
     // Screen flash effect with intensity based on damage
     const flashIntensity = Math.min(0.5, finalDamage / 50);
     const flash = document.createElement("div");
@@ -744,6 +817,115 @@ class Player {
     `;
     document.body.appendChild(flash);
     setTimeout(() => flash.remove(), 200);
+  }
+
+  showDamageIndicators(damage, sourcePosition) {
+    // Show damage vignette
+    if (this.damageVignette) {
+      const intensity = Math.min(1, damage / 100);
+      this.damageVignetteIntensity = intensity;
+      this.damageVignette.style.opacity = intensity.toString();
+
+      // Fade out vignette
+      setTimeout(() => {
+        if (this.damageVignette) {
+          this.damageVignetteIntensity = 0;
+          this.damageVignette.style.opacity = "0";
+        }
+      }, 300);
+    }
+
+    // Show directional arrow if we know the source
+    if (sourcePosition) {
+      this.createDirectionalArrow(sourcePosition);
+    }
+
+    // Camera shake effect
+    this.applyDamageShake(damage);
+  }
+
+  createDirectionalArrow(sourcePosition) {
+    if (!this.damageDirectionContainer) return;
+
+    // Calculate direction from player to damage source
+    const direction = new THREE.Vector3()
+      .subVectors(sourcePosition, this.position)
+      .normalize();
+
+    // Convert 3D direction to screen space angle
+    // Get camera's right and forward vectors
+    const cameraForward = new THREE.Vector3();
+    const cameraRight = new THREE.Vector3();
+    
+    this.camera.getWorldDirection(cameraForward);
+    cameraRight.crossVectors(cameraForward, this.camera.up).normalize();
+
+    // Project damage direction onto camera plane
+    const forwardDot = direction.dot(cameraForward);
+    const rightDot = direction.dot(cameraRight);
+
+    // Calculate angle in screen space (0 = top, 90 = right, 180 = bottom, 270 = left)
+    let angle = Math.atan2(rightDot, forwardDot) * (180 / Math.PI);
+
+    // Create arrow element
+    const arrow = document.createElement("div");
+    arrow.className = "damage-arrow";
+
+    // Position arrow around the edge of screen
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    const radius = Math.min(centerX, centerY) * 0.7; // 70% from center
+
+    const radians = (angle - 90) * (Math.PI / 180); // -90 to point arrow correctly
+    const x = centerX + Math.cos(radians) * radius;
+    const y = centerY + Math.sin(radians) * radius;
+
+    arrow.style.left = `${x}px`;
+    arrow.style.top = `${y}px`;
+    arrow.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+
+    this.damageDirectionContainer.appendChild(arrow);
+
+    // Remove after animation
+    setTimeout(() => {
+      if (arrow && arrow.parentNode) {
+        arrow.remove();
+      }
+    }, 600);
+
+    // Track for cleanup
+    this.damageIndicators.push({
+      element: arrow,
+      time: performance.now() / 1000,
+    });
+  }
+
+  createDamageNumber(damage) {
+    // This method is now removed - we use arrows instead
+  }
+
+  applyDamageShake(damage) {
+    // Camera shake intensity based on damage
+    const shakeIntensity = Math.min(0.05, damage / 500);
+    const shakeDuration = 0.2;
+    const startTime = performance.now() / 1000;
+
+    const shake = () => {
+      const elapsed = performance.now() / 1000 - startTime;
+      if (elapsed < shakeDuration) {
+        const progress = 1 - elapsed / shakeDuration;
+        const shakeX = (Math.random() - 0.5) * shakeIntensity * progress;
+        const shakeY = (Math.random() - 0.5) * shakeIntensity * progress;
+
+        // Apply shake to camera rotation slightly
+        this.camera.rotation.x += shakeY;
+        this.camera.rotation.z += shakeX;
+
+        requestAnimationFrame(shake);
+      }
+    };
+
+    shake();
   }
 
   useSpecialAbility() {
@@ -843,5 +1025,22 @@ class Player {
     this.specialCooldown = 0;
     this.isInvulnerable = false;
     this.lastDamageTime = 0;
+
+    // Reset damage indicators
+    if (this.damageVignette) {
+      this.damageVignette.style.opacity = "0";
+    }
+    this.damageVignetteIntensity = 0;
+  }
+
+  destroy() {
+    // Cleanup damage indicator elements
+    if (this.damageVignette && this.damageVignette.parentNode) {
+      this.damageVignette.remove();
+    }
+    if (this.damageDirectionContainer && this.damageDirectionContainer.parentNode) {
+      this.damageDirectionContainer.remove();
+    }
+    this.damageIndicators = [];
   }
 }

@@ -445,7 +445,7 @@ class GameMain {
         this.player.applyKnockback(direction.clone(), 9 + overlap * 8);
 
         // Apply contact damage (invulnerability frames handled by player)
-        this.player.takeDamage(enemy.contactDamage);
+        this.player.takeDamage(enemy.contactDamage, enemyPos);
         this.particleSystem.createImpact(
           this.player.getPosition(),
           0xff0000,
@@ -458,7 +458,8 @@ class GameMain {
           if (
             this.collisionManager.checkCollision(enemyProjectile, this.player)
           ) {
-            this.player.takeDamage(enemyProjectile.damage);
+            const projectilePos = enemyProjectile.getPosition();
+            this.player.takeDamage(enemyProjectile.damage, projectilePos);
             this.particleSystem.createImpact(
               this.player.getPosition(),
               0xff0000,
@@ -474,7 +475,7 @@ class GameMain {
         if (aoeResult && aoeResult.type === "aoe") {
           const aoeDistance = enemyPos.distanceTo(currentPlayerPos);
           if (aoeDistance <= aoeResult.radius) {
-            this.player.takeDamage(aoeResult.damage);
+            this.player.takeDamage(aoeResult.damage, enemyPos);
             this.particleSystem.createExplosion(enemyPos, enemy.color, 30);
           }
         }
