@@ -25,6 +25,13 @@ class MemoryEnvironment extends BaseEnvironmentMap {
     this.buildCoolantManifold();
     this.buildDataBuses();
     this.buildMaintenanceBridge();
+    this.buildBoundaryWalls();
+    this.buildCacheTowers();
+    this.buildMemoryControllers();
+    this.buildECCModules();
+    this.buildChannelIndicators();
+    this.buildCapacitorBanks();
+    this.buildAccessPlatforms();
   }
 
   buildBoardDeck() {
@@ -423,6 +430,559 @@ class MemoryEnvironment extends BaseEnvironmentMap {
       minZ: -40,
       maxZ: -28,
       height: 1.2,
+    });
+  }
+
+  buildBoundaryWalls() {
+    const wallMaterial = new THREE.MeshPhongMaterial({
+      color: 0x04273d,
+      emissive: 0x0a5080,
+      emissiveIntensity: 0.4,
+      shininess: 70,
+    });
+
+    const panelMaterial = new THREE.MeshPhongMaterial({
+      color: 0x0d4162,
+      emissive: 0x2598d8,
+      emissiveIntensity: 0.5,
+      transparent: true,
+      opacity: 0.7,
+    });
+
+    const wallHeight = 18;
+    const wallThickness = 2;
+
+    // North wall
+    const northWall = new THREE.Mesh(
+      new THREE.BoxGeometry(120, wallHeight, wallThickness),
+      wallMaterial.clone()
+    );
+    northWall.position.set(0, wallHeight / 2, -59);
+    northWall.castShadow = true;
+    northWall.receiveShadow = true;
+    this.group.add(northWall);
+
+    // South wall
+    const southWall = new THREE.Mesh(
+      new THREE.BoxGeometry(120, wallHeight, wallThickness),
+      wallMaterial.clone()
+    );
+    southWall.position.set(0, wallHeight / 2, 59);
+    southWall.castShadow = true;
+    southWall.receiveShadow = true;
+    this.group.add(southWall);
+
+    // East wall
+    const eastWall = new THREE.Mesh(
+      new THREE.BoxGeometry(wallThickness, wallHeight, 120),
+      wallMaterial.clone()
+    );
+    eastWall.position.set(59, wallHeight / 2, 0);
+    eastWall.castShadow = true;
+    eastWall.receiveShadow = true;
+    this.group.add(eastWall);
+
+    // West wall
+    const westWall = new THREE.Mesh(
+      new THREE.BoxGeometry(wallThickness, wallHeight, 120),
+      wallMaterial.clone()
+    );
+    westWall.position.set(-59, wallHeight / 2, 0);
+    westWall.castShadow = true;
+    westWall.receiveShadow = true;
+    this.group.add(westWall);
+
+    // Add glowing panels to walls
+    const panelPositions = [
+      { x: -40, z: -58, rot: 0 },
+      { x: -20, z: -58, rot: 0 },
+      { x: 0, z: -58, rot: 0 },
+      { x: 20, z: -58, rot: 0 },
+      { x: 40, z: -58, rot: 0 },
+      { x: -40, z: 58, rot: Math.PI },
+      { x: -20, z: 58, rot: Math.PI },
+      { x: 0, z: 58, rot: Math.PI },
+      { x: 20, z: 58, rot: Math.PI },
+      { x: 40, z: 58, rot: Math.PI },
+    ];
+
+    panelPositions.forEach((pos, idx) => {
+      const panel = new THREE.Mesh(
+        new THREE.BoxGeometry(8, 10, 0.4),
+        panelMaterial.clone()
+      );
+      panel.position.set(pos.x, 6, pos.z);
+      panel.rotation.y = pos.rot;
+      panel.castShadow = true;
+      this.group.add(panel);
+
+      this.addAnimator((delta, time) => {
+        panel.material.emissiveIntensity =
+          0.4 + Math.sin(time * 1.5 + idx * 0.5) * 0.2;
+      });
+    });
+
+    // Wall colliders
+    this.addCollider({
+      minX: -60,
+      maxX: 60,
+      minZ: -60,
+      maxZ: -58,
+      height: wallHeight,
+    });
+
+    this.addCollider({
+      minX: -60,
+      maxX: 60,
+      minZ: 58,
+      maxZ: 60,
+      height: wallHeight,
+    });
+
+    this.addCollider({
+      minX: 58,
+      maxX: 60,
+      minZ: -60,
+      maxZ: 60,
+      height: wallHeight,
+    });
+
+    this.addCollider({
+      minX: -60,
+      maxX: -58,
+      minZ: -60,
+      maxZ: 60,
+      height: wallHeight,
+    });
+  }
+
+  buildCacheTowers() {
+    const towerBaseMaterial = new THREE.MeshPhongMaterial({
+      color: 0x02314a,
+      emissive: 0x0c6ba8,
+      emissiveIntensity: 0.4,
+      shininess: 80,
+    });
+
+    const cacheMaterial = new THREE.MeshPhongMaterial({
+      color: 0x05456e,
+      emissive: 0x3ab8ff,
+      emissiveIntensity: 0.6,
+      transparent: true,
+      opacity: 0.85,
+    });
+
+    const positions = [
+      { x: -42, z: -42 },
+      { x: 42, z: -42 },
+      { x: -42, z: 42 },
+      { x: 42, z: 42 },
+    ];
+
+    positions.forEach((pos, idx) => {
+      const group = new THREE.Group();
+      group.position.set(pos.x, 0, pos.z);
+      this.group.add(group);
+
+      // Tower base
+      const base = new THREE.Mesh(
+        new THREE.CylinderGeometry(5, 6, 3, 8),
+        towerBaseMaterial.clone()
+      );
+      base.position.y = 1.5;
+      base.castShadow = true;
+      base.receiveShadow = true;
+      group.add(base);
+
+      // Cache levels
+      for (let i = 0; i < 4; i++) {
+        const cache = new THREE.Mesh(
+          new THREE.CylinderGeometry(4, 4.5, 2, 8),
+          cacheMaterial.clone()
+        );
+        cache.position.y = 3.5 + i * 2.5;
+        cache.castShadow = true;
+        cache.receiveShadow = true;
+        group.add(cache);
+
+        this.addAnimator((delta, time) => {
+          cache.rotation.y = time * (0.3 + i * 0.1);
+          cache.material.emissiveIntensity =
+            0.5 + Math.sin(time * 2 + i + idx) * 0.2;
+        });
+      }
+
+      // Top antenna
+      const antenna = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.3, 0.5, 4, 8),
+        new THREE.MeshPhongMaterial({
+          color: 0x1a8bc9,
+          emissive: 0x5dd4ff,
+          emissiveIntensity: 0.8,
+        })
+      );
+      antenna.position.y = 15;
+      antenna.castShadow = true;
+      group.add(antenna);
+
+      // Collider for tower
+      this.addCollider({
+        minX: pos.x - 5,
+        maxX: pos.x + 5,
+        minZ: pos.z - 5,
+        maxZ: pos.z + 5,
+        height: 13,
+      });
+    });
+  }
+
+  buildMemoryControllers() {
+    const controllerMaterial = new THREE.MeshPhongMaterial({
+      color: 0x033855,
+      emissive: 0x1892d8,
+      emissiveIntensity: 0.45,
+      shininess: 90,
+    });
+
+    const screenMaterial = new THREE.MeshPhongMaterial({
+      color: 0x44d4ff,
+      emissive: 0x6ef8ff,
+      emissiveIntensity: 1,
+      transparent: true,
+      opacity: 0.9,
+    });
+
+    const positions = [
+      { x: -48, z: 0, rot: Math.PI / 2 },
+      { x: 48, z: 0, rot: -Math.PI / 2 },
+    ];
+
+    positions.forEach((pos, idx) => {
+      const group = new THREE.Group();
+      group.position.set(pos.x, 0, pos.z);
+      group.rotation.y = pos.rot;
+      this.group.add(group);
+
+      // Controller housing
+      const housing = new THREE.Mesh(
+        new THREE.BoxGeometry(8, 10, 5),
+        controllerMaterial.clone()
+      );
+      housing.position.y = 5;
+      housing.castShadow = true;
+      housing.receiveShadow = true;
+      group.add(housing);
+
+      // Control screens
+      for (let i = 0; i < 3; i++) {
+        const screen = new THREE.Mesh(
+          new THREE.BoxGeometry(5, 2, 0.2),
+          screenMaterial.clone()
+        );
+        screen.position.set(0, 3 + i * 2.5, 2.6);
+        screen.castShadow = true;
+        group.add(screen);
+
+        this.addAnimator((delta, time) => {
+          screen.material.opacity = 0.7 + Math.sin(time * 3 + i + idx) * 0.2;
+        });
+      }
+
+      // Status lights
+      for (let i = 0; i < 4; i++) {
+        const light = new THREE.Mesh(
+          new THREE.SphereGeometry(0.3, 12, 12),
+          new THREE.MeshPhongMaterial({
+            color: 0x00ff88,
+            emissive: 0x00ff88,
+            emissiveIntensity: 1,
+          })
+        );
+        light.position.set(-3 + i * 2, 1, 2.6);
+        group.add(light);
+
+        this.addAnimator((delta, time) => {
+          const phase = time * 2 + i * 0.5;
+          light.material.emissiveIntensity = 0.5 + Math.sin(phase) * 0.5;
+        });
+      }
+
+      // Collider
+      this.addCollider({
+        minX: pos.x - 4,
+        maxX: pos.x + 4,
+        minZ: pos.z - 2.5,
+        maxZ: pos.z + 2.5,
+        height: 10,
+      });
+    });
+  }
+
+  buildECCModules() {
+    const eccMaterial = new THREE.MeshPhongMaterial({
+      color: 0x0a3d5c,
+      emissive: 0x2a9fdf,
+      emissiveIntensity: 0.5,
+      shininess: 85,
+    });
+
+    const positions = [
+      { x: -20, z: -30 },
+      { x: 20, z: -30 },
+      { x: -20, z: 30 },
+      { x: 20, z: 30 },
+    ];
+
+    positions.forEach((pos, idx) => {
+      const group = new THREE.Group();
+      group.position.set(pos.x, 0, pos.z);
+      this.group.add(group);
+
+      // ECC base
+      const base = new THREE.Mesh(
+        new THREE.BoxGeometry(6, 2, 6),
+        eccMaterial.clone()
+      );
+      base.position.y = 1;
+      base.castShadow = true;
+      base.receiveShadow = true;
+      group.add(base);
+
+      // ECC chip stack
+      for (let i = 0; i < 3; i++) {
+        const chip = new THREE.Mesh(
+          new THREE.BoxGeometry(4, 1.5, 4),
+          new THREE.MeshPhongMaterial({
+            color: 0x0d5480,
+            emissive: 0x3ac4ff,
+            emissiveIntensity: 0.6,
+          })
+        );
+        chip.position.y = 2.5 + i * 2;
+        chip.castShadow = true;
+        chip.receiveShadow = true;
+        group.add(chip);
+
+        this.addAnimator((delta, time) => {
+          chip.material.emissiveIntensity =
+            0.5 + Math.sin(time * 4 + i + idx) * 0.2;
+        });
+      }
+
+      // Error correction indicator
+      const indicator = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.4, 0.4, 0.5, 16),
+        new THREE.MeshPhongMaterial({
+          color: 0x00ffff,
+          emissive: 0x00ffff,
+          emissiveIntensity: 1,
+        })
+      );
+      indicator.position.y = 8.5;
+      group.add(indicator);
+
+      this.addAnimator((delta, time) => {
+        indicator.material.emissiveIntensity =
+          0.6 + Math.sin(time * 5 + idx) * 0.4;
+        indicator.rotation.y = time * 2;
+      });
+
+      // Collider
+      this.addCollider({
+        minX: pos.x - 3,
+        maxX: pos.x + 3,
+        minZ: pos.z - 3,
+        maxZ: pos.z + 3,
+        height: 8,
+      });
+    });
+  }
+
+  buildChannelIndicators() {
+    const channelMaterial = new THREE.MeshPhongMaterial({
+      color: 0x1a7fb8,
+      emissive: 0x5dc8ff,
+      emissiveIntensity: 0.7,
+      transparent: true,
+      opacity: 0.6,
+      side: THREE.DoubleSide,
+    });
+
+    const positions = [
+      { x: 0, z: -48 },
+      { x: 0, z: 48 },
+    ];
+
+    positions.forEach((pos, idx) => {
+      const group = new THREE.Group();
+      group.position.set(pos.x, 0, pos.z);
+      this.group.add(group);
+
+      // Channel beam
+      const beam = new THREE.Mesh(
+        new THREE.BoxGeometry(60, 0.5, 4),
+        channelMaterial.clone()
+      );
+      beam.position.y = 12;
+      this.group.add(beam);
+
+      // Channel data flow
+      for (let i = 0; i < 10; i++) {
+        const dataNode = new THREE.Mesh(
+          new THREE.SphereGeometry(0.6, 12, 12),
+          new THREE.MeshPhongMaterial({
+            color: 0xffffff,
+            emissive: 0x88f0ff,
+            emissiveIntensity: 1.2,
+            transparent: true,
+            opacity: 0.8,
+          })
+        );
+        dataNode.userData = { offset: i * 0.1, idx };
+        this.group.add(dataNode);
+
+        this.addAnimator((delta, time) => {
+          const t = (time * 0.5 + dataNode.userData.offset) % 1;
+          const xPos = -30 + t * 60;
+          dataNode.position.set(pos.x + xPos, 12, pos.z);
+          dataNode.material.emissiveIntensity = 0.8 + Math.sin(time * 3) * 0.4;
+        });
+      }
+
+      this.addAnimator((delta, time) => {
+        beam.material.emissiveIntensity = 0.6 + Math.sin(time * 2 + idx) * 0.2;
+      });
+    });
+  }
+
+  buildCapacitorBanks() {
+    const capacitorMaterial = new THREE.MeshPhongMaterial({
+      color: 0x0f4a6e,
+      emissive: 0x2ba8e0,
+      emissiveIntensity: 0.5,
+      shininess: 75,
+    });
+
+    const positions = [
+      { x: -35, z: -50 },
+      { x: -35, z: 50 },
+      { x: 35, z: -50 },
+      { x: 35, z: 50 },
+    ];
+
+    positions.forEach((pos, idx) => {
+      const group = new THREE.Group();
+      group.position.set(pos.x, 0, pos.z);
+      this.group.add(group);
+
+      // Capacitor array
+      for (let i = 0; i < 3; i++) {
+        const capacitor = new THREE.Mesh(
+          new THREE.CylinderGeometry(1.5, 1.5, 6, 16),
+          capacitorMaterial.clone()
+        );
+        capacitor.position.set((i - 1) * 3.5, 3, 0);
+        capacitor.castShadow = true;
+        capacitor.receiveShadow = true;
+        group.add(capacitor);
+
+        // Charge indicator
+        const chargeRing = new THREE.Mesh(
+          new THREE.TorusGeometry(1.8, 0.3, 12, 24),
+          new THREE.MeshPhongMaterial({
+            color: 0x00d4ff,
+            emissive: 0x00d4ff,
+            emissiveIntensity: 0.8,
+            transparent: true,
+            opacity: 0.7,
+          })
+        );
+        chargeRing.position.set((i - 1) * 3.5, 5, 0);
+        chargeRing.rotation.x = Math.PI / 2;
+        group.add(chargeRing);
+
+        this.addAnimator((delta, time) => {
+          capacitor.material.emissiveIntensity =
+            0.4 + Math.sin(time * 3 + i + idx) * 0.2;
+          chargeRing.material.opacity =
+            0.5 + Math.sin(time * 4 + i + idx) * 0.3;
+          chargeRing.rotation.z = time * (1 + i * 0.3);
+        });
+      }
+
+      // Collider
+      this.addCollider({
+        minX: pos.x - 5,
+        maxX: pos.x + 5,
+        minZ: pos.z - 2,
+        maxZ: pos.z + 2,
+        height: 6,
+      });
+    });
+  }
+
+  buildAccessPlatforms() {
+    const platformMaterial = new THREE.MeshPhongMaterial({
+      color: 0x0a3348,
+      emissive: 0x1688c4,
+      emissiveIntensity: 0.35,
+    });
+
+    const railMaterial = new THREE.MeshPhongMaterial({
+      color: 0x0e4c6d,
+      emissive: 0x29a7e6,
+      emissiveIntensity: 0.4,
+    });
+
+    const positions = [
+      { x: 32, z: -32, size: 10 },
+      { x: 32, z: 32, size: 10 },
+      { x: -32, z: 32, size: 10 },
+      { x: -32, z: -32, size: 10 },
+    ];
+
+    positions.forEach((pos) => {
+      // Platform deck
+      const platform = new THREE.Mesh(
+        new THREE.BoxGeometry(pos.size, 1.2, pos.size),
+        platformMaterial.clone()
+      );
+      platform.position.set(pos.x, 0.6, pos.z);
+      platform.castShadow = true;
+      platform.receiveShadow = true;
+      this.group.add(platform);
+
+      // Platform rails
+      const railPositions = [
+        { x: -pos.size / 2, z: 0 },
+        { x: pos.size / 2, z: 0 },
+        { x: 0, z: -pos.size / 2 },
+        { x: 0, z: pos.size / 2 },
+      ];
+
+      railPositions.forEach((railPos, idx) => {
+        const isVertical = idx >= 2;
+        const rail = new THREE.Mesh(
+          new THREE.BoxGeometry(
+            isVertical ? pos.size : 0.3,
+            1.5,
+            isVertical ? 0.3 : pos.size
+          ),
+          railMaterial.clone()
+        );
+        rail.position.set(pos.x + railPos.x, 1.8, pos.z + railPos.z);
+        rail.castShadow = true;
+        this.group.add(rail);
+      });
+
+      // Collider
+      this.addCollider({
+        minX: pos.x - pos.size / 2,
+        maxX: pos.x + pos.size / 2,
+        minZ: pos.z - pos.size / 2,
+        maxZ: pos.z + pos.size / 2,
+        height: 1.2,
+      });
     });
   }
 }

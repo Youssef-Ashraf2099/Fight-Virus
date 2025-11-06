@@ -13,7 +13,7 @@ class Player {
     // Damage reduction and invulnerability frames
     this.damageReduction = 0; // Percentage damage reduction
     this.isInvulnerable = false;
-    this.invulnerabilityDuration = 0.5; // 0.5 seconds after taking damage
+    this.invulnerabilityDuration = 1; // 1 second after taking damage
     this.lastDamageTime = 0;
 
     // FPS Movement settings

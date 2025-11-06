@@ -606,6 +606,118 @@ class Environment {
     return this.getFloorHeightAt(position.x, position.z);
   }
 
+  isProjectilePathObstructed(start, end, radius = 0.25, heightPadding = 0) {
+    if (!start || !end) {
+      return false;
+    }
+
+    const colliders = this.physicsColliders || [];
+    if (!colliders.length) {
+      return false;
+    }
+
+    const startY = start.y ?? 0;
+    const endY = end.y ?? 0;
+    const startX = start.x ?? 0;
+    const startZ = start.z ?? 0;
+    const endX = end.x ?? 0;
+    const endZ = end.z ?? 0;
+
+    for (let i = 0; i < colliders.length; i++) {
+      const collider = colliders[i];
+      if (!collider || typeof collider.height !== "number") {
+        continue;
+      }
+
+      if (collider.height <= 0) {
+        continue;
+      }
+
+      const maxRelevantHeight = collider.height + heightPadding;
+      if (Math.min(startY, endY) > maxRelevantHeight) {
+        continue;
+      }
+
+      const minX = (collider.minX ?? 0) - radius;
+      const maxX = (collider.maxX ?? 0) + radius;
+      const minZ = (collider.minZ ?? 0) - radius;
+      const maxZ = (collider.maxZ ?? 0) + radius;
+
+      if (
+        this._segmentIntersectsRect2D(
+          startX,
+          startZ,
+          endX,
+          endZ,
+          minX,
+          maxX,
+          minZ,
+          maxZ
+        )
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  _segmentIntersectsRect2D(x1, z1, x2, z2, minX, maxX, minZ, maxZ) {
+    const startInside = x1 >= minX && x1 <= maxX && z1 >= minZ && z1 <= maxZ;
+    const endInside = x2 >= minX && x2 <= maxX && z2 >= minZ && z2 <= maxZ;
+
+    if (startInside || endInside) {
+      return true;
+    }
+
+    const dx = x2 - x1;
+    const dz = z2 - z1;
+
+    const epsilon = 1e-8;
+    if (Math.abs(dx) < epsilon && Math.abs(dz) < epsilon) {
+      return false;
+    }
+
+    let tMin = 0;
+    let tMax = 1;
+
+    const tests = [
+      { p: -dx, q: x1 - minX },
+      { p: dx, q: maxX - x1 },
+      { p: -dz, q: z1 - minZ },
+      { p: dz, q: maxZ - z1 },
+    ];
+
+    for (let i = 0; i < tests.length; i++) {
+      const { p, q } = tests[i];
+      if (Math.abs(p) < epsilon) {
+        if (q < 0) {
+          return false;
+        }
+        continue;
+      }
+
+      const t = q / p;
+      if (p < 0) {
+        if (t > tMax) {
+          return false;
+        }
+        if (t > tMin) {
+          tMin = t;
+        }
+      } else {
+        if (t < tMin) {
+          return false;
+        }
+        if (t < tMax) {
+          tMax = t;
+        }
+      }
+    }
+
+    return tMin <= tMax && tMax >= 0 && tMin <= 1;
+  }
+
   getFloorHeightAt(x, z) {
     let height = this.baseFloorHeight || 0;
     if (this.physicsColliders && this.physicsColliders.length) {

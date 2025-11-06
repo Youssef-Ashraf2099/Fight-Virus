@@ -207,14 +207,13 @@ class SpywareVirus extends BaseEnemy {
 
     // Update projectiles
     this.projectiles = this.projectiles.filter((proj) => {
-      proj.position.add(proj.velocity.clone().multiplyScalar(deltaTime));
-      proj.mesh.position.copy(proj.position);
+      if (!this._advanceProjectile(proj, deltaTime)) {
+        return false;
+      }
 
       proj.lifetime -= deltaTime;
       if (proj.lifetime <= 0) {
-        this.scene.remove(proj.mesh);
-        proj.mesh.geometry.dispose();
-        proj.mesh.material.dispose();
+        this._disposeProjectile(proj);
         return false;
       }
 
@@ -262,6 +261,7 @@ class SpywareVirus extends BaseEnemy {
       damage: this.damage,
       lifetime: 3,
       collisionRadius: 0.3,
+      color: 0xff00ff,
       getPosition: function () {
         return this.position.clone();
       },

@@ -37,6 +37,11 @@ class BaseEnemy {
     this.time = 0;
     this.alive = true;
     this.spawnElevation = null; // Allows specific enemies to control spawn height
+    this.environment = null;
+
+    // Reusable vectors for projectile movement checks
+    this._tempProjectilePrev = new THREE.Vector3();
+    this._tempProjectileStep = new THREE.Vector3();
   }
 
   update(deltaTime, playerPosition) {
@@ -231,6 +236,7 @@ class BaseEnemy {
       damage: this.damage * 0.8, // Ranged attacks do slightly less damage
       lifetime: 4,
       collisionRadius: 0.3,
+      color: this.color,
       getPosition: function () {
         return this.position.clone();
       },
@@ -246,19 +252,18 @@ class BaseEnemy {
     if (!this.projectiles) return;
 
     this.projectiles = this.projectiles.filter((proj) => {
-      proj.position.add(proj.velocity.clone().multiplyScalar(deltaTime));
-      proj.mesh.position.copy(proj.position);
+      if (!this._advanceProjectile(proj, deltaTime)) {
+        return false;
+      }
 
       // Add trail effect
-      if (proj.mesh.material) {
+      if (proj.mesh && proj.mesh.material) {
         proj.mesh.material.opacity = Math.max(0.3, proj.lifetime / 4);
       }
 
       proj.lifetime -= deltaTime;
       if (proj.lifetime <= 0) {
-        this.scene.remove(proj.mesh);
-        if (proj.mesh.geometry) proj.mesh.geometry.dispose();
-        if (proj.mesh.material) proj.mesh.material.dispose();
+        this._disposeProjectile(proj);
         return false;
       }
 
@@ -266,7 +271,136 @@ class BaseEnemy {
     });
   }
 
+  setEnvironment(environment) {
+    this.environment = environment || null;
+  }
+
+  _advanceProjectile(projectile, deltaTime, options = {}) {
+    if (!projectile || !projectile.position || !projectile.velocity) {
+      return true;
+    }
+
+    const prevPosition = this._tempProjectilePrev.copy(projectile.position);
+    this._tempProjectileStep
+      .copy(projectile.velocity)
+      .multiplyScalar(deltaTime);
+    projectile.position.add(this._tempProjectileStep);
+
+    if (options.syncMesh !== false && projectile.mesh) {
+      projectile.mesh.position.copy(projectile.position);
+    }
+
+    const radius =
+      options.collisionRadius ??
+      projectile.collisionRadius ??
+      options.defaultRadius ??
+      0.3;
+    const heightPadding =
+      options.heightPadding !== undefined
+        ? options.heightPadding
+        : radius * 0.5;
+
+    if (
+      this._projectileHitsEnvironment(
+        prevPosition,
+        projectile.position,
+        radius,
+        heightPadding
+      )
+    ) {
+      this._handleProjectileBlocked(projectile);
+      return false;
+    }
+
+    return true;
+  }
+
+  _projectileHitsEnvironment(
+    previousPosition,
+    nextPosition,
+    radius,
+    heightPad
+  ) {
+    if (
+      !this.environment ||
+      typeof this.environment.isProjectilePathObstructed !== "function"
+    ) {
+      return false;
+    }
+
+    return this.environment.isProjectilePathObstructed(
+      previousPosition,
+      nextPosition,
+      radius,
+      heightPad
+    );
+  }
+
+  _handleProjectileBlocked(projectile) {
+    if (!projectile) {
+      return;
+    }
+
+    const impactPos = projectile.mesh
+      ? projectile.mesh.position.clone()
+      : projectile.position.clone();
+
+    let impactColor = this.color || 0xffffff;
+    if (projectile.color) {
+      impactColor = projectile.color;
+    } else if (
+      projectile.mesh &&
+      projectile.mesh.material &&
+      projectile.mesh.material.color &&
+      typeof projectile.mesh.material.color.getHex === "function"
+    ) {
+      impactColor = projectile.mesh.material.color.getHex();
+    }
+
+    if (this.particleSystem) {
+      this.particleSystem.createImpact(impactPos, impactColor, 8);
+    }
+
+    if (typeof projectile.destroy === "function") {
+      projectile.destroy();
+    } else {
+      projectile.lifetime = 0;
+    }
+
+    this._disposeProjectile(projectile);
+  }
+
+  _disposeProjectile(projectile) {
+    if (!projectile) {
+      return;
+    }
+
+    if (projectile.mesh) {
+      this.scene.remove(projectile.mesh);
+      if (projectile.mesh.geometry) {
+        projectile.mesh.geometry.dispose();
+      }
+
+      if (projectile.mesh.material) {
+        if (Array.isArray(projectile.mesh.material)) {
+          projectile.mesh.material.forEach((mat) => {
+            if (mat && typeof mat.dispose === "function") {
+              mat.dispose();
+            }
+          });
+        } else if (typeof projectile.mesh.material.dispose === "function") {
+          projectile.mesh.material.dispose();
+        }
+      }
+    }
+  }
+
   destroy() {
+    if (this.projectiles && this.projectiles.length) {
+      this.projectiles.forEach((proj) => this._disposeProjectile(proj));
+      this.projectiles = [];
+    }
+
     if (this.group) {
       this.scene.remove(this.group);
 

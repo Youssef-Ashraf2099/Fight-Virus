@@ -386,16 +386,18 @@ class RootkitVirus extends BaseEnemy {
         proj.velocity.normalize().multiplyScalar(22);
       }
 
-      proj.position.add(proj.velocity.clone().multiplyScalar(deltaTime));
-      proj.mesh.position.copy(proj.position);
-      proj.mesh.rotation.x += deltaTime * 8;
-      proj.mesh.rotation.y += deltaTime * 5;
+      if (!this._advanceProjectile(proj, deltaTime)) {
+        return false;
+      }
+
+      if (proj.mesh) {
+        proj.mesh.rotation.x += deltaTime * 8;
+        proj.mesh.rotation.y += deltaTime * 5;
+      }
 
       proj.lifetime -= deltaTime;
       if (proj.lifetime <= 0) {
-        this.scene.remove(proj.mesh);
-        proj.mesh.geometry.dispose();
-        proj.mesh.material.dispose();
+        this._disposeProjectile(proj);
         return false;
       }
 
@@ -425,6 +427,7 @@ class RootkitVirus extends BaseEnemy {
         lifetime: 5,
         collisionRadius: 0.5,
         isHoming: false,
+        color: this.secondaryColor,
         getPosition: function () {
           return this.position.clone();
         },
@@ -459,6 +462,7 @@ class RootkitVirus extends BaseEnemy {
         lifetime: 4,
         collisionRadius: 0.6,
         isHoming: false,
+        color: 0xff0000,
         getPosition: function () {
           return this.position.clone();
         },
@@ -503,6 +507,7 @@ class RootkitVirus extends BaseEnemy {
         lifetime: 6,
         collisionRadius: 0.5,
         isHoming: true,
+        color: 0xff00ff,
         getPosition: function () {
           return this.position.clone();
         },

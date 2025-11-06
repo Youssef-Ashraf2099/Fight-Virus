@@ -54,6 +54,10 @@ class EnemyManager {
     );
 
     if (enemy) {
+      if (this.environment && typeof enemy.setEnvironment === "function") {
+        enemy.setEnvironment(this.environment);
+      }
+
       const radius =
         typeof enemy.collisionRadius === "number" ? enemy.collisionRadius : 1;
       const lift =
@@ -107,6 +111,10 @@ class EnemyManager {
     );
 
     if (boss) {
+      if (this.environment && typeof boss.setEnvironment === "function") {
+        boss.setEnvironment(this.environment);
+      }
+
       const radius =
         typeof boss.collisionRadius === "number" ? boss.collisionRadius : 2;
       const lift =

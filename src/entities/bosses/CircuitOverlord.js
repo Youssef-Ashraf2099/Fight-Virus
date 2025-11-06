@@ -399,7 +399,9 @@ class CircuitOverlord extends BaseBoss {
       playerPosition.z - this.position.z
     );
     this.yawQuaternion.setFromAxisAngle(this.yawAxis, yaw);
-    this.group.quaternion.copy(this.yawQuaternion).multiply(this.baseTiltQuaternion);
+    this.group.quaternion
+      .copy(this.yawQuaternion)
+      .multiply(this.baseTiltQuaternion);
 
     // Update ability cooldowns
     if (this.shieldCooldown > 0) this.shieldCooldown -= deltaTime;
@@ -486,16 +488,18 @@ class CircuitOverlord extends BaseBoss {
         proj.velocity.normalize().multiplyScalar(proj.speed || 25);
       }
 
-      proj.position.add(proj.velocity.clone().multiplyScalar(deltaTime));
-      proj.mesh.position.copy(proj.position);
-      proj.mesh.rotation.x += deltaTime * 12;
-      proj.mesh.rotation.y += deltaTime * 8;
+      if (!this._advanceProjectile(proj, deltaTime)) {
+        return false;
+      }
+
+      if (proj.mesh) {
+        proj.mesh.rotation.x += deltaTime * 12;
+        proj.mesh.rotation.y += deltaTime * 8;
+      }
 
       proj.lifetime -= deltaTime;
       if (proj.lifetime <= 0) {
-        this.scene.remove(proj.mesh);
-        proj.mesh.geometry.dispose();
-        proj.mesh.material.dispose();
+        this._disposeProjectile(proj);
         return false;
       }
 
@@ -547,7 +551,7 @@ class CircuitOverlord extends BaseBoss {
         0,
         baseDirection.x * Math.sin(spreadAngle) +
           baseDirection.z * Math.cos(spreadAngle)
-        );
+      );
 
       this.applyAimJitter(
         direction,
@@ -721,6 +725,7 @@ class CircuitOverlord extends BaseBoss {
       speed: speed || this.projectileSpeed,
       isHoming: isHoming,
       homingStrength: homingStrength,
+      color: color,
       getPosition: function () {
         return this.position.clone();
       },

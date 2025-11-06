@@ -448,16 +448,18 @@ class CorruptionCore extends BaseBoss {
         proj.velocity.normalize().multiplyScalar(24);
       }
 
-      proj.position.add(proj.velocity.clone().multiplyScalar(deltaTime));
-      proj.mesh.position.copy(proj.position);
-      proj.mesh.rotation.x += deltaTime * 10;
-      proj.mesh.rotation.y += deltaTime * 7;
+      if (!this._advanceProjectile(proj, deltaTime)) {
+        return false;
+      }
+
+      if (proj.mesh) {
+        proj.mesh.rotation.x += deltaTime * 10;
+        proj.mesh.rotation.y += deltaTime * 7;
+      }
 
       proj.lifetime -= deltaTime;
       if (proj.lifetime <= 0) {
-        this.scene.remove(proj.mesh);
-        proj.mesh.geometry.dispose();
-        proj.mesh.material.dispose();
+        this._disposeProjectile(proj);
         return false;
       }
 
@@ -606,6 +608,7 @@ class CorruptionCore extends BaseBoss {
       lifetime: 6,
       collisionRadius: 0.7,
       isHoming: isHoming,
+      color: color,
       getPosition: function () {
         return this.position.clone();
       },
