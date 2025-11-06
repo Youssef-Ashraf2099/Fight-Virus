@@ -710,7 +710,8 @@ class MotherboardEnvironment extends BaseEnvironmentMap {
       }
 
       this.addAnimator((delta, time) => {
-        slotBase.material.emissiveIntensity = 0.3 + Math.sin(time * 2 + slot) * 0.2;
+        slotBase.material.emissiveIntensity =
+          0.3 + Math.sin(time * 2 + slot) * 0.2;
       });
 
       this.addCollider({
@@ -768,11 +769,7 @@ class MotherboardEnvironment extends BaseEnvironmentMap {
             shininess: 150,
           })
         );
-        pin.position.set(
-          port.position.x - 1 + p * 0.35,
-          0.8,
-          port.position.z
-        );
+        pin.position.set(port.position.x - 1 + p * 0.35, 0.8, port.position.z);
         this.group.add(pin);
       }
 
@@ -1078,7 +1075,8 @@ class MotherboardEnvironment extends BaseEnvironmentMap {
       }
 
       this.addAnimator((delta, time) => {
-        connector.material.emissiveIntensity = 0.5 + Math.sin(time * 3 + i) * 0.2;
+        connector.material.emissiveIntensity =
+          0.5 + Math.sin(time * 3 + i) * 0.2;
       });
 
       this.addCollider({
