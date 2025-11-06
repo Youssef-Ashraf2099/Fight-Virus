@@ -856,7 +856,7 @@ class Player {
     // Get camera's right and forward vectors
     const cameraForward = new THREE.Vector3();
     const cameraRight = new THREE.Vector3();
-    
+
     this.camera.getWorldDirection(cameraForward);
     cameraRight.crossVectors(cameraForward, this.camera.up).normalize();
 
@@ -1038,7 +1038,10 @@ class Player {
     if (this.damageVignette && this.damageVignette.parentNode) {
       this.damageVignette.remove();
     }
-    if (this.damageDirectionContainer && this.damageDirectionContainer.parentNode) {
+    if (
+      this.damageDirectionContainer &&
+      this.damageDirectionContainer.parentNode
+    ) {
       this.damageDirectionContainer.remove();
     }
     this.damageIndicators = [];
