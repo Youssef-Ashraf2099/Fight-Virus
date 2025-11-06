@@ -38,6 +38,16 @@ class WaveManager {
       bossType = "corruption-core";
       bossTitle = "⚠️💀 CORRUPTION CORE - SYSTEM DESTROYER 💀⚠️";
       this.uiManager.showMessage(bossTitle, 4000);
+    } else if (this.currentWave >= 8 && this.currentWave % 3 === 2) {
+      // Waves 8, 11, 14, etc: DATA WYRM - Dragon boss (Motherboard waves)
+      bossType = "data-wyrm";
+      bossTitle = "🐉🔥 DATA WYRM - CORRUPTED MAINFRAME GUARDIAN 🔥🐉";
+      this.uiManager.showMessage(bossTitle, 3500);
+    } else if (this.currentWave >= 4 && this.currentWave % 3 === 1) {
+      // Waves 4, 7, 10, etc: PIXEL REAPER - GPU boss
+      bossType = "pixel-reaper";
+      bossTitle = "🎮💥 PIXEL REAPER - CORRUPTED RENDERING ENGINE 💥🎮";
+      this.uiManager.showMessage(bossTitle, 3200);
     } else if (this.currentWave % 5 === 0) {
       // Every 5 waves: CORRUPTION CORE - Major boss
       bossType = "corruption-core";

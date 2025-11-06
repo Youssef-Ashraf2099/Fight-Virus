@@ -22,7 +22,8 @@ class EnemyManager {
     this.bossClasses = {
       "circuit-overlord": CircuitOverlord, // First boss - Wave 3
       "corruption-core": CorruptionCore, // Second boss - Wave 5+
-      // Future bosses will be added here
+      "pixel-reaper": PixelReaper, // GPU boss - Wave 4+ (GPU environment)
+      "data-wyrm": DataWyrm, // Dragon boss - Wave 8+ (Motherboard)
     };
   }
 
