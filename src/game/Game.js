@@ -32,6 +32,18 @@ class Game {
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
+      // Initialize health bar canvas
+      console.log("Initializing health bar canvas...");
+      this.healthBarCanvas = document.getElementById("healthBarCanvas");
+      if (this.healthBarCanvas) {
+        this.healthBarCanvas.width = window.innerWidth;
+        this.healthBarCanvas.height = window.innerHeight;
+        this.healthBarContext = this.healthBarCanvas.getContext("2d");
+        console.log("Health bar canvas initialized");
+      } else {
+        console.warn("Health bar canvas not found");
+      }
+
       this.clock = new THREE.Clock();
       this.isRunning = false;
       this.gameStarted = false;
@@ -107,6 +119,12 @@ class Game {
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
+
+      // Update health bar canvas size
+      if (this.healthBarCanvas) {
+        this.healthBarCanvas.width = window.innerWidth;
+        this.healthBarCanvas.height = window.innerHeight;
+      }
     });
 
     // Weapon switching
@@ -516,5 +534,37 @@ class Game {
     const deltaTime = this.clock.getDelta();
     this.update(deltaTime);
     this.renderer.render(this.scene, this.camera);
+
+    // Render health bars on overlay canvas
+    if (this.healthBarCanvas && this.healthBarContext && this.gameStarted) {
+      // Clear canvas
+      this.healthBarContext.clearRect(
+        0,
+        0,
+        this.healthBarCanvas.width,
+        this.healthBarCanvas.height
+      );
+
+      // Render enemy health bars (3D projected above enemies)
+      const enemies = this.enemyManager.getEnemies();
+      enemies.forEach((enemy) => {
+        this.uiManager.renderEnemyHealthBar(
+          enemy,
+          this.camera,
+          this.healthBarContext,
+          this.healthBarCanvas
+        );
+      });
+
+      // Render boss health bar at top of screen (if boss is active)
+      const activeBoss = enemies.find((enemy) => enemy.isBoss);
+      if (activeBoss) {
+        this.uiManager.renderBossHealthBar(
+          activeBoss,
+          this.healthBarContext,
+          this.healthBarCanvas
+        );
+      }
+    }
   }
 }

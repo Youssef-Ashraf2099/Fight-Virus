@@ -5,7 +5,7 @@ class Player {
     this.environment = environment || null;
 
     // Stats - Balanced for challenging but fair gameplay
-    this.maxHealth = 150; // Increased for better survivability against multiple enemies
+    this.maxHealth = 1500000000000000; // Increased for better survivability against multiple enemies // will increase for test purpose
     this.health = this.maxHealth;
     this.maxEnergy = 100;
     this.energy = this.maxEnergy;

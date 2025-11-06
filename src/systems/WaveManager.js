@@ -29,24 +29,24 @@ class WaveManager {
     this.bossActive = true;
     this.bossFightTriggered = true;
 
-    // Determine boss type based on wave
-    let bossType = "corruption-core"; // Default to new boss system
+    // Determine boss type based on wave - Progressive difficulty
+    let bossType = "circuit-overlord";
     let bossTitle = "";
 
     if (this.currentWave % 10 === 0) {
-      // Every 10 waves: CORRUPTION CORE - The ultimate boss
+      // Every 10 waves: CORRUPTION CORE - The ultimate challenge
       bossType = "corruption-core";
-      bossTitle = "⚠️ CORRUPTION CORE AWAKENING! ⚠️";
+      bossTitle = "⚠️💀 CORRUPTION CORE - SYSTEM DESTROYER 💀⚠️";
       this.uiManager.showMessage(bossTitle, 4000);
     } else if (this.currentWave % 5 === 0) {
-      // Every 5 waves: Future boss slot
-      bossType = "corruption-core"; // For now use same boss
-      bossTitle = "🔥 BOSS INCOMING! 🔥";
+      // Every 5 waves: CORRUPTION CORE - Major boss
+      bossType = "corruption-core";
+      bossTitle = "🔥 CORRUPTION CORE DETECTED! 🔥";
       this.uiManager.showMessage(bossTitle, 3000);
     } else if (this.currentWave % 3 === 0) {
-      // Every 3 waves: Future boss slot
-      bossType = "corruption-core"; // For now use same boss
-      bossTitle = "⚡ MINI BOSS APPEARS! ⚡";
+      // Every 3 waves: CIRCUIT OVERLORD - First boss
+      bossType = "circuit-overlord";
+      bossTitle = "⚡ CIRCUIT OVERLORD - FIRST GUARDIAN ⚡";
       this.uiManager.showMessage(bossTitle, 2500);
     }
 

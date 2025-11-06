@@ -18,9 +18,10 @@ class EnemyManager {
       rootkit: RootkitVirus,
     };
 
-    // Boss classes
+    // Boss classes (in order of difficulty)
     this.bossClasses = {
-      "corruption-core": CorruptionCore,
+      "circuit-overlord": CircuitOverlord, // First boss - Wave 3
+      "corruption-core": CorruptionCore, // Second boss - Wave 5+
       // Future bosses will be added here
     };
   }
@@ -55,7 +56,10 @@ class EnemyManager {
     if (enemy) {
       const radius =
         typeof enemy.collisionRadius === "number" ? enemy.collisionRadius : 1;
-      const lift = Math.max(0.5, radius);
+      const lift =
+        typeof enemy.spawnElevation === "number"
+          ? enemy.spawnElevation
+          : Math.max(0.5, radius);
       enemy.position.y = spawnPosition.y + lift;
       if (enemy.group) {
         enemy.group.position.copy(enemy.position);
@@ -105,7 +109,10 @@ class EnemyManager {
     if (boss) {
       const radius =
         typeof boss.collisionRadius === "number" ? boss.collisionRadius : 2;
-      const lift = Math.max(0.5, radius);
+      const lift =
+        typeof boss.spawnElevation === "number"
+          ? boss.spawnElevation
+          : Math.max(0.5, radius);
       boss.position.y = spawnPosition.y + lift;
       if (boss.group) {
         boss.group.position.copy(boss.position);

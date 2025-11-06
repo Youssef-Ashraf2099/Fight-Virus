@@ -7,8 +7,8 @@ class RansomwareVirus extends BaseEnemy {
     this.health = this.maxHealth;
     this.speed = 3;
     this.damage = 28 * difficulty;
-    this.contactDamage = 15 * difficulty; // Reduced from 22 for balance
-    this.collisionRadius = 2.5;
+    this.contactDamage = 10 * difficulty; // Reduced from 22 for balance
+    this.collisionRadius = 1.5;
     this.scoreValue = 200;
     this.color = 0xff6600;
 

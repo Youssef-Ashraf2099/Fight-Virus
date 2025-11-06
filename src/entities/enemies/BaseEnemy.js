@@ -36,6 +36,7 @@ class BaseEnemy {
     this.group = new THREE.Group();
     this.time = 0;
     this.alive = true;
+    this.spawnElevation = null; // Allows specific enemies to control spawn height
   }
 
   update(deltaTime, playerPosition) {

@@ -34,6 +34,18 @@ class GameMain {
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
+      // Overlay canvas for 2D health bars
+      console.log("Initializing health bar canvas...");
+      this.healthBarCanvas = document.getElementById("healthBarCanvas");
+      if (this.healthBarCanvas) {
+        this.healthBarCanvas.width = window.innerWidth;
+        this.healthBarCanvas.height = window.innerHeight;
+        this.healthBarContext = this.healthBarCanvas.getContext("2d");
+        console.log("✓ Health bar canvas ready");
+      } else {
+        console.warn("⚠️ Health bar canvas not found");
+      }
+
       this.loadingOverlay = document.getElementById("loadingOverlay");
       this.loadingTitle = document.getElementById("loadingTitle");
       this.loadingMessage = document.getElementById("loadingMessage");
@@ -134,6 +146,10 @@ class GameMain {
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
+      if (this.healthBarCanvas) {
+        this.healthBarCanvas.width = window.innerWidth;
+        this.healthBarCanvas.height = window.innerHeight;
+      }
     });
 
     // Weapon switching
@@ -378,10 +394,63 @@ class GameMain {
     });
 
     enemies.forEach((enemy) => {
-      if (this.collisionManager.checkCollision(enemy, this.player)) {
+      const enemyPos = enemy.getPosition();
+      const currentPlayerPos = this.player.getPosition();
+      const minDistance = enemy.collisionRadius + this.player.collisionRadius;
+      const distance = enemyPos.distanceTo(currentPlayerPos);
+
+      if (distance < minDistance) {
+        // Direction away from enemy (ignore vertical to prevent lift)
+        let direction = new THREE.Vector3().subVectors(
+          currentPlayerPos,
+          enemyPos
+        );
+
+        if (direction.lengthSq() < 0.0001) {
+          direction.set(Math.random() - 0.5, 0, Math.random() - 0.5);
+        }
+
+        direction.y = 0; // keep on horizontal plane
+        direction.normalize();
+
+        const overlap = minDistance - distance;
+        const pushbackStrength = Math.max(overlap * 1.8, 0.45);
+        const pushbackVector = direction
+          .clone()
+          .multiplyScalar(pushbackStrength);
+
+        // Physically separate the player immediately
+        this.player.position.add(pushbackVector);
+        this.camera.position.add(pushbackVector);
+
+        // Ensure player stays grounded
+        if (this.player.environment) {
+          const groundHeight = this.player.environment.getFloorHeightAt(
+            this.player.position.x,
+            this.player.position.z
+          );
+          this.player.position.y = groundHeight + this.player.height;
+          this.camera.position.y = this.player.position.y;
+        }
+
+        // Push enemy back slightly so it doesn't keep overlapping
+        if (enemy.position) {
+          enemy.position.add(direction.clone().multiplyScalar(-overlap * 0.4));
+          if (enemy.group) {
+            enemy.group.position.copy(enemy.position);
+          }
+        }
+
+        // Add strong knockback to velocity for continued separation
+        this.player.applyKnockback(direction.clone(), 9 + overlap * 8);
+
+        // Apply contact damage (invulnerability frames handled by player)
         this.player.takeDamage(enemy.contactDamage);
-        this.player.applyKnockback(enemy.getPosition());
-        this.particleSystem.createImpact(playerPos, 0xff0000, 15);
+        this.particleSystem.createImpact(
+          this.player.getPosition(),
+          0xff0000,
+          15
+        );
       }
 
       if (enemy.getProjectiles) {
@@ -390,12 +459,61 @@ class GameMain {
             this.collisionManager.checkCollision(enemyProjectile, this.player)
           ) {
             this.player.takeDamage(enemyProjectile.damage);
-            this.particleSystem.createImpact(playerPos, 0xff0000, 10);
+            this.particleSystem.createImpact(
+              this.player.getPosition(),
+              0xff0000,
+              10
+            );
             enemyProjectile.destroy();
           }
         });
       }
+
+      if (enemy.attackType === "aoe" && enemy.behaviorState === "attacking") {
+        const aoeResult = enemy.performAOEAttack(currentPlayerPos);
+        if (aoeResult && aoeResult.type === "aoe") {
+          const aoeDistance = enemyPos.distanceTo(currentPlayerPos);
+          if (aoeDistance <= aoeResult.radius) {
+            this.player.takeDamage(aoeResult.damage);
+            this.particleSystem.createExplosion(enemyPos, enemy.color, 30);
+          }
+        }
+      }
     });
+
+    // Prevent enemies from stacking by separating overlapping pairs
+    for (let i = 0; i < enemies.length; i++) {
+      const enemyA = enemies[i];
+      const posA = enemyA.getPosition();
+      for (let j = i + 1; j < enemies.length; j++) {
+        const enemyB = enemies[j];
+        const posB = enemyB.getPosition();
+        const minEnemyDistance =
+          enemyA.collisionRadius + enemyB.collisionRadius;
+        const enemyDistance = posA.distanceTo(posB);
+
+        if (enemyDistance < minEnemyDistance && enemyDistance > 0.05) {
+          const overlap = minEnemyDistance - enemyDistance;
+          const separationDir = new THREE.Vector3()
+            .subVectors(posA, posB)
+            .normalize();
+          const separationAmount = overlap * 0.35;
+
+          enemyA.position.add(
+            separationDir.clone().multiplyScalar(separationAmount)
+          );
+          enemyB.position.add(
+            separationDir.clone().multiplyScalar(-separationAmount)
+          );
+
+          if (enemyA.group) enemyA.group.position.copy(enemyA.position);
+          if (enemyB.group) enemyB.group.position.copy(enemyB.position);
+
+          posA.copy(enemyA.position);
+          posB.copy(enemyB.position);
+        }
+      }
+    }
   }
 
   onEnemyKilled(enemy) {
@@ -528,6 +646,25 @@ class GameMain {
     const deltaTime = this.clock.getDelta();
     this.update(deltaTime);
     this.renderer.render(this.scene, this.camera);
+
+    // Overlay health bars after 3D render
+    if (this.healthBarCanvas && this.healthBarContext) {
+      const ctx = this.healthBarContext;
+      const canvas = this.healthBarCanvas;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const enemies = this.enemyManager ? this.enemyManager.getEnemies() : [];
+      if (enemies && enemies.length) {
+        enemies.forEach((enemy) => {
+          this.uiManager.renderEnemyHealthBar(enemy, this.camera, ctx, canvas);
+        });
+
+        const activeBoss = enemies.find((enemy) => enemy.isBoss && enemy.alive);
+        if (activeBoss) {
+          this.uiManager.renderBossHealthBar(activeBoss, ctx, canvas);
+        }
+      }
+    }
   }
 
   showLoadingOverlay(title, message) {

@@ -290,4 +290,140 @@ class UIManager {
 
     ctx.restore();
   }
+
+  // Render health bar above enemy in 3D space
+  renderEnemyHealthBar(enemy, camera, ctx, canvas) {
+    if (!enemy || !enemy.alive || !enemy.group || !ctx) return;
+
+    const position = enemy.getPosition();
+    const healthRatio = enemy.health / enemy.maxHealth;
+
+    // Project 3D position to 2D screen
+    const vector = position.clone();
+    vector.y += enemy.collisionRadius * 2 + 2; // Above enemy
+    vector.project(camera);
+
+    const x = (vector.x * 0.5 + 0.5) * canvas.width;
+    const y = (-(vector.y * 0.5) + 0.5) * canvas.height;
+
+    // Only render if on screen
+    if (vector.z > 1 || x < 0 || x > canvas.width || y < 0 || y > canvas.height)
+      return;
+
+    // Health bar dimensions
+    const barWidth = enemy.isBoss ? 200 : 60;
+    const barHeight = enemy.isBoss ? 12 : 6;
+
+    // Background
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillRect(x - barWidth / 2, y - barHeight / 2, barWidth, barHeight);
+
+    // Health fill
+    const healthColor =
+      healthRatio > 0.6 ? "#0f0" : healthRatio > 0.3 ? "#ff0" : "#f00";
+    ctx.fillStyle = healthColor;
+    ctx.fillRect(
+      x - barWidth / 2,
+      y - barHeight / 2,
+      barWidth * healthRatio,
+      barHeight
+    );
+
+    // Border
+    ctx.strokeStyle = enemy.isBoss ? "#f00" : "#0f0";
+    ctx.lineWidth = enemy.isBoss ? 2 : 1;
+    ctx.strokeRect(x - barWidth / 2, y - barHeight / 2, barWidth, barHeight);
+
+    // Boss name
+    if (enemy.isBoss && enemy.bossName) {
+      ctx.fillStyle = "#f00";
+      ctx.font = 'bold 14px "Courier New"';
+      ctx.textAlign = "center";
+      ctx.fillText(enemy.bossName, x, y - barHeight);
+    }
+  }
+
+  // Render massive boss health bar at top of screen
+  renderBossHealthBar(boss, ctx, canvas) {
+    if (!boss || !boss.alive || !boss.isBoss || !ctx) return;
+
+    const healthRatio = boss.health / boss.maxHealth;
+
+    const barWidth = canvas.width * 0.6;
+    const barHeight = 40;
+    const x = (canvas.width - barWidth) / 2;
+    const y = 80;
+
+    // Background glow
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = "#f00";
+
+    // Background
+    ctx.fillStyle = "rgba(20, 0, 0, 0.9)";
+    ctx.fillRect(x, y, barWidth, barHeight);
+
+    // Health fill with gradient
+    const gradient = ctx.createLinearGradient(x, y, x + barWidth, y);
+    if (healthRatio > 0.6) {
+      gradient.addColorStop(0, "#ff0000");
+      gradient.addColorStop(1, "#ff6600");
+    } else if (healthRatio > 0.3) {
+      gradient.addColorStop(0, "#ff6600");
+      gradient.addColorStop(1, "#ffaa00");
+    } else {
+      gradient.addColorStop(0, "#ff0000");
+      gradient.addColorStop(1, "#ffffff");
+    }
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x, y, barWidth * healthRatio, barHeight);
+
+    // Animated segments
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.lineWidth = 2;
+    for (let i = 1; i < 10; i++) {
+      const segX = x + (barWidth / 10) * i;
+      ctx.beginPath();
+      ctx.moveTo(segX, y);
+      ctx.lineTo(segX, y + barHeight);
+      ctx.stroke();
+    }
+
+    // Border
+    ctx.strokeStyle = "#ff0000";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x, y, barWidth, barHeight);
+
+    // Reset shadow
+    ctx.shadowBlur = 0;
+
+    // Boss name and title
+    ctx.shadowColor = "#f00";
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = "#ff0000";
+    ctx.font = 'bold 24px "Courier New"';
+    ctx.textAlign = "center";
+    ctx.fillText(boss.bossName || "BOSS", canvas.width / 2, y - 15);
+
+    // Health text
+    ctx.shadowBlur = 5;
+    ctx.shadowColor = "#000";
+    ctx.fillStyle = "#fff";
+    ctx.font = 'bold 16px "Courier New"';
+    const healthText = `${Math.ceil(boss.health)} / ${boss.maxHealth}`;
+    ctx.fillText(healthText, canvas.width / 2, y + barHeight / 2 + 6);
+
+    // Phase indicator
+    if (boss.phases && boss.currentPhaseIndex !== undefined) {
+      ctx.fillStyle = "#ffaa00";
+      ctx.font = '14px "Courier New"';
+      const phaseText = `PHASE ${boss.currentPhaseIndex + 1}/${
+        boss.phases.length
+      }`;
+      ctx.fillText(phaseText, canvas.width / 2, y + barHeight + 20);
+    }
+
+    // Reset shadow
+    ctx.shadowBlur = 0;
+  }
 }
