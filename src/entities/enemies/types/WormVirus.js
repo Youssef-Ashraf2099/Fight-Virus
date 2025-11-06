@@ -2,15 +2,20 @@ class WormVirus extends BaseEnemy {
   constructor(scene, position, particleSystem, difficulty = 1) {
     super(scene, position, particleSystem, difficulty);
 
-    // Worm stats - Fast, low health, spawns copies
-    this.maxHealth = 60 * difficulty;
+    // Worm stats - Fast, low health, rapid melee attacks
+    this.maxHealth = 70 * difficulty;
     this.health = this.maxHealth;
-    this.speed = 12;
-    this.damage = 10 * difficulty;
-    this.contactDamage = 8 * difficulty;
+    this.speed = 14; // Very fast
+    this.damage = 12 * difficulty; // Moderate damage but fast attacks
+    this.contactDamage = 6 * difficulty; // Reduced from 10 for balance
     this.collisionRadius = 1;
     this.scoreValue = 80;
     this.color = 0x00ff00;
+
+    // Attack configuration
+    this.attackType = "melee";
+    this.attackRange = 3;
+    this.attackSpeed = 0.8; // Fast attack rate
 
     this.segmentCount = 8;
     this.segments = [];

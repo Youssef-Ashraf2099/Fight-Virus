@@ -161,6 +161,13 @@ class MotherboardEnvironment extends BaseEnvironmentMap {
     this.buildIoRampart();
     this.buildSignalSpans();
     this.buildDataGrid();
+    this.buildBIOSChip();
+    this.buildMemorySlots();
+    this.buildSATAPorts();
+    this.buildBatteryHolder();
+    this.buildNorthBridge();
+    this.buildSouthBridge();
+    this.buildPowerPhases();
   }
 
   buildMainBoard() {
@@ -594,5 +601,491 @@ class MotherboardEnvironment extends BaseEnvironmentMap {
         );
       });
     });
+  }
+
+  buildBIOSChip() {
+    // BIOS/UEFI firmware chip
+    const biosBase = new THREE.Mesh(
+      new THREE.BoxGeometry(12, 2, 8),
+      new THREE.MeshPhongMaterial({
+        color: 0x1a1a1a,
+        emissive: 0x4400ff,
+        emissiveIntensity: 0.5,
+        shininess: 100,
+      })
+    );
+    biosBase.position.set(40, 1, -40);
+    biosBase.castShadow = true;
+    biosBase.receiveShadow = true;
+    this.group.add(biosBase);
+
+    // BIOS label/logo
+    const biosLabel = new THREE.Mesh(
+      new THREE.BoxGeometry(10, 0.3, 6),
+      new THREE.MeshPhongMaterial({
+        color: 0x00ff00,
+        emissive: 0x00ff00,
+        emissiveIntensity: 1.2,
+        transparent: true,
+        opacity: 0.9,
+      })
+    );
+    biosLabel.position.set(40, 2.2, -40);
+    this.group.add(biosLabel);
+
+    // Socket pins
+    for (let i = 0; i < 8; i++) {
+      const pin = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.3, 0.3, 1, 8),
+        new THREE.MeshPhongMaterial({
+          color: 0xcccccc,
+          shininess: 150,
+        })
+      );
+      pin.position.set(40 + (i - 3.5) * 1.4, 0.5, -40);
+      this.group.add(pin);
+    }
+
+    this.addAnimator((delta, time) => {
+      biosLabel.material.emissiveIntensity = 0.8 + Math.sin(time * 3) * 0.4;
+    });
+
+    this.addCollider({
+      minX: 34,
+      maxX: 46,
+      minZ: -44,
+      maxZ: -36,
+      height: 2.5,
+    });
+  }
+
+  buildMemorySlots() {
+    // DDR4/DDR5 Memory Slots
+    const slotMaterial = new THREE.MeshPhongMaterial({
+      color: 0x0a0a0a,
+      emissive: 0xff9900,
+      emissiveIntensity: 0.4,
+      shininess: 80,
+    });
+
+    for (let slot = 0; slot < 4; slot++) {
+      const slotBase = new THREE.Mesh(
+        new THREE.BoxGeometry(4, 2, 28),
+        slotMaterial.clone()
+      );
+      slotBase.position.set(30, 1, -10 + slot * 8);
+      slotBase.castShadow = true;
+      slotBase.receiveShadow = true;
+      this.group.add(slotBase);
+
+      // Retention clips
+      const clipMaterial = new THREE.MeshPhongMaterial({
+        color: 0xeeeeee,
+        shininess: 100,
+      });
+      const clip1 = new THREE.Mesh(
+        new THREE.BoxGeometry(1, 3, 2),
+        clipMaterial
+      );
+      clip1.position.set(28, 2, -10 + slot * 8 - 13);
+      this.group.add(clip1);
+
+      const clip2 = clip1.clone();
+      clip2.position.set(28, 2, -10 + slot * 8 + 13);
+      this.group.add(clip2);
+
+      // Contact pins
+      const pinGeometry = new THREE.BoxGeometry(3.5, 0.2, 0.3);
+      const pinMaterial = new THREE.MeshPhongMaterial({
+        color: 0xffdd00,
+        emissive: 0xffaa00,
+        emissiveIntensity: 0.6,
+        shininess: 150,
+      });
+
+      for (let i = 0; i < 24; i++) {
+        const pin = new THREE.Mesh(pinGeometry, pinMaterial.clone());
+        pin.position.set(30, 0.8, -21 + slot * 8 + i * 1.8);
+        this.group.add(pin);
+      }
+
+      this.addAnimator((delta, time) => {
+        slotBase.material.emissiveIntensity =
+          0.3 + Math.sin(time * 2 + slot) * 0.2;
+      });
+
+      this.addCollider({
+        minX: 26,
+        maxX: 34,
+        minZ: -24 + slot * 8,
+        maxZ: 4 + slot * 8,
+        height: 2,
+      });
+    }
+  }
+
+  buildSATAPorts() {
+    // SATA storage connectors
+    const sataBaseMaterial = new THREE.MeshPhongMaterial({
+      color: 0x1a1a1a,
+      emissive: 0xff0000,
+      emissiveIntensity: 0.5,
+      shininess: 90,
+    });
+
+    for (let i = 0; i < 6; i++) {
+      const port = new THREE.Mesh(
+        new THREE.BoxGeometry(3, 2, 4),
+        sataBaseMaterial.clone()
+      );
+      const row = Math.floor(i / 3);
+      const col = i % 3;
+      port.position.set(50 + col * 5, 1, 20 + row * 6);
+      port.rotation.y = Math.PI / 4;
+      port.castShadow = true;
+      port.receiveShadow = true;
+      this.group.add(port);
+
+      // Port interior
+      const interior = new THREE.Mesh(
+        new THREE.BoxGeometry(2.5, 1.5, 3.5),
+        new THREE.MeshPhongMaterial({
+          color: 0xff3333,
+          emissive: 0xff0000,
+          emissiveIntensity: 0.8,
+        })
+      );
+      interior.position.copy(port.position);
+      interior.position.y += 0.3;
+      interior.rotation.y = port.rotation.y;
+      this.group.add(interior);
+
+      // Connection pins
+      for (let p = 0; p < 7; p++) {
+        const pin = new THREE.Mesh(
+          new THREE.BoxGeometry(0.2, 1.2, 0.3),
+          new THREE.MeshPhongMaterial({
+            color: 0xffdd00,
+            shininess: 150,
+          })
+        );
+        pin.position.set(port.position.x - 1 + p * 0.35, 0.8, port.position.z);
+        this.group.add(pin);
+      }
+
+      this.addAnimator((delta, time) => {
+        port.material.emissiveIntensity = 0.4 + Math.sin(time * 4 + i) * 0.2;
+      });
+
+      this.addCollider({
+        minX: port.position.x - 2,
+        maxX: port.position.x + 2,
+        minZ: port.position.z - 2,
+        maxZ: port.position.z + 2,
+        height: 2,
+      });
+    }
+  }
+
+  buildBatteryHolder() {
+    // CMOS Battery holder (CR2032)
+    const holderBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(4, 4, 1, 24),
+      new THREE.MeshPhongMaterial({
+        color: 0x222222,
+        shininess: 80,
+      })
+    );
+    holderBase.position.set(-10, 0.5, 40);
+    holderBase.castShadow = true;
+    holderBase.receiveShadow = true;
+    this.group.add(holderBase);
+
+    // Battery
+    const battery = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.5, 3.5, 0.6, 24),
+      new THREE.MeshPhongMaterial({
+        color: 0xcccccc,
+        emissive: 0x4444ff,
+        emissiveIntensity: 0.3,
+        shininess: 120,
+      })
+    );
+    battery.position.set(-10, 1.2, 40);
+    battery.castShadow = true;
+    this.group.add(battery);
+
+    // Battery label
+    const label = new THREE.Mesh(
+      new THREE.CircleGeometry(2.5, 24),
+      new THREE.MeshPhongMaterial({
+        color: 0x4444ff,
+        emissive: 0x6666ff,
+        emissiveIntensity: 0.6,
+      })
+    );
+    label.rotation.x = -Math.PI / 2;
+    label.position.set(-10, 1.6, 40);
+    this.group.add(label);
+
+    this.addAnimator((delta, time) => {
+      battery.material.emissiveIntensity = 0.2 + Math.sin(time * 1.5) * 0.15;
+    });
+
+    this.addCollider({
+      minX: -14,
+      maxX: -6,
+      minZ: 36,
+      maxZ: 44,
+      height: 1.8,
+    });
+  }
+
+  buildNorthBridge() {
+    // Northbridge chipset with heatsink
+    const heatsinkBase = new THREE.Mesh(
+      new THREE.BoxGeometry(16, 8, 16),
+      new THREE.MeshPhongMaterial({
+        color: 0x1a1a1a,
+        emissive: 0x00ffaa,
+        emissiveIntensity: 0.4,
+        shininess: 100,
+      })
+    );
+    heatsinkBase.position.set(0, 4, -30);
+    heatsinkBase.castShadow = true;
+    heatsinkBase.receiveShadow = true;
+    this.group.add(heatsinkBase);
+
+    // Heatsink fins
+    const finMaterial = new THREE.MeshPhongMaterial({
+      color: 0x333333,
+      emissive: 0x00cc88,
+      emissiveIntensity: 0.3,
+      shininess: 110,
+    });
+
+    for (let i = 0; i < 8; i++) {
+      const fin = new THREE.Mesh(
+        new THREE.BoxGeometry(14, 0.8, 0.6),
+        finMaterial.clone()
+      );
+      fin.position.set(0, 5 + i * 1, -30);
+      fin.castShadow = true;
+      this.group.add(fin);
+    }
+
+    // Cooling fan
+    const fanHub = new THREE.Mesh(
+      new THREE.CylinderGeometry(3, 3, 1.5, 16),
+      new THREE.MeshPhongMaterial({
+        color: 0x222222,
+        emissive: 0x00ffaa,
+        emissiveIntensity: 0.5,
+      })
+    );
+    fanHub.rotation.x = Math.PI / 2;
+    fanHub.position.set(0, 13, -30);
+    this.group.add(fanHub);
+
+    // Fan blades
+    const bladeGeometry = new THREE.BoxGeometry(0.6, 0.2, 5);
+    const bladeMaterial = new THREE.MeshPhongMaterial({
+      color: 0x00ffaa,
+      emissive: 0x00ffaa,
+      emissiveIntensity: 0.6,
+      transparent: true,
+      opacity: 0.7,
+    });
+
+    const fanGroup = new THREE.Group();
+    fanGroup.position.copy(fanHub.position);
+    this.group.add(fanGroup);
+
+    for (let i = 0; i < 4; i++) {
+      const blade = new THREE.Mesh(bladeGeometry, bladeMaterial.clone());
+      blade.position.z = 2.5;
+      blade.rotation.y = (i / 4) * Math.PI * 2;
+      fanGroup.add(blade);
+    }
+
+    this.addAnimator((delta, time) => {
+      fanGroup.rotation.z = time * 8;
+      heatsinkBase.material.emissiveIntensity = 0.3 + Math.sin(time * 3) * 0.2;
+    });
+
+    this.addCollider({
+      minX: -8,
+      maxX: 8,
+      minZ: -38,
+      maxZ: -22,
+      height: 14,
+    });
+  }
+
+  buildSouthBridge() {
+    // Southbridge chipset
+    const chipBase = new THREE.Mesh(
+      new THREE.BoxGeometry(12, 4, 12),
+      new THREE.MeshPhongMaterial({
+        color: 0x0a2633,
+        emissive: 0x00aaff,
+        emissiveIntensity: 0.5,
+        shininess: 95,
+      })
+    );
+    chipBase.position.set(10, 2, 45);
+    chipBase.castShadow = true;
+    chipBase.receiveShadow = true;
+    this.group.add(chipBase);
+
+    // Heat spreader
+    const spreader = new THREE.Mesh(
+      new THREE.BoxGeometry(10, 0.5, 10),
+      new THREE.MeshPhongMaterial({
+        color: 0x333333,
+        emissive: 0x0088ff,
+        emissiveIntensity: 0.4,
+        shininess: 120,
+      })
+    );
+    spreader.position.set(10, 4.5, 45);
+    spreader.castShadow = true;
+    this.group.add(spreader);
+
+    // LED indicators
+    const ledPositions = [
+      { x: -4, z: -4 },
+      { x: 4, z: -4 },
+      { x: -4, z: 4 },
+      { x: 4, z: 4 },
+    ];
+
+    ledPositions.forEach((pos, i) => {
+      const led = new THREE.Mesh(
+        new THREE.SphereGeometry(0.5, 12, 12),
+        new THREE.MeshPhongMaterial({
+          color: 0x00ffff,
+          emissive: 0x00ffff,
+          emissiveIntensity: 2,
+        })
+      );
+      led.position.set(10 + pos.x, 5, 45 + pos.z);
+      this.group.add(led);
+
+      this.addAnimator((delta, time) => {
+        led.material.emissiveIntensity = 1.5 + Math.sin(time * 5 + i) * 0.5;
+      });
+    });
+
+    this.addAnimator((delta, time) => {
+      chipBase.material.emissiveIntensity = 0.4 + Math.sin(time * 2.5) * 0.2;
+    });
+
+    this.addCollider({
+      minX: 4,
+      maxX: 16,
+      minZ: 39,
+      maxZ: 51,
+      height: 5,
+    });
+  }
+
+  buildPowerPhases() {
+    // VRM power delivery phases
+    const phaseMaterial = new THREE.MeshPhongMaterial({
+      color: 0x1a1a1a,
+      emissive: 0xffaa00,
+      emissiveIntensity: 0.5,
+      shininess: 100,
+    });
+
+    // Power phases in a row
+    for (let i = 0; i < 10; i++) {
+      const mosfet = new THREE.Mesh(
+        new THREE.BoxGeometry(3, 3, 3),
+        phaseMaterial.clone()
+      );
+      mosfet.position.set(-48 + i * 5, 1.5, -55);
+      mosfet.castShadow = true;
+      mosfet.receiveShadow = true;
+      this.group.add(mosfet);
+
+      // Choke/inductor
+      const choke = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.2, 1.2, 2.5, 16),
+        new THREE.MeshPhongMaterial({
+          color: 0x2a2a2a,
+          emissive: 0xff6600,
+          emissiveIntensity: 0.4,
+        })
+      );
+      choke.position.set(-48 + i * 5, 3.5, -55);
+      choke.castShadow = true;
+      this.group.add(choke);
+
+      this.addAnimator((delta, time) => {
+        const phase = (time * 4 + i * 0.3) % (Math.PI * 2);
+        mosfet.material.emissiveIntensity = 0.3 + Math.sin(phase) * 0.25;
+        choke.material.emissiveIntensity = 0.3 + Math.cos(phase) * 0.2;
+      });
+
+      this.addCollider({
+        minX: -50 + i * 5,
+        maxX: -46 + i * 5,
+        minZ: -57,
+        maxZ: -53,
+        height: 4.5,
+      });
+    }
+
+    // Power connectors
+    for (let i = 0; i < 2; i++) {
+      const connector = new THREE.Mesh(
+        new THREE.BoxGeometry(6, 4, 4),
+        new THREE.MeshPhongMaterial({
+          color: 0x1a1a1a,
+          emissive: 0xffff00,
+          emissiveIntensity: 0.6,
+          shininess: 110,
+        })
+      );
+      connector.position.set(-52 + i * 54, 2, -64);
+      connector.castShadow = true;
+      connector.receiveShadow = true;
+      this.group.add(connector);
+
+      // Connector pins
+      for (let p = 0; p < 8; p++) {
+        const pin = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.3, 0.3, 3, 8),
+          new THREE.MeshPhongMaterial({
+            color: 0xffdd00,
+            emissive: 0xffaa00,
+            emissiveIntensity: 0.8,
+            shininess: 150,
+          })
+        );
+        pin.position.set(
+          -55 + i * 54 + (p % 4) * 1.5,
+          3,
+          -64 + Math.floor(p / 4) * 2
+        );
+        this.group.add(pin);
+      }
+
+      this.addAnimator((delta, time) => {
+        connector.material.emissiveIntensity =
+          0.5 + Math.sin(time * 3 + i) * 0.2;
+      });
+
+      this.addCollider({
+        minX: -55 + i * 54,
+        maxX: -49 + i * 54,
+        minZ: -66,
+        maxZ: -62,
+        height: 4,
+      });
+    }
   }
 }

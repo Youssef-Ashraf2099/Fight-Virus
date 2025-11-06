@@ -32,6 +32,18 @@ class Game {
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
+      // Initialize health bar canvas
+      console.log("Initializing health bar canvas...");
+      this.healthBarCanvas = document.getElementById("healthBarCanvas");
+      if (this.healthBarCanvas) {
+        this.healthBarCanvas.width = window.innerWidth;
+        this.healthBarCanvas.height = window.innerHeight;
+        this.healthBarContext = this.healthBarCanvas.getContext("2d");
+        console.log("Health bar canvas initialized");
+      } else {
+        console.warn("Health bar canvas not found");
+      }
+
       this.clock = new THREE.Clock();
       this.isRunning = false;
       this.gameStarted = false;
@@ -107,6 +119,12 @@ class Game {
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
+
+      // Update health bar canvas size
+      if (this.healthBarCanvas) {
+        this.healthBarCanvas.width = window.innerWidth;
+        this.healthBarCanvas.height = window.innerHeight;
+      }
     });
 
     // Weapon switching
@@ -160,21 +178,33 @@ class Game {
     // EMP blast that damages all nearby enemies
     const enemies = this.enemyManager.getEnemies();
     const playerPos = this.player.getPosition();
-    const blastRadius = 15;
+    const blastRadius = this.player.empRadius || 18;
+    const empDamage = this.player.empDamage || 60;
 
+    let hitCount = 0;
     enemies.forEach((enemy) => {
       const enemyPos = enemy.getPosition();
       const distance = playerPos.distanceTo(enemyPos);
 
       if (distance < blastRadius) {
-        enemy.takeDamage(50);
-        this.particleSystem.createExplosion(enemyPos, 0x00ffff, 20);
+        // Damage scales with distance
+        const distanceRatio = 1 - distance / blastRadius;
+        const scaledDamage = empDamage * (0.5 + distanceRatio * 0.5);
+
+        enemy.takeDamage(scaledDamage);
+        this.particleSystem.createImpact(enemyPos, 0x00ffff, 15);
+        hitCount++;
       }
     });
 
     // Visual effect
     this.particleSystem.createShockwave(playerPos, blastRadius, 0x00ffff);
-    this.uiManager.showMessage("EMP BLAST!", 1000);
+
+    if (hitCount > 0) {
+      this.uiManager.showMessage(`EMP BLAST! ${hitCount} ENEMIES HIT!`, 1500);
+    } else {
+      this.uiManager.showMessage("EMP BLAST!", 1000);
+    }
   }
 
   update(deltaTime) {
@@ -208,6 +238,9 @@ class Game {
     // Update particle effects
     this.particleSystem.update(deltaTime);
 
+    // Continuous enemy separation (prevents getting stuck)
+    this.preventPlayerSticking(deltaTime);
+
     // Check collisions
     this.checkCollisions();
 
@@ -226,6 +259,43 @@ class Game {
     // Check game over
     if (this.player.health <= 0) {
       this.gameOver();
+    }
+  }
+
+  preventPlayerSticking(deltaTime) {
+    // Continuous separation to prevent player getting stuck in enemies
+    const enemies = this.enemyManager.getEnemies();
+    const playerPos = this.player.getPosition();
+    const separationForce = new THREE.Vector3();
+    let enemiesNearby = 0;
+
+    enemies.forEach((enemy) => {
+      const enemyPos = enemy.getPosition();
+      const distance = playerPos.distanceTo(enemyPos);
+      const safeDistance =
+        enemy.collisionRadius + this.player.collisionRadius + 0.5;
+
+      // Apply separation force if too close
+      if (distance < safeDistance && distance > 0.01) {
+        const direction = new THREE.Vector3()
+          .subVectors(playerPos, enemyPos)
+          .normalize();
+
+        // Stronger force when closer
+        const strength = (safeDistance - distance) / safeDistance;
+        const force = direction.multiplyScalar(strength * 15 * deltaTime);
+
+        separationForce.add(force);
+        enemiesNearby++;
+      }
+    });
+
+    // Apply accumulated separation force
+    if (enemiesNearby > 0) {
+      this.player.position.add(separationForce);
+      if (this.player.group) {
+        this.player.group.position.copy(this.player.position);
+      }
     }
   }
 
@@ -256,22 +326,49 @@ class Game {
       });
     });
 
-    // Enemy vs Player collisions
+    // Enemy vs Player collisions with STRONG pushback
     enemies.forEach((enemy) => {
       const enemyPos = enemy.getPosition();
       const distance = playerPos.distanceTo(enemyPos);
+      const minDistance = enemy.collisionRadius + this.player.collisionRadius;
 
-      if (distance < enemy.collisionRadius + this.player.collisionRadius) {
+      if (distance < minDistance) {
+        // Calculate pushback direction (away from enemy)
+        let direction = new THREE.Vector3().subVectors(playerPos, enemyPos);
+
+        // Handle case where player is exactly on enemy position
+        if (direction.length() < 0.01) {
+          // Push in random direction to break the stuck state
+          direction.set(Math.random() - 0.5, 0, Math.random() - 0.5);
+        }
+
+        direction.normalize();
+
+        // Calculate overlap amount
+        const overlap = minDistance - distance;
+
+        // STRONG pushback - multiply by 2.0 for immediate separation
+        const pushbackStrength = Math.max(overlap * 2.0, 0.5);
+        const pushbackVector = direction
+          .clone()
+          .multiplyScalar(pushbackStrength);
+
+        // Instantly move player to safe distance
+        this.player.position.add(pushbackVector);
+
+        // Update player group position
+        if (this.player.group) {
+          this.player.group.position.copy(this.player.position);
+        }
+
+        // Strong knockback velocity for continuous separation
+        this.player.applyKnockback(direction.clone(), 12);
+
+        // Apply contact damage
         const damage = enemy.contactDamage;
         this.player.takeDamage(damage);
 
-        // Knockback
-        const direction = new THREE.Vector3()
-          .subVectors(playerPos, enemyPos)
-          .normalize();
-        this.player.applyKnockback(direction, 5);
-
-        this.particleSystem.createImpact(playerPos, 0xff0000, 15);
+        this.particleSystem.createImpact(playerPos.clone(), 0xff0000, 15);
       }
 
       // Enemy projectiles vs Player
@@ -288,16 +385,77 @@ class Game {
           proj.destroy();
         }
       });
+
+      // Handle enemy AOE attacks
+      if (enemy.attackType === "aoe" && enemy.behaviorState === "attacking") {
+        const aoeResult = enemy.performAOEAttack(playerPos);
+        if (aoeResult && aoeResult.type === "aoe") {
+          const distance = playerPos.distanceTo(enemyPos);
+          if (distance <= aoeResult.radius) {
+            this.player.takeDamage(aoeResult.damage);
+            this.particleSystem.createExplosion(enemyPos, enemy.color, 30);
+          }
+        }
+      }
     });
+
+    // Enemy vs Enemy collision pushback (prevent stacking)
+    for (let i = 0; i < enemies.length; i++) {
+      for (let j = i + 1; j < enemies.length; j++) {
+        const enemy1 = enemies[i];
+        const enemy2 = enemies[j];
+
+        const pos1 = enemy1.getPosition();
+        const pos2 = enemy2.getPosition();
+        const distance = pos1.distanceTo(pos2);
+
+        const minDistance = enemy1.collisionRadius + enemy2.collisionRadius;
+
+        if (distance < minDistance && distance > 0.1) {
+          // Calculate separation force
+          const overlap = minDistance - distance;
+          const direction = new THREE.Vector3()
+            .subVectors(pos1, pos2)
+            .normalize();
+
+          // Push enemies apart (distribute force equally)
+          const separationForce = overlap * 0.3;
+
+          enemy1.position.add(
+            direction.clone().multiplyScalar(separationForce * 0.5)
+          );
+          enemy2.position.add(
+            direction.clone().multiplyScalar(-separationForce * 0.5)
+          );
+
+          // Update enemy group positions
+          if (enemy1.group) enemy1.group.position.copy(enemy1.position);
+          if (enemy2.group) enemy2.group.position.copy(enemy2.position);
+        }
+      }
+    }
   }
 
   onEnemyKilled(enemy) {
     const points = enemy.scoreValue || 100;
-    this.score += points;
+    const bonusMultiplier = enemy.isBoss ? 3 : 1; // Bonus points for bosses
+    const totalPoints = points * bonusMultiplier;
+
+    this.score += totalPoints;
     this.uiManager.updateScore(this.score);
 
     // Create death explosion
-    this.particleSystem.createExplosion(enemy.getPosition(), enemy.color, 30);
+    const explosionSize = enemy.isBoss ? 50 : 30;
+    this.particleSystem.createExplosion(
+      enemy.getPosition(),
+      enemy.color,
+      explosionSize
+    );
+
+    // Show boss kill message
+    if (enemy.isBoss) {
+      this.uiManager.showMessage(`💀 BOSS DEFEATED! +${totalPoints} 💀`, 2500);
+    }
 
     this.enemyManager.removeEnemy(enemy);
   }
@@ -306,28 +464,54 @@ class Game {
     this.difficulty += 0.2;
     const waveNumber = this.waveManager.getCurrentWave();
 
-    this.uiManager.showMessage(`WAVE ${waveNumber} COMPLETE!`, 2000);
+    // Determine if this was a boss wave
+    const wasBossWave = waveNumber % 3 === 0;
+
+    if (wasBossWave) {
+      this.uiManager.showMessage(
+        `🎉 WAVE ${waveNumber} - BOSS DEFEATED! 🎉`,
+        3000
+      );
+    } else {
+      this.uiManager.showMessage(`WAVE ${waveNumber} COMPLETE!`, 2000);
+    }
 
     // Bonus score
-    this.score += 1000 * waveNumber;
+    const waveBonus = 1000 * waveNumber * (wasBossWave ? 1.5 : 1);
+    this.score += waveBonus;
     this.uiManager.updateScore(this.score);
 
-    // Heal player slightly
+    // Heal player based on wave performance
+    const healAmount = wasBossWave ? 30 : 20;
     this.player.health = Math.min(
       this.player.maxHealth,
-      this.player.health + 20
+      this.player.health + healAmount
+    );
+
+    // Restore some energy
+    this.player.energy = Math.min(
+      this.player.maxEnergy,
+      this.player.energy + 30
     );
 
     // Start next wave after delay
+    const nextWaveDelay = wasBossWave ? 5000 : 3000; // Longer rest after boss
     setTimeout(() => {
       if (this.gameStarted) {
         this.waveManager.startWave();
-        this.uiManager.showMessage(
-          `WAVE ${this.waveManager.getCurrentWave()} - INCOMING!`,
-          2000
-        );
+        const nextWave = this.waveManager.getCurrentWave();
+        const isBossWave = nextWave % 3 === 0;
+
+        if (isBossWave) {
+          this.uiManager.showMessage(
+            `⚔️ WAVE ${nextWave} - PREPARE FOR BOSS! ⚔️`,
+            2500
+          );
+        } else {
+          this.uiManager.showMessage(`WAVE ${nextWave} - INCOMING!`, 2000);
+        }
       }
-    }, 3000);
+    }, nextWaveDelay);
   }
 
   gameOver() {
@@ -350,5 +534,37 @@ class Game {
     const deltaTime = this.clock.getDelta();
     this.update(deltaTime);
     this.renderer.render(this.scene, this.camera);
+
+    // Render health bars on overlay canvas
+    if (this.healthBarCanvas && this.healthBarContext && this.gameStarted) {
+      // Clear canvas
+      this.healthBarContext.clearRect(
+        0,
+        0,
+        this.healthBarCanvas.width,
+        this.healthBarCanvas.height
+      );
+
+      // Render enemy health bars (3D projected above enemies)
+      const enemies = this.enemyManager.getEnemies();
+      enemies.forEach((enemy) => {
+        this.uiManager.renderEnemyHealthBar(
+          enemy,
+          this.camera,
+          this.healthBarContext,
+          this.healthBarCanvas
+        );
+      });
+
+      // Render boss health bar at top of screen (if boss is active)
+      const activeBoss = enemies.find((enemy) => enemy.isBoss);
+      if (activeBoss) {
+        this.uiManager.renderBossHealthBar(
+          activeBoss,
+          this.healthBarContext,
+          this.healthBarCanvas
+        );
+      }
+    }
   }
 }

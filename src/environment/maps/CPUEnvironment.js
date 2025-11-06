@@ -140,6 +140,7 @@ class CPUEnvironment extends BaseEnvironmentMap {
     this.buildPulseConduits();
     this.buildTelemetryHalo();
     this.buildBinaryStream();
+    this.buildBinaryBoundaryWalls();
   }
 
   buildFoundation() {
@@ -164,7 +165,7 @@ class CPUEnvironment extends BaseEnvironmentMap {
       shininess: 40,
     });
     const traces = new THREE.Mesh(
-      new THREE.PlaneGeometry(118, 118, 30, 30),
+      new THREE.PlaneGeometry(120, 120, 30, 30),
       traceMaterial
     );
     traces.rotation.x = -Math.PI / 2;
@@ -199,7 +200,7 @@ class CPUEnvironment extends BaseEnvironmentMap {
       dieOverlayMaterial.map.wrapT = THREE.RepeatWrapping;
       dieOverlayMaterial.map.repeat.set(1.8, 1.8);
     }
-    const dieOverlayGeometry = new THREE.PlaneGeometry(118, 118, 30, 30);
+    const dieOverlayGeometry = new THREE.PlaneGeometry(120, 120, 30, 30);
     const overlayPos = dieOverlayGeometry.attributes.position;
     for (let i = 0; i < overlayPos.count; i++) {
       const x = overlayPos.getX(i);
@@ -221,7 +222,7 @@ class CPUEnvironment extends BaseEnvironmentMap {
       emissiveIntensity: 0.25,
     });
     const perimeter = new THREE.Mesh(
-      new THREE.BoxGeometry(126, 1.2, 126),
+      new THREE.BoxGeometry(128, 1.2, 128),
       perimeterMaterial
     );
     perimeter.position.y = -1.4;
@@ -229,10 +230,10 @@ class CPUEnvironment extends BaseEnvironmentMap {
     this.group.add(perimeter);
 
     this.addCollider({
-      minX: -58,
-      maxX: 58,
-      minZ: -58,
-      maxZ: 58,
+      minX: -60,
+      maxX: 60,
+      minZ: -60,
+      maxZ: 60,
       height: 0,
     });
   }
@@ -710,6 +711,219 @@ class CPUEnvironment extends BaseEnvironmentMap {
         sprite.position.y =
           sprite.userData.baseY +
           Math.sin(time * sprite.userData.bobSpeed) * 1.5;
+      });
+    });
+  }
+
+  buildBinaryBoundaryWalls() {
+    // Create glowing binary digit sprites as boundary walls
+    const wallDistance = 58; // Match the floor boundary
+    const wallHeight = 15;
+    const digitSpacing = 6;
+
+    const createBinaryTexture = (digit) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext("2d");
+
+      // Clear background
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Glow effect
+      ctx.shadowColor = digit === "0" ? "#00ffcc" : "#ff6b6b";
+      ctx.shadowBlur = 30;
+
+      // Draw digit
+      ctx.fillStyle = digit === "0" ? "#00ffcc" : "#ff6b6b";
+      ctx.font = "bold 220px 'Courier New', monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(digit, canvas.width / 2, canvas.height / 2);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+      return texture;
+    };
+
+    const zeroTexture = createBinaryTexture("0");
+    const oneTexture = createBinaryTexture("1");
+
+    const createWallSprite = (texture, x, y, z) => {
+      const material = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0.9,
+        depthWrite: false,
+      });
+      const sprite = new THREE.Sprite(material);
+      sprite.position.set(x, y, z);
+      sprite.scale.set(4, 4, 1);
+      return sprite;
+    };
+
+    // North wall (positive Z)
+    for (let i = -wallDistance; i <= wallDistance; i += digitSpacing) {
+      const texture = Math.random() > 0.5 ? zeroTexture : oneTexture;
+      const sprite = createWallSprite(texture, i, wallHeight / 2, wallDistance);
+      this.group.add(sprite);
+
+      // Add second row for more density
+      const sprite2 = createWallSprite(
+        texture,
+        i,
+        wallHeight / 2 + 5,
+        wallDistance
+      );
+      sprite2.scale.set(3, 3, 1);
+      this.group.add(sprite2);
+    }
+
+    // South wall (negative Z)
+    for (let i = -wallDistance; i <= wallDistance; i += digitSpacing) {
+      const texture = Math.random() > 0.5 ? zeroTexture : oneTexture;
+      const sprite = createWallSprite(
+        texture,
+        i,
+        wallHeight / 2,
+        -wallDistance
+      );
+      this.group.add(sprite);
+
+      const sprite2 = createWallSprite(
+        texture,
+        i,
+        wallHeight / 2 + 5,
+        -wallDistance
+      );
+      sprite2.scale.set(3, 3, 1);
+      this.group.add(sprite2);
+    }
+
+    // East wall (positive X)
+    for (let i = -wallDistance; i <= wallDistance; i += digitSpacing) {
+      const texture = Math.random() > 0.5 ? zeroTexture : oneTexture;
+      const sprite = createWallSprite(texture, wallDistance, wallHeight / 2, i);
+      this.group.add(sprite);
+
+      const sprite2 = createWallSprite(
+        texture,
+        wallDistance,
+        wallHeight / 2 + 5,
+        i
+      );
+      sprite2.scale.set(3, 3, 1);
+      this.group.add(sprite2);
+    }
+
+    // West wall (negative X)
+    for (let i = -wallDistance; i <= wallDistance; i += digitSpacing) {
+      const texture = Math.random() > 0.5 ? zeroTexture : oneTexture;
+      const sprite = createWallSprite(
+        texture,
+        -wallDistance,
+        wallHeight / 2,
+        i
+      );
+      this.group.add(sprite);
+
+      const sprite2 = createWallSprite(
+        texture,
+        -wallDistance,
+        wallHeight / 2 + 5,
+        i
+      );
+      sprite2.scale.set(3, 3, 1);
+      this.group.add(sprite2);
+    }
+
+    // Add invisible collision barriers at boundaries
+    const barrierMaterial = new THREE.MeshBasicMaterial({
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide,
+    });
+
+    // North barrier
+    const northBarrier = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallDistance * 2, wallHeight * 2),
+      barrierMaterial
+    );
+    northBarrier.position.set(0, wallHeight, wallDistance);
+    this.group.add(northBarrier);
+
+    // South barrier
+    const southBarrier = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallDistance * 2, wallHeight * 2),
+      barrierMaterial
+    );
+    southBarrier.position.set(0, wallHeight, -wallDistance);
+    this.group.add(southBarrier);
+
+    // East barrier
+    const eastBarrier = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallDistance * 2, wallHeight * 2),
+      barrierMaterial
+    );
+    eastBarrier.rotation.y = Math.PI / 2;
+    eastBarrier.position.set(wallDistance, wallHeight, 0);
+    this.group.add(eastBarrier);
+
+    // West barrier
+    const westBarrier = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallDistance * 2, wallHeight * 2),
+      barrierMaterial
+    );
+    westBarrier.rotation.y = Math.PI / 2;
+    westBarrier.position.set(-wallDistance, wallHeight, 0);
+    this.group.add(westBarrier);
+
+    // Add physical colliders for player/enemy boundaries
+    // North wall
+    this.addCollider({
+      minX: -wallDistance,
+      maxX: wallDistance,
+      minZ: wallDistance - 2,
+      maxZ: wallDistance + 2,
+      height: wallHeight * 2,
+    });
+
+    // South wall
+    this.addCollider({
+      minX: -wallDistance,
+      maxX: wallDistance,
+      minZ: -wallDistance - 2,
+      maxZ: -wallDistance + 2,
+      height: wallHeight * 2,
+    });
+
+    // East wall
+    this.addCollider({
+      minX: wallDistance - 2,
+      maxX: wallDistance + 2,
+      minZ: -wallDistance,
+      maxZ: wallDistance,
+      height: wallHeight * 2,
+    });
+
+    // West wall
+    this.addCollider({
+      minX: -wallDistance - 2,
+      maxX: -wallDistance + 2,
+      minZ: -wallDistance,
+      maxZ: wallDistance,
+      height: wallHeight * 2,
+    });
+
+    // Animate the wall sprites
+    this.addAnimator((delta, time) => {
+      this.group.children.forEach((child) => {
+        if (child instanceof THREE.Sprite && child.material.map) {
+          // Pulse opacity
+          child.material.opacity =
+            0.7 +
+            Math.sin(time * 2 + child.position.x + child.position.z) * 0.2;
+        }
       });
     });
   }

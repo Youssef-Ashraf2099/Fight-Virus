@@ -2,15 +2,19 @@ class AdwareVirus extends BaseEnemy {
   constructor(scene, position, particleSystem, difficulty = 1) {
     super(scene, position, particleSystem, difficulty);
 
-    // Adware stats - Swarm behavior, weak individually
-    this.maxHealth = 40 * difficulty;
+    // Adware stats - Swarm behavior, weak individually, fast melee
+    this.maxHealth = 50 * difficulty;
     this.health = this.maxHealth;
-    this.speed = 10;
-    this.damage = 5 * difficulty;
-    this.contactDamage = 5 * difficulty;
+    this.speed = 12; // Very fast
+    this.damage = 8 * difficulty;
+    this.contactDamage = 4 * difficulty; // Reduced from 6 for balance
     this.collisionRadius = 0.8;
     this.scoreValue = 50;
     this.color = 0xffff00;
+
+    // Attack configuration - swarm melee
+    this.attackType = "melee";
+    this.attackRange = 2.5;
 
     this.createMesh();
   }

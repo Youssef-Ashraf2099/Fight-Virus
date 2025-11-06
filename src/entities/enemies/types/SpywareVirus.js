@@ -3,14 +3,19 @@ class SpywareVirus extends BaseEnemy {
     super(scene, position, particleSystem, difficulty);
 
     // Spyware stats - Stealthy, teleports, ranged attacks
-    this.maxHealth = 80 * difficulty;
+    this.maxHealth = 90 * difficulty;
     this.health = this.maxHealth;
     this.speed = 8;
-    this.damage = 15 * difficulty;
-    this.contactDamage = 10 * difficulty;
+    this.damage = 18 * difficulty; // Higher ranged damage
+    this.contactDamage = 7 * difficulty; // Reduced from 10 for balance
     this.collisionRadius = 1.2;
     this.scoreValue = 120;
     this.color = 0x9900ff;
+
+    // Attack configuration
+    this.attackType = "ranged";
+    this.attackRange = 22; // Long range
+    this.projectileSpeed = 18;
 
     this.teleportCooldown = 0;
     this.teleportCooldownMax = 5;
@@ -202,14 +207,13 @@ class SpywareVirus extends BaseEnemy {
 
     // Update projectiles
     this.projectiles = this.projectiles.filter((proj) => {
-      proj.position.add(proj.velocity.clone().multiplyScalar(deltaTime));
-      proj.mesh.position.copy(proj.position);
+      if (!this._advanceProjectile(proj, deltaTime)) {
+        return false;
+      }
 
       proj.lifetime -= deltaTime;
       if (proj.lifetime <= 0) {
-        this.scene.remove(proj.mesh);
-        proj.mesh.geometry.dispose();
-        proj.mesh.material.dispose();
+        this._disposeProjectile(proj);
         return false;
       }
 
@@ -257,6 +261,7 @@ class SpywareVirus extends BaseEnemy {
       damage: this.damage,
       lifetime: 3,
       collisionRadius: 0.3,
+      color: 0xff00ff,
       getPosition: function () {
         return this.position.clone();
       },

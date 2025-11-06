@@ -17,6 +17,14 @@ class EnemyManager {
       adware: AdwareVirus,
       rootkit: RootkitVirus,
     };
+
+    // Boss classes (in order of difficulty)
+    this.bossClasses = {
+      "circuit-overlord": CircuitOverlord, // First boss - Wave 3
+      "corruption-core": CorruptionCore, // Second boss - Wave 5+
+      "pixel-reaper": PixelReaper, // GPU boss - Wave 4+ (GPU environment)
+      "data-wyrm": DataWyrm, // Dragon boss - Wave 8+ (Motherboard)
+    };
   }
 
   spawnEnemy(type, position, difficulty = 1) {
@@ -47,9 +55,16 @@ class EnemyManager {
     );
 
     if (enemy) {
+      if (this.environment && typeof enemy.setEnvironment === "function") {
+        enemy.setEnvironment(this.environment);
+      }
+
       const radius =
         typeof enemy.collisionRadius === "number" ? enemy.collisionRadius : 1;
-      const lift = Math.max(0.5, radius);
+      const lift =
+        typeof enemy.spawnElevation === "number"
+          ? enemy.spawnElevation
+          : Math.max(0.5, radius);
       enemy.position.y = spawnPosition.y + lift;
       if (enemy.group) {
         enemy.group.position.copy(enemy.position);
@@ -64,6 +79,59 @@ class EnemyManager {
     const types = allowedTypes || Object.keys(this.enemyClasses);
     const randomType = types[Math.floor(Math.random() * types.length)];
     return this.spawnEnemy(randomType, position, difficulty);
+  }
+
+  /**
+   * Spawn a boss enemy at the specified position (usually map center)
+   * Bosses have special spawn animations and behaviors
+   */
+  spawnBoss(bossType, position, difficulty = 1) {
+    const BossClass = this.bossClasses[bossType];
+    if (!BossClass) {
+      console.error(`Unknown boss type: ${bossType}`);
+      return null;
+    }
+
+    const spawnPosition = position
+      ? position.clone()
+      : new THREE.Vector3(0, 0, 0);
+
+    // Bosses spawn at map center, adjust for floor height
+    if (this.environment) {
+      spawnPosition.y = this.environment.getFloorHeightAt(
+        spawnPosition.x,
+        spawnPosition.z
+      );
+    }
+
+    const boss = new BossClass(
+      this.scene,
+      spawnPosition,
+      this.particleSystem,
+      difficulty
+    );
+
+    if (boss) {
+      if (this.environment && typeof boss.setEnvironment === "function") {
+        boss.setEnvironment(this.environment);
+      }
+
+      const radius =
+        typeof boss.collisionRadius === "number" ? boss.collisionRadius : 2;
+      const lift =
+        typeof boss.spawnElevation === "number"
+          ? boss.spawnElevation
+          : Math.max(0.5, radius);
+      boss.position.y = spawnPosition.y + lift;
+      if (boss.group) {
+        boss.group.position.copy(boss.position);
+      }
+
+      console.log(`Boss spawned: ${boss.bossName} at position`, spawnPosition);
+    }
+
+    this.enemies.push(boss);
+    return boss;
   }
 
   queueSpawn(type, position, difficulty, delaySeconds = 0) {
@@ -110,16 +178,7 @@ class EnemyManager {
       this.queueSpawn(randomType, position, difficulty, i * spawnDelayStep);
     }
 
-    // Boss enemy every 5 waves
-    if (waveNumber % 5 === 0) {
-      const bossPosition = new THREE.Vector3(0, 0, -50);
-      this.queueSpawn(
-        "rootkit",
-        bossPosition,
-        difficulty * 2,
-        count * spawnDelayStep + 1
-      );
-    }
+    // Note: Boss spawning is now handled by WaveManager
   }
 
   update(deltaTime, playerPosition) {
