@@ -17,6 +17,12 @@ class EnemyManager {
       adware: AdwareVirus,
       rootkit: RootkitVirus,
     };
+
+    // Boss classes
+    this.bossClasses = {
+      "corruption-core": CorruptionCore,
+      // Future bosses will be added here
+    };
   }
 
   spawnEnemy(type, position, difficulty = 1) {
@@ -66,6 +72,52 @@ class EnemyManager {
     return this.spawnEnemy(randomType, position, difficulty);
   }
 
+  /**
+   * Spawn a boss enemy at the specified position (usually map center)
+   * Bosses have special spawn animations and behaviors
+   */
+  spawnBoss(bossType, position, difficulty = 1) {
+    const BossClass = this.bossClasses[bossType];
+    if (!BossClass) {
+      console.error(`Unknown boss type: ${bossType}`);
+      return null;
+    }
+
+    const spawnPosition = position
+      ? position.clone()
+      : new THREE.Vector3(0, 0, 0);
+
+    // Bosses spawn at map center, adjust for floor height
+    if (this.environment) {
+      spawnPosition.y = this.environment.getFloorHeightAt(
+        spawnPosition.x,
+        spawnPosition.z
+      );
+    }
+
+    const boss = new BossClass(
+      this.scene,
+      spawnPosition,
+      this.particleSystem,
+      difficulty
+    );
+
+    if (boss) {
+      const radius =
+        typeof boss.collisionRadius === "number" ? boss.collisionRadius : 2;
+      const lift = Math.max(0.5, radius);
+      boss.position.y = spawnPosition.y + lift;
+      if (boss.group) {
+        boss.group.position.copy(boss.position);
+      }
+
+      console.log(`Boss spawned: ${boss.bossName} at position`, spawnPosition);
+    }
+
+    this.enemies.push(boss);
+    return boss;
+  }
+
   queueSpawn(type, position, difficulty, delaySeconds = 0) {
     this.spawnQueue.push({
       type,
@@ -110,16 +162,7 @@ class EnemyManager {
       this.queueSpawn(randomType, position, difficulty, i * spawnDelayStep);
     }
 
-    // Boss enemy every 5 waves
-    if (waveNumber % 5 === 0) {
-      const bossPosition = new THREE.Vector3(0, 0, -50);
-      this.queueSpawn(
-        "rootkit",
-        bossPosition,
-        difficulty * 2,
-        count * spawnDelayStep + 1
-      );
-    }
+    // Note: Boss spawning is now handled by WaveManager
   }
 
   update(deltaTime, playerPosition) {

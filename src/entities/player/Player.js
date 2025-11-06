@@ -4,16 +4,22 @@ class Player {
     this.camera = camera;
     this.environment = environment || null;
 
-    // Stats
-    this.maxHealth = 100;
+    // Stats - Balanced for challenging but fair gameplay
+    this.maxHealth = 150; // Increased for better survivability against multiple enemies
     this.health = this.maxHealth;
     this.maxEnergy = 100;
     this.energy = this.maxEnergy;
 
+    // Damage reduction and invulnerability frames
+    this.damageReduction = 0; // Percentage damage reduction
+    this.isInvulnerable = false;
+    this.invulnerabilityDuration = 0.5; // 0.5 seconds after taking damage
+    this.lastDamageTime = 0;
+
     // FPS Movement settings
     this.speed = 20;
     this.sprintMultiplier = 1.5;
-    this.collisionRadius = 0.8;
+    this.collisionRadius = 1.2; // Increased from 0.8 for better separation
 
     // FPS Camera settings
     this.height = 1.8; // Eye height
@@ -42,10 +48,12 @@ class Player {
     this.isAiming = false;
     this.aimProgress = 0;
 
-    // Special ability cooldown
+    // Special ability cooldown - EMP blast
     this.specialCooldown = 0;
-    this.specialCooldownMax = 5;
-    this.specialEnergyCost = 50;
+    this.specialCooldownMax = 3; // Increased cooldown for balance
+    this.specialEnergyCost = 40; // Reduced cost for more frequent use
+    this.empDamage = 60; // EMP damage value
+    this.empRadius = 18; // EMP blast radius
 
     this.time = 0;
 
@@ -657,6 +665,19 @@ class Player {
       );
     }
 
+    // Visual feedback for invulnerability
+    if (this.isInvulnerable) {
+      const currentTime = performance.now() / 1000;
+      const timeInInvuln = currentTime - this.lastDamageTime;
+      if (timeInInvuln < this.invulnerabilityDuration) {
+        // Pulse weapon intensity during invulnerability
+        const pulse = Math.sin(currentTime * 20) * 0.5 + 0.5;
+        if (this.weaponLight) {
+          this.weaponLight.intensity *= 1 + pulse * 0.3;
+        }
+      }
+    }
+
     // Update crosshair for aiming
     this.updateCrosshair();
   }
@@ -685,15 +706,38 @@ class Player {
   }
 
   takeDamage(amount) {
-    this.health = Math.max(0, this.health - amount);
+    // Check invulnerability frames to prevent instant death from multiple hits
+    const currentTime = performance.now() / 1000;
+    if (
+      this.isInvulnerable &&
+      currentTime - this.lastDamageTime < this.invulnerabilityDuration
+    ) {
+      return; // Still invulnerable
+    }
 
-    // Screen flash effect
+    // Apply damage reduction
+    const reducedDamage = amount * (1 - this.damageReduction);
+    const finalDamage = Math.max(1, Math.floor(reducedDamage)); // Minimum 1 damage
+
+    this.health = Math.max(0, this.health - finalDamage);
+
+    // Set invulnerability
+    this.isInvulnerable = true;
+    this.lastDamageTime = currentTime;
+
+    // Clear invulnerability after duration
+    setTimeout(() => {
+      this.isInvulnerable = false;
+    }, this.invulnerabilityDuration * 1000);
+
+    // Screen flash effect with intensity based on damage
+    const flashIntensity = Math.min(0.5, finalDamage / 50);
     const flash = document.createElement("div");
     flash.style.cssText = `
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(255, 0, 0, 0.3);
+      background: rgba(255, 0, 0, ${flashIntensity});
       pointer-events: none;
       z-index: 9999;
       animation: damageFlash 0.2s ease-out;
@@ -713,12 +757,36 @@ class Player {
     return true;
   }
 
-  applyKnockback(enemyPosition) {
+  applyKnockback(directionOrPosition, strength = 3) {
     // Knockback in FPS mode
-    const knockbackDir = new THREE.Vector3()
-      .subVectors(this.position, enemyPosition)
-      .normalize()
-      .multiplyScalar(3);
+    let knockbackDir;
+
+    // Check if first parameter is a direction vector or enemy position
+    if (
+      typeof strength === "number" &&
+      directionOrPosition instanceof THREE.Vector3
+    ) {
+      // If strength is provided, assume directionOrPosition is already a direction
+      if (
+        directionOrPosition.length() > 0.9 &&
+        directionOrPosition.length() < 1.1
+      ) {
+        // It's already normalized direction
+        knockbackDir = directionOrPosition.clone().multiplyScalar(strength);
+      } else {
+        // It's an enemy position, calculate direction
+        knockbackDir = new THREE.Vector3()
+          .subVectors(this.position, directionOrPosition)
+          .normalize()
+          .multiplyScalar(strength);
+      }
+    } else {
+      // Legacy support: single parameter as enemy position
+      knockbackDir = new THREE.Vector3()
+        .subVectors(this.position, directionOrPosition)
+        .normalize()
+        .multiplyScalar(3);
+    }
 
     this.velocity.add(knockbackDir);
   }
@@ -773,5 +841,7 @@ class Player {
     this.jumpVelocity = 0;
     this.isGrounded = true;
     this.specialCooldown = 0;
+    this.isInvulnerable = false;
+    this.lastDamageTime = 0;
   }
 }

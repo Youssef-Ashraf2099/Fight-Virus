@@ -2,18 +2,23 @@ class RansomwareVirus extends BaseEnemy {
   constructor(scene, position, particleSystem, difficulty = 1) {
     super(scene, position, particleSystem, difficulty);
 
-    // Ransomware stats - Locks area, high damage, armor
-    this.maxHealth = 200 * difficulty;
+    // Ransomware stats - Locks area, high damage, armor, AOE attacks
+    this.maxHealth = 220 * difficulty;
     this.health = this.maxHealth;
     this.speed = 3;
-    this.damage = 25 * difficulty;
-    this.contactDamage = 20 * difficulty;
+    this.damage = 28 * difficulty;
+    this.contactDamage = 15 * difficulty; // Reduced from 22 for balance
     this.collisionRadius = 2.5;
     this.scoreValue = 200;
     this.color = 0xff6600;
 
+    // Attack configuration - AOE specialist
+    this.attackType = "aoe";
+    this.attackRange = 8;
+    this.aoeRadius = 12;
+
     this.shieldActive = true;
-    this.shieldHealth = 100;
+    this.shieldHealth = 120 * difficulty;
     this.lockdownRadius = 10;
 
     this.createMesh();
@@ -218,6 +223,11 @@ class RansomwareVirus extends BaseEnemy {
         .normalize();
 
       this.position.add(direction.multiplyScalar(this.speed * deltaTime));
+    } else {
+      // Perform AOE attack when in range
+      if (this.attackCooldown <= 0) {
+        this.performAOEAttack(playerPosition);
+      }
     }
   }
 

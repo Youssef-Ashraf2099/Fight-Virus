@@ -48,6 +48,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     "./entities/enemies/types/RansomwareVirus.js",
     "./entities/enemies/types/AdwareVirus.js",
     "./entities/enemies/types/RootkitVirus.js",
+    "./entities/bosses/BaseBoss.js",
+    "./entities/bosses/CorruptionCore.js",
     "./entities/enemies/EnemyManager.js",
 
     // Weapons

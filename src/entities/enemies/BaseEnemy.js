@@ -20,6 +20,19 @@ class BaseEnemy {
     this.stateTimer = 0;
     this.attackCooldown = 0;
 
+    // Attack system
+    this.attackType = "melee"; // melee, ranged, charger, aoe
+    this.attackRange = 3;
+    this.projectileSpeed = 15;
+    this.projectiles = [];
+    this.isBoss = false;
+
+    // Attack zone system - prevents all enemies attacking at once
+    this.aggroRange = 20; // Distance to start attacking
+    this.deAggroRange = 30; // Distance to stop attacking
+    this.isAggressive = false; // Whether enemy is actively attacking
+    this.passiveWanderRadius = 15; // How far to wander when not aggressive
+
     this.group = new THREE.Group();
     this.time = 0;
     this.alive = true;
@@ -38,6 +51,9 @@ class BaseEnemy {
     // AI behavior update
     this.updateBehavior(deltaTime, playerPosition);
 
+    // Update projectiles if enemy has ranged attacks
+    this.updateProjectiles(deltaTime);
+
     // Update mesh position
     this.group.position.copy(this.position);
 
@@ -46,12 +62,58 @@ class BaseEnemy {
   }
 
   updateBehavior(deltaTime, playerPosition) {
-    // Default behavior: move toward player
-    const direction = new THREE.Vector3()
-      .subVectors(playerPosition, this.position)
-      .normalize();
+    // Default behavior with attack zones
+    if (!playerPosition) return;
 
-    this.position.add(direction.multiplyScalar(this.speed * deltaTime));
+    const distanceToPlayer = this.position.distanceTo(playerPosition);
+
+    // Check aggro range
+    if (!this.isAggressive && distanceToPlayer <= this.aggroRange) {
+      this.isAggressive = true;
+      this.behaviorState = "chasing";
+    } else if (this.isAggressive && distanceToPlayer > this.deAggroRange) {
+      this.isAggressive = false;
+      this.behaviorState = "idle";
+    }
+
+    // Bosses are always aggressive
+    if (this.isBoss) {
+      this.isAggressive = true;
+    }
+
+    if (this.isAggressive) {
+      // Move toward player when aggressive
+      const direction = new THREE.Vector3()
+        .subVectors(playerPosition, this.position)
+        .normalize();
+
+      this.position.add(direction.multiplyScalar(this.speed * deltaTime));
+    } else {
+      // Passive wandering behavior
+      if (this.behaviorState === "idle" || Math.random() < 0.01) {
+        this.behaviorState = "wandering";
+        this.wanderTarget = new THREE.Vector3(
+          this.position.x + (Math.random() - 0.5) * this.passiveWanderRadius,
+          0,
+          this.position.z + (Math.random() - 0.5) * this.passiveWanderRadius
+        );
+      }
+
+      if (this.behaviorState === "wandering" && this.wanderTarget) {
+        const direction = new THREE.Vector3()
+          .subVectors(this.wanderTarget, this.position)
+          .normalize();
+
+        this.position.add(
+          direction.multiplyScalar(this.speed * 0.3 * deltaTime)
+        );
+
+        // Stop wandering when close to target
+        if (this.position.distanceTo(this.wanderTarget) < 2) {
+          this.behaviorState = "idle";
+        }
+      }
+    }
   }
 
   animate(deltaTime) {
@@ -87,7 +149,120 @@ class BaseEnemy {
   }
 
   getProjectiles() {
-    return [];
+    return this.projectiles || [];
+  }
+
+  // Attack methods for different enemy types
+  performMeleeAttack(playerPosition) {
+    if (this.attackCooldown > 0) return false;
+
+    const distance = this.position.distanceTo(playerPosition);
+    if (distance <= this.attackRange) {
+      this.attackCooldown = 1.5; // Melee attack cooldown
+      return { type: "melee", damage: this.damage };
+    }
+    return false;
+  }
+
+  performRangedAttack(playerPosition) {
+    if (this.attackCooldown > 0 || !this.projectiles) return false;
+
+    const distance = this.position.distanceTo(playerPosition);
+    if (distance <= this.attackRange && distance > 5) {
+      this.shootProjectile(playerPosition);
+      this.attackCooldown = 2; // Ranged attack cooldown
+      return true;
+    }
+    return false;
+  }
+
+  performChargeAttack(playerPosition) {
+    if (this.attackCooldown > 0) return false;
+
+    const distance = this.position.distanceTo(playerPosition);
+    if (distance > 10 && distance < 25) {
+      // Charge toward player at high speed
+      this.behaviorState = "charging";
+      this.stateTimer = 2; // Charge duration
+      this.attackCooldown = 4; // Long cooldown after charge
+      return true;
+    }
+    return false;
+  }
+
+  performAOEAttack(playerPosition) {
+    if (this.attackCooldown > 0) return false;
+
+    const distance = this.position.distanceTo(playerPosition);
+    if (distance <= this.attackRange * 1.5) {
+      // Create AOE explosion effect
+      if (this.particleSystem) {
+        this.particleSystem.createExplosion(this.position, this.color, 30);
+      }
+      this.attackCooldown = 3; // AOE attack cooldown
+      return {
+        type: "aoe",
+        damage: this.damage * 0.7,
+        radius: this.attackRange * 1.5,
+      };
+    }
+    return false;
+  }
+
+  shootProjectile(targetPosition) {
+    const direction = new THREE.Vector3()
+      .subVectors(targetPosition, this.position)
+      .normalize();
+
+    // Create projectile visual
+    const projGeometry = new THREE.SphereGeometry(0.25, 8, 8);
+    const projMaterial = this.createGlowMaterial(this.color, 1.2);
+    const projMesh = new THREE.Mesh(projGeometry, projMaterial);
+
+    projMesh.position.copy(this.position);
+    projMesh.position.y += 1; // Spawn at enemy center
+    this.scene.add(projMesh);
+
+    const projectile = {
+      mesh: projMesh,
+      position: this.position.clone(),
+      velocity: direction.multiplyScalar(this.projectileSpeed),
+      damage: this.damage * 0.8, // Ranged attacks do slightly less damage
+      lifetime: 4,
+      collisionRadius: 0.3,
+      getPosition: function () {
+        return this.position.clone();
+      },
+      destroy: function () {
+        this.lifetime = 0;
+      },
+    };
+
+    this.projectiles.push(projectile);
+  }
+
+  updateProjectiles(deltaTime) {
+    if (!this.projectiles) return;
+
+    this.projectiles = this.projectiles.filter((proj) => {
+      proj.position.add(proj.velocity.clone().multiplyScalar(deltaTime));
+      proj.mesh.position.copy(proj.position);
+
+      // Add trail effect
+      if (proj.mesh.material) {
+        proj.mesh.material.opacity = Math.max(0.3, proj.lifetime / 4);
+      }
+
+      proj.lifetime -= deltaTime;
+      if (proj.lifetime <= 0) {
+        this.scene.remove(proj.mesh);
+        if (proj.mesh.geometry) proj.mesh.geometry.dispose();
+        if (proj.mesh.material) proj.mesh.material.dispose();
+        return false;
+      }
+
+      return true;
+    });
   }
 
   destroy() {

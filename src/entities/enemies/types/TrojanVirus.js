@@ -2,15 +2,21 @@ class TrojanVirus extends BaseEnemy {
   constructor(scene, position, particleSystem, difficulty = 1) {
     super(scene, position, particleSystem, difficulty);
 
-    // Trojan stats - Heavy, slow, high damage
-    this.maxHealth = 150 * difficulty;
+    // Trojan stats - Heavy, slow, high damage charger
+    this.maxHealth = 180 * difficulty;
     this.health = this.maxHealth;
     this.speed = 4;
-    this.damage = 20 * difficulty;
-    this.contactDamage = 15 * difficulty;
+    this.damage = 25 * difficulty; // High melee damage
+    this.contactDamage = 12 * difficulty; // Reduced from 18 for balance
     this.collisionRadius = 2;
     this.scoreValue = 150;
     this.color = 0xff0000;
+
+    // Attack configuration
+    this.attackType = "charger";
+    this.attackRange = 15;
+    this.chargeSpeed = 18; // Fast charge speed
+    this.isCharging = false;
 
     this.createMesh();
   }
@@ -111,25 +117,59 @@ class TrojanVirus extends BaseEnemy {
       return;
     }
 
-    // Aggressive charge behavior
     const distanceToPlayer = this.position.distanceTo(playerPosition);
 
+    // Handle charging state
+    if (this.behaviorState === "charging" && this.stateTimer > 0) {
+      this.isCharging = true;
+      const direction = new THREE.Vector3()
+        .subVectors(playerPosition, this.position)
+        .normalize();
+
+      // Charge at high speed
+      this.position.add(direction.multiplyScalar(this.chargeSpeed * deltaTime));
+
+      // Create charge trail
+      if (Math.random() < 0.3 && this.particleSystem) {
+        this.particleSystem.createImpact(this.position, this.color, 3);
+      }
+
+      this.stateTimer -= deltaTime;
+      if (this.stateTimer <= 0) {
+        this.behaviorState = "idle";
+        this.isCharging = false;
+      }
+      return;
+    }
+
+    this.isCharging = false;
+
+    // Try to charge at player
+    if (
+      distanceToPlayer > 10 &&
+      distanceToPlayer < 25 &&
+      this.attackCooldown <= 0
+    ) {
+      this.performChargeAttack(playerPosition);
+      return;
+    }
+
     if (distanceToPlayer > 5) {
-      // Charge toward player
+      // Move toward player
       const direction = new THREE.Vector3()
         .subVectors(playerPosition, this.position)
         .normalize();
 
       this.position.add(direction.multiplyScalar(this.speed * deltaTime));
     } else {
-      // Circle around player when close
+      // Circle around player when close for another charge
       const direction = new THREE.Vector3()
         .subVectors(playerPosition, this.position)
         .normalize();
 
       const perpendicular = new THREE.Vector3(-direction.z, 0, direction.x);
       this.position.add(
-        perpendicular.multiplyScalar(this.speed * deltaTime * 0.5)
+        perpendicular.multiplyScalar(this.speed * deltaTime * 0.8)
       );
     }
   }
