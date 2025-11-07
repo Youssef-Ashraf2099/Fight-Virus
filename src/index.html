@@ -309,6 +309,352 @@
         border-color: rgba(34, 209, 255, 0.9);
       }
 
+      #puzzleOverlay {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 30px;
+        background: radial-gradient(
+            circle at center,
+            rgba(0, 255, 136, 0.06),
+            rgba(2, 16, 10, 0.94)
+          ),
+          rgba(0, 0, 0, 0.86);
+        backdrop-filter: blur(9px);
+        z-index: 185000;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+      }
+
+      #puzzleOverlay.visible {
+        display: flex;
+        pointer-events: all;
+        opacity: 1;
+      }
+
+      .puzzle-panel {
+        width: min(960px, calc(100% - 120px));
+        background: rgba(4, 22, 18, 0.95);
+        border: 2px solid rgba(34, 209, 255, 0.35);
+        border-radius: 18px;
+        padding: 36px 40px;
+        display: flex;
+        flex-direction: column;
+        gap: 26px;
+        box-shadow: 0 0 45px rgba(34, 209, 255, 0.28);
+      }
+
+      .puzzle-header {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .puzzle-title {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-family: var(--heading-font);
+        letter-spacing: 3px;
+      }
+
+      .puzzle-title h2 {
+        font-size: 28px;
+        text-shadow: 0 0 18px rgba(34, 209, 255, 0.7);
+      }
+
+      .puzzle-title-icon {
+        font-size: 30px;
+        filter: drop-shadow(0 0 12px rgba(34, 209, 255, 0.6));
+      }
+
+      .puzzle-header p {
+        color: rgba(173, 255, 214, 0.78);
+        line-height: 1.6;
+      }
+
+      .puzzle-instructions {
+        display: none;
+        padding: 14px 18px;
+        border-radius: 12px;
+        background: rgba(0, 38, 28, 0.4);
+        border: 1px solid rgba(34, 209, 255, 0.2);
+        color: rgba(191, 255, 229, 0.85);
+        font-size: 15px;
+        line-height: 1.55;
+        letter-spacing: 0.8px;
+      }
+
+      .puzzle-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 16px 20px;
+        border: 1px solid rgba(34, 209, 255, 0.25);
+        border-radius: 14px;
+        background: rgba(1, 30, 24, 0.55);
+      }
+
+      .puzzle-timer {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .puzzle-timer-label {
+        font-size: 12px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: rgba(173, 255, 214, 0.65);
+      }
+
+      .puzzle-timer-value {
+        font-family: var(--heading-font);
+        font-size: 36px;
+        color: #b7f9ff;
+        text-shadow: 0 0 20px rgba(34, 209, 255, 0.6);
+      }
+
+      .puzzle-feedback {
+        flex: 1;
+        min-height: 28px;
+        font-size: 15px;
+        color: rgba(173, 255, 214, 0.85);
+        text-shadow: 0 0 10px rgba(34, 209, 255, 0.45);
+      }
+
+      .puzzle-body {
+        min-height: 180px;
+        padding: 20px;
+        border: 1px solid rgba(34, 209, 255, 0.18);
+        border-radius: 14px;
+        background: rgba(3, 26, 20, 0.5);
+        box-shadow: inset 0 0 25px rgba(34, 209, 255, 0.05);
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .puzzle-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        justify-content: flex-end;
+      }
+
+      #puzzleSubmitButton,
+      #puzzleSkipButton {
+        font-family: var(--heading-font);
+        font-size: 16px;
+        padding: 12px 28px;
+        border-radius: 10px;
+        border: 2px solid rgba(34, 209, 255, 0.55);
+        background: linear-gradient(
+          135deg,
+          rgba(34, 209, 255, 0.18),
+          rgba(34, 209, 255, 0.05)
+        );
+        color: #c9fbff;
+        cursor: pointer;
+        text-shadow: 0 0 10px rgba(34, 209, 255, 0.5);
+        transition: transform 0.2s ease, box-shadow 0.2s ease,
+          border-color 0.2s ease;
+      }
+
+      #puzzleSubmitButton:hover,
+      #puzzleSkipButton:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 32px rgba(34, 209, 255, 0.22);
+        border-color: rgba(34, 209, 255, 0.85);
+      }
+
+      #puzzleSkipButton {
+        background: linear-gradient(
+          135deg,
+          rgba(255, 102, 0, 0.15),
+          rgba(120, 0, 0, 0.4)
+        );
+        border-color: rgba(255, 102, 0, 0.6);
+        color: #ffd8b0;
+        text-shadow: 0 0 12px rgba(255, 128, 0, 0.55);
+      }
+
+      #puzzleSkipButton:hover {
+        box-shadow: 0 15px 35px rgba(255, 102, 0, 0.25);
+        border-color: rgba(255, 136, 34, 0.8);
+      }
+
+      body.puzzle-open {
+        cursor: default;
+      }
+
+      .puzzle-body.puzzle-logic {
+        gap: 22px;
+      }
+
+      .logic-inputs {
+        display: grid;
+        gap: 14px;
+      }
+
+      .logic-input-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(0, 40, 28, 0.45);
+        border: 1px solid rgba(34, 209, 255, 0.25);
+        border-radius: 10px;
+        padding: 12px 16px;
+      }
+
+      .logic-input-label {
+        font-family: var(--heading-font);
+        letter-spacing: 2px;
+      }
+
+      .logic-invert {
+        font-size: 14px;
+        letter-spacing: 1px;
+        color: rgba(173, 255, 214, 0.8);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .logic-invert input {
+        accent-color: rgba(34, 209, 255, 0.9);
+        width: 16px;
+        height: 16px;
+      }
+
+      .logic-gates {
+        display: grid;
+        gap: 12px;
+        background: rgba(0, 36, 28, 0.4);
+        border: 1px solid rgba(34, 209, 255, 0.2);
+        border-radius: 12px;
+        padding: 16px;
+      }
+
+      .logic-gate-label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 14px;
+        letter-spacing: 1px;
+        color: rgba(173, 255, 214, 0.78);
+      }
+
+      .logic-gate-select {
+        background: rgba(0, 32, 24, 0.7);
+        color: #b7f9ff;
+        border: 1px solid rgba(34, 209, 255, 0.35);
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 15px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+
+      .puzzle-body.puzzle-router {
+        align-items: center;
+      }
+
+      .wire-grid {
+        display: grid;
+        grid-template-columns: repeat(var(--router-cols, 3), minmax(90px, 1fr));
+        gap: 14px;
+        width: 100%;
+        max-width: 520px;
+        margin: 0 auto;
+      }
+
+      .wire-tile {
+        position: relative;
+        aspect-ratio: 1 / 1;
+        border-radius: 12px;
+        border: 1px solid rgba(34, 209, 255, 0.3);
+        background: rgba(0, 30, 25, 0.45);
+        box-shadow: inset 0 0 18px rgba(34, 209, 255, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .wire-tile:hover {
+        transform: scale(1.04);
+        box-shadow: 0 12px 24px rgba(34, 209, 255, 0.2);
+      }
+
+      .wire-tile svg {
+        width: 70%;
+        height: 70%;
+        pointer-events: none;
+      }
+
+      .puzzle-body.puzzle-register {
+        gap: 18px;
+      }
+
+      .register-header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        justify-content: space-between;
+        padding: 16px;
+        border-radius: 10px;
+        background: rgba(0, 36, 24, 0.45);
+        border: 1px solid rgba(34, 209, 255, 0.2);
+      }
+
+      .register-value {
+        font-family: var(--heading-font);
+        font-size: 16px;
+        letter-spacing: 2px;
+      }
+
+      .register-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .register-button {
+        font-size: 15px;
+        letter-spacing: 1px;
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: 1px solid rgba(34, 209, 255, 0.35);
+        background: rgba(0, 36, 28, 0.6);
+        color: #b7f9ff;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .register-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 20px rgba(34, 209, 255, 0.18);
+      }
+
+      .register-history {
+        max-height: 160px;
+        overflow-y: auto;
+        padding-left: 18px;
+        color: rgba(173, 255, 214, 0.85);
+        letter-spacing: 1px;
+      }
+
+      .register-history li + li {
+        margin-top: 6px;
+      }
+
       body.upgrade-select-open {
         cursor: default;
       }
@@ -1263,6 +1609,37 @@
       </div>
 
       <div id="message"></div>
+
+      <div id="puzzleOverlay">
+        <div class="puzzle-panel">
+          <div class="puzzle-header">
+            <div class="puzzle-title">
+              <span class="puzzle-title-icon">🧩</span>
+              <h2 id="puzzleTitle">SYSTEMS INTERDICTION CHALLENGE</h2>
+            </div>
+            <p id="puzzleSubtitle">
+              Stabilize the subsystem before the next wave breaches containment.
+            </p>
+          </div>
+          <div class="puzzle-meta">
+            <div class="puzzle-timer">
+              <span class="puzzle-timer-label">Time Remaining</span>
+              <span class="puzzle-timer-value" id="puzzleTimer">60</span>
+            </div>
+            <div class="puzzle-feedback" id="puzzleFeedback"></div>
+          </div>
+          <div class="puzzle-instructions" id="puzzleInstructions"></div>
+          <div id="puzzleContent" class="puzzle-body"></div>
+          <div class="puzzle-actions">
+            <button id="puzzleSubmitButton" type="button">
+              Validate Solution
+            </button>
+            <button id="puzzleSkipButton" type="button">
+              Skip (-1,000 SCORE)
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div id="upgradeOverlay">
         <div class="upgrade-panel">

@@ -56,6 +56,8 @@ class Player {
     this.empRadius = 18; // EMP blast radius
 
     this.time = 0;
+    this.cameraShakeOffset = { x: 0, z: 0 };
+    this.damageShakeFrame = null;
 
     // Damage indicator system
     this.damageIndicators = [];
@@ -451,7 +453,8 @@ class Player {
     // Update camera rotation from mouse look
     this.camera.rotation.order = "YXZ";
     this.camera.rotation.y = this.yaw;
-    this.camera.rotation.x = this.pitch;
+    this.camera.rotation.x = this.pitch + this.cameraShakeOffset.x;
+    this.camera.rotation.z = this.cameraShakeOffset.z;
 
     // FPS Movement
     const moveSpeed = this.speed * deltaTime;
@@ -930,27 +933,32 @@ class Player {
   }
 
   applyDamageShake(damage) {
-    // Camera shake intensity based on damage
-    const shakeIntensity = Math.min(0.05, damage / 500);
-    const shakeDuration = 0.2;
-    const startTime = performance.now() / 1000;
+    const shakeIntensity = Math.min(0.045, damage / 1200);
+    const durationMs = 220;
+    const start = performance.now();
 
-    const shake = () => {
-      const elapsed = performance.now() / 1000 - startTime;
-      if (elapsed < shakeDuration) {
-        const progress = 1 - elapsed / shakeDuration;
-        const shakeX = (Math.random() - 0.5) * shakeIntensity * progress;
-        const shakeY = (Math.random() - 0.5) * shakeIntensity * progress;
+    if (this.damageShakeFrame) {
+      cancelAnimationFrame(this.damageShakeFrame);
+      this.damageShakeFrame = null;
+    }
 
-        // Apply shake to camera rotation slightly
-        this.camera.rotation.x += shakeY;
-        this.camera.rotation.z += shakeX;
-
-        requestAnimationFrame(shake);
+    const animate = () => {
+      const elapsed = performance.now() - start;
+      if (elapsed < durationMs) {
+        const progress = 1 - elapsed / durationMs;
+        this.cameraShakeOffset.x =
+          (Math.random() - 0.5) * shakeIntensity * progress;
+        this.cameraShakeOffset.z =
+          (Math.random() - 0.5) * shakeIntensity * progress;
+        this.damageShakeFrame = requestAnimationFrame(animate);
+      } else {
+        this.cameraShakeOffset.x = 0;
+        this.cameraShakeOffset.z = 0;
+        this.damageShakeFrame = null;
       }
     };
 
-    shake();
+    animate();
   }
 
   useSpecialAbility() {
@@ -1050,6 +1058,13 @@ class Player {
     this.specialCooldown = 0;
     this.isInvulnerable = false;
     this.lastDamageTime = 0;
+
+    this.cameraShakeOffset.x = 0;
+    this.cameraShakeOffset.z = 0;
+    if (this.damageShakeFrame) {
+      cancelAnimationFrame(this.damageShakeFrame);
+      this.damageShakeFrame = null;
+    }
 
     // Reset damage indicators
     if (this.damageVignette) {

@@ -15,6 +15,18 @@ class UIManager {
     this.upgradeScoreValue = document.getElementById("upgradeScoreValue");
     this.upgradeSubtitle = document.getElementById("upgradeSubtitle");
 
+    this.puzzleOverlay = document.getElementById("puzzleOverlay");
+    this.puzzleTitle = document.getElementById("puzzleTitle");
+    this.puzzleSubtitle = document.getElementById("puzzleSubtitle");
+    this.puzzleTimer = document.getElementById("puzzleTimer");
+    this.puzzleContent = document.getElementById("puzzleContent");
+    this.puzzleFeedback = document.getElementById("puzzleFeedback");
+    this.puzzleInstructions = document.getElementById("puzzleInstructions");
+    this.puzzleSubmitButton = document.getElementById("puzzleSubmitButton");
+    this.puzzleSkipButton = document.getElementById("puzzleSkipButton");
+    this.puzzleSubmitHandler = null;
+    this.puzzleSkipHandler = null;
+
     this.messageTimeout = null;
 
     // Minimap setup
@@ -177,6 +189,105 @@ class UIManager {
         ? numericScore.toLocaleString()
         : "0";
     }
+  }
+
+  showPuzzleOverlay() {
+    if (!this.puzzleOverlay) return;
+    this.puzzleOverlay.classList.add("visible");
+    document.body?.classList.add("puzzle-open");
+  }
+
+  hidePuzzleOverlay() {
+    if (!this.puzzleOverlay) return;
+    this.puzzleOverlay.classList.remove("visible");
+    document.body?.classList.remove("puzzle-open");
+    if (this.puzzleFeedback) {
+      this.puzzleFeedback.textContent = "";
+    }
+    if (this.puzzleInstructions) {
+      this.puzzleInstructions.textContent = "";
+      this.puzzleInstructions.style.display = "none";
+    }
+    if (this.puzzleSubmitButton) {
+      this.puzzleSubmitButton.onclick = null;
+    }
+    if (this.puzzleSkipButton) {
+      this.puzzleSkipButton.onclick = null;
+    }
+  }
+
+  setPuzzleTitle(text) {
+    if (this.puzzleTitle) {
+      this.puzzleTitle.textContent = text || "";
+    }
+  }
+
+  setPuzzleSubtitle(text) {
+    if (this.puzzleSubtitle) {
+      this.puzzleSubtitle.textContent = text || "";
+    }
+  }
+
+  setPuzzleTimer(seconds) {
+    if (this.puzzleTimer) {
+      const clamped = Math.max(0, Math.ceil(seconds ?? 0));
+      this.puzzleTimer.textContent = clamped.toString();
+    }
+  }
+
+  clearPuzzleContent() {
+    if (this.puzzleContent) {
+      this.puzzleContent.innerHTML = "";
+      this.puzzleContent.classList.remove(
+        "puzzle-logic",
+        "puzzle-router",
+        "puzzle-register"
+      );
+      this.puzzleContent.style.removeProperty("--router-cols");
+    }
+  }
+
+  getPuzzleContentElement() {
+    return this.puzzleContent;
+  }
+
+  setPuzzleInstructions(text) {
+    if (!this.puzzleInstructions) return;
+    const value = text || "";
+    this.puzzleInstructions.textContent = value;
+    this.puzzleInstructions.style.display = value ? "block" : "none";
+  }
+
+  setPuzzleFeedback(text) {
+    if (this.puzzleFeedback) {
+      this.puzzleFeedback.textContent = text || "";
+    }
+  }
+
+  setPuzzleSubmitVisibility(visible, label) {
+    if (!this.puzzleSubmitButton) return;
+    this.puzzleSubmitButton.style.display = visible ? "inline-flex" : "none";
+    if (label) {
+      this.puzzleSubmitButton.textContent = label;
+    }
+  }
+
+  setPuzzleSkipLabel(label) {
+    if (this.puzzleSkipButton && label) {
+      this.puzzleSkipButton.textContent = label;
+    }
+  }
+
+  setPuzzleSubmitHandler(handler) {
+    if (!this.puzzleSubmitButton) return;
+    this.puzzleSubmitHandler = handler || null;
+    this.puzzleSubmitButton.onclick = handler || null;
+  }
+
+  setPuzzleSkipHandler(handler) {
+    if (!this.puzzleSkipButton) return;
+    this.puzzleSkipHandler = handler || null;
+    this.puzzleSkipButton.onclick = handler || null;
   }
 
   updateMinimap(playerPosition, enemies, phaseName) {

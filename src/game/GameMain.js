@@ -58,7 +58,9 @@ class GameMain {
       this.score = 0;
       this.difficulty = 1;
       this.awaitingUpgradeSelection = false;
+      this.awaitingPuzzleResolution = false;
       this.pendingNextWaveTimeout = null;
+      this.puzzleManager = null;
 
       this.backgroundMusicTracks = [
         "../Assets/sounds/game/edm-gaming-music-335408.mp3",
@@ -95,6 +97,16 @@ class GameMain {
     // Initialize systems
     this.inputManager = new InputManager();
     this.uiManager = new UIManager();
+    if (typeof PuzzleManager === "function") {
+      try {
+        this.puzzleManager = new PuzzleManager(this.uiManager);
+      } catch (error) {
+        console.warn("PuzzleManager initialization failed:", error);
+        this.puzzleManager = null;
+      }
+    } else {
+      console.warn("PuzzleManager class not found. Timed puzzles disabled.");
+    }
     this.particleSystem = new ParticleSystem(this.scene);
     this.collisionManager = new CollisionManager();
 
@@ -748,12 +760,13 @@ class GameMain {
         this.presentUpgradeSelection(waveNumber);
       }, 900);
     } else {
-      this.scheduleNextWave(3000);
+      this.launchPuzzleChallenge(waveNumber);
     }
   }
 
   presentUpgradeSelection(waveNumber) {
     if (!this.upgradeManager || !this.uiManager) {
+      this.awaitingUpgradeSelection = false;
       this.scheduleNextWave(1200);
       return;
     }
@@ -809,11 +822,113 @@ class GameMain {
     this.scheduleNextWave(1600);
   }
 
+  launchPuzzleChallenge(waveNumber) {
+    if (!this.gameStarted) {
+      return;
+    }
+
+    if (!this.puzzleManager) {
+      this.scheduleNextWave(2000);
+      return;
+    }
+
+    this.clearPendingWaveTimeout();
+    this.awaitingPuzzleResolution = true;
+    this.isRunning = false;
+
+    if (document.pointerLockElement) {
+      document.exitPointerLock();
+    }
+
+    try {
+      this.puzzleManager.startRandomPuzzle({
+        waveNumber,
+        onSuccess: (result) => this.handlePuzzleResult("success", result),
+        onFailure: (result) => this.handlePuzzleResult("failure", result),
+        onSkip: (result) => this.handlePuzzleResult("skip", result),
+      });
+    } catch (error) {
+      console.error("Failed to start puzzle challenge:", error);
+      this.awaitingPuzzleResolution = false;
+      this.isRunning = true;
+      this.scheduleNextWave(2000);
+      return;
+    }
+
+    if (!this.puzzleManager.active) {
+      console.warn(
+        "PuzzleManager did not activate a puzzle. Resuming normal wave flow."
+      );
+      this.awaitingPuzzleResolution = false;
+      this.isRunning = true;
+      this.scheduleNextWave(2000);
+    }
+  }
+
+  handlePuzzleResult(outcome, result) {
+    const puzzleResult = result || {};
+    const delta = Number.isFinite(puzzleResult.scoreDelta)
+      ? puzzleResult.scoreDelta
+      : 0;
+
+    if (delta !== 0) {
+      this.score += delta;
+    }
+
+    this.uiManager.updateScore(this.score);
+
+    let message = puzzleResult.message;
+    if (!message) {
+      if (outcome === "success") {
+        message = "Subsystem stabilized.";
+      } else if (outcome === "skip") {
+        message = "Challenge skipped.";
+      } else {
+        message = "Challenge failed.";
+      }
+    }
+
+    const deltaText = this.formatScoreDelta(delta);
+    if (deltaText) {
+      message = `${message}<br><small>${deltaText}</small>`;
+    }
+
+    const duration = outcome === "success" ? 2000 : 2200;
+    this.uiManager.showMessage(message, duration);
+
+    this.resumeAfterPuzzle();
+  }
+
+  formatScoreDelta(amount) {
+    if (!amount) {
+      return "";
+    }
+
+    const sign = amount > 0 ? "+" : "";
+    return `${sign}${amount.toLocaleString()} SCORE`;
+  }
+
+  resumeAfterPuzzle(delayMs = 1800) {
+    this.awaitingPuzzleResolution = false;
+    if (!this.gameStarted) {
+      return;
+    }
+
+    this.isRunning = true;
+    this.scheduleNextWave(delayMs);
+  }
+
   scheduleNextWave(delayMs = 3000) {
     this.clearPendingWaveTimeout();
 
     this.pendingNextWaveTimeout = setTimeout(() => {
-      if (!this.gameStarted) return;
+      if (
+        !this.gameStarted ||
+        this.awaitingUpgradeSelection ||
+        this.awaitingPuzzleResolution
+      ) {
+        return;
+      }
       this.beginNextWave();
     }, Math.max(0, delayMs));
   }
@@ -867,8 +982,15 @@ class GameMain {
     this.enableBackgroundMusic(false);
 
     this.awaitingUpgradeSelection = false;
+    this.awaitingPuzzleResolution = false;
     this.clearPendingWaveTimeout();
     this.uiManager.hideUpgradeSelection?.();
+    if (
+      this.puzzleManager &&
+      typeof this.puzzleManager.abortActivePuzzle === "function"
+    ) {
+      this.puzzleManager.abortActivePuzzle();
+    }
 
     this.uiManager.showMessage(
       `GAME OVER<br>FINAL SCORE: ${this.score}<br><small>Press R to Restart</small>`,
@@ -893,8 +1015,15 @@ class GameMain {
       this.weaponManager.clear();
       this.uiManager.hideMessage();
       this.uiManager.hideUpgradeSelection?.();
+      if (
+        this.puzzleManager &&
+        typeof this.puzzleManager.abortActivePuzzle === "function"
+      ) {
+        this.puzzleManager.abortActivePuzzle();
+      }
 
       this.awaitingUpgradeSelection = false;
+      this.awaitingPuzzleResolution = false;
       this.clearPendingWaveTimeout();
 
       if (this.upgradeManager) {
