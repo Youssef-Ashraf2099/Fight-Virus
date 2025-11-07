@@ -17,6 +17,21 @@ class LaserRifle extends BaseWeapon {
 
     this.fireSound = this.createSound("../Assets/sounds/rifle.mp3", 0.2);
     this.reloadSound = this.createSound("../Assets/sounds/reload 2.mp3", 0.6);
+
+    this.fireSoundPool = [];
+    this.fireSoundIndex = 0;
+    if (this.fireSound) {
+      this.fireSoundPool.push(this.fireSound);
+      for (let i = 0; i < 4; i++) {
+        const clone = this.fireSound.cloneNode();
+        clone.volume = this.fireSound.volume;
+        clone.preload = "auto";
+        if (typeof clone.load === "function") {
+          clone.load();
+        }
+        this.fireSoundPool.push(clone);
+      }
+    }
   }
 
   fire(origin, target, camera, cameraDirection) {
@@ -62,6 +77,25 @@ class LaserRifle extends BaseWeapon {
       this.projectileColor,
       this.damage
     );
+  }
+
+  playSound(sound) {
+    if (sound === this.fireSound && this.fireSoundPool?.length) {
+      const audio = this.fireSoundPool[this.fireSoundIndex];
+      this.fireSoundIndex = (this.fireSoundIndex + 1) % this.fireSoundPool.length;
+      try {
+        audio.currentTime = 0;
+        const playResult = audio.play();
+        if (playResult && typeof playResult.catch === "function") {
+          playResult.catch((error) => console.warn("Audio play failed:", error));
+        }
+      } catch (error) {
+        console.warn("Audio play failed:", error);
+      }
+      return;
+    }
+
+    super.playSound(sound);
   }
 }
 
