@@ -82,12 +82,15 @@ class LaserRifle extends BaseWeapon {
   playSound(sound) {
     if (sound === this.fireSound && this.fireSoundPool?.length) {
       const audio = this.fireSoundPool[this.fireSoundIndex];
-      this.fireSoundIndex = (this.fireSoundIndex + 1) % this.fireSoundPool.length;
+      this.fireSoundIndex =
+        (this.fireSoundIndex + 1) % this.fireSoundPool.length;
       try {
         audio.currentTime = 0;
         const playResult = audio.play();
         if (playResult && typeof playResult.catch === "function") {
-          playResult.catch((error) => console.warn("Audio play failed:", error));
+          playResult.catch((error) =>
+            console.warn("Audio play failed:", error)
+          );
         }
       } catch (error) {
         console.warn("Audio play failed:", error);
