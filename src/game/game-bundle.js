@@ -59,6 +59,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     // Weapons
     "./weapons/Projectile.js",
     "./weapons/BaseWeapon.js",
+    "./weapons/DetailedWeaponModels.js",
     "./weapons/types/PulseCannon.js",
     "./weapons/types/LaserRifle.js",
     "./weapons/types/PlasmaLauncher.js",

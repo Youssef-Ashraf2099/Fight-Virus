@@ -3,12 +3,14 @@ class PulseCannon extends BaseWeapon {
     super(scene, particleSystem);
 
     this.name = "PULSE CANNON";
-    this.damage = 20;
-    this.fireRate = 0.15;
-    this.projectileSpeed = 40;
-    this.projectileLifetime = 2;
+    this.damage = 25;
+    this.fireRate = 0.12;
+    this.projectileSpeed = 45;
+    this.projectileLifetime = 2.5;
     this.projectileColor = 0x00ff00;
     this.viewModelId = "pulseCannon";
+    this.hudColor = "#00ff00";
+    this.ammoType = "infinite";
   }
 
   fire(origin, target, camera, cameraDirection) {

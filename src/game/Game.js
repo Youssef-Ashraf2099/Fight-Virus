@@ -133,6 +133,12 @@ class Game {
     this.inputManager.on("weapon3", () => this.weaponManager.switchWeapon(2));
     this.inputManager.on("weapon4", () => this.weaponManager.switchWeapon(3));
 
+    this.inputManager.on("reload", () => {
+      if (this.gameStarted && this.isRunning) {
+        this.weaponManager.reload();
+      }
+    });
+
     // Special ability
     this.inputManager.on("special", () => {
       if (this.gameStarted && this.player.useSpecialAbility()) {

@@ -3,12 +3,14 @@ class ShockwaveEmitter extends BaseWeapon {
     super(scene, particleSystem);
 
     this.name = "SHOCKWAVE EMITTER";
-    this.damage = 10;
-    this.fireRate = 0.25;
-    this.projectileSpeed = 35;
-    this.projectileLifetime = 2;
-    this.projectileColor = 0xffff00;
+    this.damage = 12;
+    this.fireRate = 0.2;
+    this.projectileSpeed = 40;
+    this.projectileLifetime = 2.5;
+    this.projectileColor = 0xffcc00;
     this.viewModelId = "shockwaveEmitter";
+    this.hudColor = "#ffcc00";
+    this.ammoType = "infinite";
   }
 
   fire(origin, target, camera, cameraDirection) {

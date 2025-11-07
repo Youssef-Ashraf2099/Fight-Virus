@@ -3,12 +3,17 @@ class LaserRifle extends BaseWeapon {
     super(scene, particleSystem);
 
     this.name = "LASER RIFLE";
-    this.damage = 15;
-    this.fireRate = 0.15; // Reduced fire rate to prevent lag
-    this.projectileSpeed = 60;
-    this.projectileLifetime = 1.5;
-    this.projectileColor = 0x00ffff;
+    this.damage = 18;
+    this.fireRate = 0.1; // Fast fire rate
+    this.projectileSpeed = 70;
+    this.projectileLifetime = 2;
+    this.projectileColor = 0xff0000;
     this.viewModelId = "laserRifle";
+    this.hudColor = "#ff0000";
+    this.ammoType = "limited";
+    this.currentAmmo = 30;
+    this.maxAmmo = 30;
+    this.reloadTime = 1.8;
   }
 
   fire(origin, target, camera, cameraDirection) {

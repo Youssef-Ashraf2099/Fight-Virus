@@ -11,13 +11,23 @@ class WeaponManager {
       new ShockwaveEmitter(scene, particleSystem),
     ];
 
+    this.weapons.forEach((weapon) => {
+      weapon.onReloadStart = (duration) => {
+        this.player?.notifyWeaponReload?.(duration);
+      };
+      weapon.onReloadEnd = () => {
+        this.player?.updateWeaponHUD?.(weapon);
+      };
+    });
+
     this.currentWeaponIndex = 0;
     this.projectiles = [];
+    this.time = 0;
 
-    if (this.player.setWeaponViewModel) {
-      this.player.setWeaponViewModel(
-        this.getCurrentWeapon().viewModelId || this.getCurrentWeapon().name
-      );
+    if (this.player?.setWeaponViewModel) {
+      const weapon = this.getCurrentWeapon();
+      this.player.setWeaponViewModel(weapon.viewModelId || weapon.name);
+      this.player.updateWeaponHUD?.(weapon);
     }
   }
 
@@ -27,8 +37,9 @@ class WeaponManager {
       const weapon = this.getCurrentWeapon();
       weapon.onEquip();
 
-      if (this.player.setWeaponViewModel) {
+      if (this.player?.setWeaponViewModel) {
         this.player.setWeaponViewModel(weapon.viewModelId || weapon.name);
+        this.player.updateWeaponHUD?.(weapon);
       }
     }
   }
@@ -66,10 +77,23 @@ class WeaponManager {
           this.projectiles.push(projectile);
         }
       }
+
+      // Update player HUD when ammo changes
+      this.player.updateWeaponHUD?.(weapon);
+    }
+  }
+
+  reload() {
+    const weapon = this.getCurrentWeapon();
+    if (weapon.ammoType === "limited" && !weapon.isReloading) {
+      weapon.startReload();
+      this.player.notifyWeaponReload?.(weapon.reloadTime);
     }
   }
 
   update(deltaTime) {
+    this.time += deltaTime;
+
     // Update all weapons
     this.weapons.forEach((weapon) => weapon.update(deltaTime));
 
@@ -84,6 +108,7 @@ class WeaponManager {
 
       return true;
     });
+    this.player.updateWeaponHUD?.(this.getCurrentWeapon());
   }
 
   getProjectiles() {

@@ -14,10 +14,19 @@ class BaseWeapon {
     this.ammoType = "infinite"; // or 'limited'
     this.currentAmmo = Infinity;
     this.maxAmmo = Infinity;
+    this.hudColor = "rgba(3, 239, 227, 1)"; // HUD display color
+
+    // Weapon model
+    this.weaponModel = null;
+    this.isReloading = false;
+    this.reloadTime = 1.5;
+    this.currentAnimation = null;
+    this.onReloadStart = null;
+    this.onReloadEnd = null;
   }
 
   canFire() {
-    return this.cooldown <= 0 && this.currentAmmo > 0;
+    return this.cooldown <= 0 && this.currentAmmo > 0 && !this.isReloading;
   }
 
   fire(origin, target, camera) {
@@ -27,6 +36,11 @@ class BaseWeapon {
 
     if (this.ammoType === "limited") {
       this.currentAmmo--;
+
+      // Auto reload when empty
+      if (this.currentAmmo <= 0) {
+        this.startReload();
+      }
     }
 
     // Override in subclasses
@@ -37,6 +51,30 @@ class BaseWeapon {
     if (this.cooldown > 0) {
       this.cooldown -= deltaTime;
     }
+
+    // Update current animation
+    if (this.currentAnimation) {
+      const stillRunning = this.currentAnimation.update(deltaTime);
+      if (!stillRunning) {
+        this.currentAnimation = null;
+      }
+    }
+  }
+
+  startReload() {
+    if (this.isReloading || this.currentAmmo === this.maxAmmo) return;
+
+    this.isReloading = true;
+    if (typeof this.onReloadStart === "function") {
+      this.onReloadStart(this.reloadTime);
+    }
+    setTimeout(() => {
+      this.reload();
+      this.isReloading = false;
+      if (typeof this.onReloadEnd === "function") {
+        this.onReloadEnd();
+      }
+    }, this.reloadTime * 1000);
   }
 
   onEquip() {
@@ -52,5 +90,13 @@ class BaseWeapon {
 
   reload() {
     this.currentAmmo = this.maxAmmo;
+  }
+
+  setWeaponModel(model) {
+    this.weaponModel = model;
+  }
+
+  getWeaponModel() {
+    return this.weaponModel;
   }
 }
