@@ -97,6 +97,14 @@ class WaveManager {
     const enemyCount = this.enemyManager.getActiveEnemyCount();
 
     if (enemyCount === 0) {
+      const hasPendingSpawns =
+        typeof this.enemyManager.hasPendingSpawns === "function" &&
+        this.enemyManager.hasPendingSpawns();
+
+      if (hasPendingSpawns) {
+        return false;
+      }
+
       if (!this.bossFightTriggered) {
         // Regular enemies cleared, trigger boss fight before ending wave
         if (this.currentWave % 3 === 0) {

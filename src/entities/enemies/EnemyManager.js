@@ -6,6 +6,7 @@ class EnemyManager {
     this.enemies = [];
     this.spawnQueue = [];
     this.maxSpawnsPerFrame = 5;
+    this.maxActiveEnemies = 15;
     this.safeSpawnDistance = 18;
     this.lastPlayerPosition = null;
     this._spawnOffset = new THREE.Vector3();
@@ -191,8 +192,16 @@ class EnemyManager {
       });
 
       let spawnsThisFrame = 0;
+      let availableSlots = Math.max(
+        0,
+        this.maxActiveEnemies - this.enemies.length
+      );
       for (let i = 0; i < this.spawnQueue.length; ) {
         if (spawnsThisFrame >= this.maxSpawnsPerFrame) {
+          break;
+        }
+
+        if (availableSlots <= 0) {
           break;
         }
 
@@ -210,6 +219,10 @@ class EnemyManager {
         this.spawnEnemy(request.type, spawnPosition, request.difficulty);
         this.spawnQueue.splice(i, 1);
         spawnsThisFrame++;
+        availableSlots = Math.max(
+          0,
+          this.maxActiveEnemies - this.enemies.length
+        );
       }
     }
 
@@ -235,6 +248,10 @@ class EnemyManager {
     return this.enemies.length;
   }
 
+  hasPendingSpawns() {
+    return this.spawnQueue.length > 0;
+  }
+
   removeEnemy(enemy) {
     const index = this.enemies.indexOf(enemy);
     if (index > -1) {
@@ -247,6 +264,12 @@ class EnemyManager {
     this.enemies.forEach((enemy) => enemy.destroy());
     this.enemies = [];
     this.spawnQueue = [];
+  }
+
+  setMaxActiveEnemies(limit) {
+    if (typeof limit === "number" && limit > 0) {
+      this.maxActiveEnemies = Math.floor(limit);
+    }
   }
 
   _ensureSafeSpawnDistance(spawnPos, playerPos) {

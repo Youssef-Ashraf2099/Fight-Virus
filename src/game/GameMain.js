@@ -129,6 +129,9 @@ class GameMain {
       this.particleSystem,
       this.environment
     );
+    if (typeof this.enemyManager.setMaxActiveEnemies === "function") {
+      this.enemyManager.setMaxActiveEnemies(15);
+    }
 
     // Create wave manager
     this.waveManager = new WaveManager(this.enemyManager, this.uiManager);
