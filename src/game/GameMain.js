@@ -58,6 +58,25 @@ class GameMain {
       this.score = 0;
       this.difficulty = 1;
 
+      this.backgroundMusicTracks = [
+        "../Assets/sounds/game/edm-gaming-music-335408.mp3",
+        "../Assets/sounds/game/energy-gaming-electro-trap-301124.mp3",
+        "../Assets/sounds/game/fast-chiptune-for-gaming-videos-253097 (1).mp3",
+        "../Assets/sounds/game/gaming-game-minecraft-background-music-278382.mp3",
+        "../Assets/sounds/game/level-up-energetic-gaming-rock-music-251284.mp3",
+        "../Assets/sounds/game/neon-gaming-128925.mp3",
+        "../Assets/sounds/game/neon-overdrive-cyberpunk-gaming-edm-415723.mp3",
+        "../Assets/sounds/game/retro-retro-synthwave-gaming-music-270173.mp3",
+        "../Assets/sounds/game/ultimate-gaming-soundtrack-for-legends_astronaut-272122.mp3",
+      ];
+      this.backgroundMusicElements = [];
+      this.backgroundMusicIndex = 0;
+      this.activeBackgroundAudio = null;
+      this.shouldLoopBackgroundMusic = false;
+      this.backgroundMusicVolume = 0.3;
+
+      this.setupBackgroundMusic();
+
       console.log("Calling init()...");
       this.init();
       console.log("GameMain constructor completed successfully");
@@ -195,6 +214,126 @@ class GameMain {
     });
   }
 
+  setupBackgroundMusic() {
+    if (
+      !this.backgroundMusicTracks?.length ||
+      typeof window === "undefined" ||
+      typeof Audio === "undefined"
+    ) {
+      return;
+    }
+
+    this.backgroundMusicElements = this.backgroundMusicTracks
+      .map((relativePath) => {
+        try {
+          const resolvedSrc = new URL(relativePath, window.location.href).href;
+          const audio = new Audio(resolvedSrc);
+          audio.volume = this.backgroundMusicVolume;
+          audio.preload = "auto";
+          audio.addEventListener("ended", () => {
+            if (!this.shouldLoopBackgroundMusic) {
+              return;
+            }
+            this.playNextBackgroundTrack();
+          });
+          if (typeof audio.load === "function") {
+            audio.load();
+          }
+          return audio;
+        } catch (error) {
+          console.warn("Failed to load background track:", relativePath, error);
+          return null;
+        }
+      })
+      .filter(Boolean);
+
+    if (!this.backgroundMusicElements.length) {
+      console.warn("No background music tracks were loaded successfully.");
+    }
+  }
+
+  playCurrentBackgroundTrack() {
+    if (!this.backgroundMusicElements?.length) {
+      return;
+    }
+
+    const index =
+      this.backgroundMusicIndex % this.backgroundMusicElements.length;
+    const audio = this.backgroundMusicElements[index];
+    if (!audio) {
+      return;
+    }
+
+    if (this.activeBackgroundAudio && this.activeBackgroundAudio !== audio) {
+      this.activeBackgroundAudio.pause();
+      this.activeBackgroundAudio.currentTime = 0;
+    }
+
+    this.activeBackgroundAudio = audio;
+
+    try {
+      audio.currentTime = 0;
+      const playResult = audio.play();
+      if (playResult && typeof playResult.catch === "function") {
+        playResult.catch((error) => {
+          console.warn("Background music play failed:", error);
+        });
+      }
+    } catch (error) {
+      console.warn("Background music play failed:", error);
+    }
+  }
+
+  playNextBackgroundTrack() {
+    if (!this.backgroundMusicElements?.length) {
+      return;
+    }
+
+    if (this.backgroundMusicElements.length > 1) {
+      this.backgroundMusicIndex =
+        (this.backgroundMusicIndex + 1) % this.backgroundMusicElements.length;
+    }
+
+    this.playCurrentBackgroundTrack();
+  }
+
+  enableBackgroundMusic(enable) {
+    this.shouldLoopBackgroundMusic = Boolean(enable);
+
+    if (!enable) {
+      this.stopBackgroundMusic();
+      return;
+    }
+
+    if (!this.backgroundMusicElements?.length) {
+      return;
+    }
+
+    if (!this.activeBackgroundAudio || this.activeBackgroundAudio.paused) {
+      if (this.backgroundMusicElements.length > 1) {
+        this.backgroundMusicIndex = Math.floor(
+          Math.random() * this.backgroundMusicElements.length
+        );
+      } else {
+        this.backgroundMusicIndex = 0;
+      }
+      this.playCurrentBackgroundTrack();
+    }
+  }
+
+  stopBackgroundMusic() {
+    if (!this.backgroundMusicElements?.length) {
+      return;
+    }
+
+    this.backgroundMusicElements.forEach((audio) => {
+      audio.pause();
+      audio.currentTime = 0;
+    });
+
+    this.activeBackgroundAudio = null;
+  }
+
   startGame() {
     console.log("🚀 startGame() called");
 
@@ -236,6 +375,8 @@ class GameMain {
           2200
         );
 
+        this.enableBackgroundMusic(true);
+
         console.log("✅ Game started successfully!");
       } catch (error) {
         console.error("❌ Error starting game:", error);
@@ -273,6 +414,8 @@ class GameMain {
         console.log("Setting spectator state...");
         this.gameStarted = false;
         this.isRunning = false;
+
+        this.enableBackgroundMusic(false);
 
         console.log("Starting spectator mode...");
         this.spectatorMode.start();
@@ -593,6 +736,8 @@ class GameMain {
     this.isRunning = false;
     this.gameStarted = false;
 
+    this.enableBackgroundMusic(false);
+
     this.uiManager.showMessage(
       `GAME OVER<br>FINAL SCORE: ${this.score}<br><small>Press R to Restart</small>`,
       0
@@ -649,6 +794,8 @@ class GameMain {
         }WAVE 1 - GET READY!`,
         2200
       );
+
+      this.enableBackgroundMusic(true);
 
       console.log("✅ Game restarted successfully!");
     } catch (error) {
