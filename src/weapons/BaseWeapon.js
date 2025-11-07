@@ -15,8 +15,8 @@ class BaseWeapon {
     this.currentAmmo = Infinity;
     this.maxAmmo = Infinity;
     this.hudColor = "rgba(3, 239, 227, 1)"; // HUD display color
-  this.fireSound = null;
-  this.reloadSound = null;
+    this.fireSound = null;
+    this.reloadSound = null;
 
     // Weapon model
     this.weaponModel = null;

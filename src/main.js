@@ -31,11 +31,14 @@ function createWindow() {
   mainWindow.webContents.on("did-finish-load", () => {
     console.log("Page loaded successfully");
   });
-  mainWindow.webContents.on("console-message", (event, level, message, line, sourceId) => {
-    const levels = ["log", "info", "warn", "error"]; // Electron levels 0-3
-    const label = levels[level] || level;
-    console.log(`[renderer:${label}] ${message} (${sourceId}:${line})`);
-  });
+  mainWindow.webContents.on(
+    "console-message",
+    (event, level, message, line, sourceId) => {
+      const levels = ["log", "info", "warn", "error"]; // Electron levels 0-3
+      const label = levels[level] || level;
+      console.log(`[renderer:${label}] ${message} (${sourceId}:${line})`);
+    }
+  );
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
