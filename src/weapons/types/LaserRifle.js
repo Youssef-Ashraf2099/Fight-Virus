@@ -14,6 +14,9 @@ class LaserRifle extends BaseWeapon {
     this.currentAmmo = 30;
     this.maxAmmo = 30;
     this.reloadTime = 1.8;
+
+    this.fireSound = this.createSound("../Assets/sounds/rifle.mp3", 0.2);
+    this.reloadSound = this.createSound("../Assets/sounds/reload 2.mp3", 0.6);
   }
 
   fire(origin, target, camera, cameraDirection) {
@@ -23,11 +26,9 @@ class LaserRifle extends BaseWeapon {
 
     let direction;
 
-    // FPS mode: use camera direction directly
     if (cameraDirection) {
       direction = cameraDirection.clone().normalize();
     } else {
-      // Legacy top-down mode
       const mouse = new THREE.Vector2(
         (target.x / window.innerWidth) * 2 - 1,
         -(target.y / window.innerHeight) * 2 + 1
@@ -52,7 +53,6 @@ class LaserRifle extends BaseWeapon {
         .normalize();
     }
 
-    // Create laser beam projectile
     return new LaserBeam(
       this.scene,
       origin,

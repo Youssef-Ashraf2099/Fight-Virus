@@ -15,6 +15,9 @@ class PlasmaLauncher extends BaseWeapon {
     this.currentAmmo = 12;
     this.maxAmmo = 12;
     this.reloadTime = 2.5;
+
+    this.fireSound = this.createSound("../Assets/sounds/launcher.mp3", 0.5);
+    this.reloadSound = this.createSound("../Assets/sounds/reload 4.mp3", 0.6);
   }
 
   fire(origin, target, camera, cameraDirection) {

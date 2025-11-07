@@ -10,7 +10,13 @@ class PulseCannon extends BaseWeapon {
     this.projectileColor = 0x00ff00;
     this.viewModelId = "pulseCannon";
     this.hudColor = "#00ff00";
-    this.ammoType = "infinite";
+    this.ammoType = "limited";
+    this.currentAmmo = 40;
+    this.maxAmmo = 40;
+    this.reloadTime = 2.0;
+
+    this.fireSound = this.createSound("../Assets/sounds/cannon.mp3", 0.5);
+    this.reloadSound = this.createSound("../Assets/sounds/reload 3.mp3", 0.6);
   }
 
   fire(origin, target, camera, cameraDirection) {

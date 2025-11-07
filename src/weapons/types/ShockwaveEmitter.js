@@ -10,7 +10,13 @@ class ShockwaveEmitter extends BaseWeapon {
     this.projectileColor = 0xffcc00;
     this.viewModelId = "shockwaveEmitter";
     this.hudColor = "#ffcc00";
-    this.ammoType = "infinite";
+    this.ammoType = "limited";
+    this.currentAmmo = 50;
+    this.maxAmmo = 50;
+    this.reloadTime = 2.2;
+
+    this.fireSound = this.createSound("../Assets/sounds/shockwave.mp3", 0.5);
+    this.reloadSound = this.createSound("../Assets/sounds/reload 1.mp3", 0.6);
   }
 
   fire(origin, target, camera, cameraDirection) {
