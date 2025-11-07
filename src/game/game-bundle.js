@@ -32,6 +32,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     "./environment/maps/GPUEnvironment.js",
     "./environment/maps/MotherboardEnvironment.js",
     "./environment/maps/HardDriveEnvironment.js",
+    "./environment/maps/FirewallEnvironment.js",
     "./environment/maps/RetroTerminalEnvironment.js",
     "./environment/maps/NetworkHubEnvironment.js",
     "./environment/maps/AINeuralNetworkEnvironment.js",
