@@ -27,6 +27,10 @@
     "linux": {
       "target": "AppImage",
       "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "allowToChangeInstallationDirectory": true,
+      "oneClick": false
     }
   },
   "keywords": [
