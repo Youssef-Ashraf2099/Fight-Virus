@@ -25,6 +25,7 @@ class SpectatorMode {
       "GPU ACCELERATOR",
       "MOTHERBOARD EXPANSE",
       "HARD DRIVE SECTOR",
+      "FIREWALL FORTRESS",
       "RETRO TERMINAL INTERFACE",
       "NETWORK HUB NEXUS",
       "AI NEURAL NETWORK CORE",
@@ -39,6 +40,7 @@ class SpectatorMode {
       new THREE.Vector3(0, 25, 50), // GPU
       new THREE.Vector3(0, 30, 60), // Motherboard
       new THREE.Vector3(0, 35, 50), // Hard Drive
+      new THREE.Vector3(0, 25, 45), // Firewall
       new THREE.Vector3(0, 20, 50), // Retro Terminal
       new THREE.Vector3(0, 40, 60), // Network Hub
       new THREE.Vector3(0, 32, 45), // AI Neural Network

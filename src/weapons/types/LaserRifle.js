@@ -3,12 +3,35 @@ class LaserRifle extends BaseWeapon {
     super(scene, particleSystem);
 
     this.name = "LASER RIFLE";
-    this.damage = 15;
-    this.fireRate = 0.15; // Reduced fire rate to prevent lag
-    this.projectileSpeed = 60;
-    this.projectileLifetime = 1.5;
-    this.projectileColor = 0x00ffff;
+    this.damage = 18;
+    this.fireRate = 0.1; // Fast fire rate
+    this.projectileSpeed = 70;
+    this.projectileLifetime = 2;
+    this.projectileColor = 0xff0000;
     this.viewModelId = "laserRifle";
+    this.hudColor = "#ff0000";
+    this.ammoType = "limited";
+    this.currentAmmo = 30;
+    this.maxAmmo = 30;
+    this.reloadTime = 1.8;
+
+    this.fireSound = this.createSound("../Assets/sounds/rifle.mp3", 0.2);
+    this.reloadSound = this.createSound("../Assets/sounds/reload 2.mp3", 0.6);
+
+    this.fireSoundPool = [];
+    this.fireSoundIndex = 0;
+    if (this.fireSound) {
+      this.fireSoundPool.push(this.fireSound);
+      for (let i = 0; i < 4; i++) {
+        const clone = this.fireSound.cloneNode();
+        clone.volume = this.fireSound.volume;
+        clone.preload = "auto";
+        if (typeof clone.load === "function") {
+          clone.load();
+        }
+        this.fireSoundPool.push(clone);
+      }
+    }
   }
 
   fire(origin, target, camera, cameraDirection) {
@@ -18,11 +41,9 @@ class LaserRifle extends BaseWeapon {
 
     let direction;
 
-    // FPS mode: use camera direction directly
     if (cameraDirection) {
       direction = cameraDirection.clone().normalize();
     } else {
-      // Legacy top-down mode
       const mouse = new THREE.Vector2(
         (target.x / window.innerWidth) * 2 - 1,
         -(target.y / window.innerHeight) * 2 + 1
@@ -47,7 +68,6 @@ class LaserRifle extends BaseWeapon {
         .normalize();
     }
 
-    // Create laser beam projectile
     return new LaserBeam(
       this.scene,
       origin,
@@ -57,6 +77,28 @@ class LaserRifle extends BaseWeapon {
       this.projectileColor,
       this.damage
     );
+  }
+
+  playSound(sound) {
+    if (sound === this.fireSound && this.fireSoundPool?.length) {
+      const audio = this.fireSoundPool[this.fireSoundIndex];
+      this.fireSoundIndex =
+        (this.fireSoundIndex + 1) % this.fireSoundPool.length;
+      try {
+        audio.currentTime = 0;
+        const playResult = audio.play();
+        if (playResult && typeof playResult.catch === "function") {
+          playResult.catch((error) =>
+            console.warn("Audio play failed:", error)
+          );
+        }
+      } catch (error) {
+        console.warn("Audio play failed:", error);
+      }
+      return;
+    }
+
+    super.playSound(sound);
   }
 }
 

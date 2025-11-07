@@ -3,13 +3,21 @@ class PlasmaLauncher extends BaseWeapon {
     super(scene, particleSystem);
 
     this.name = "PLASMA LAUNCHER";
-    this.damage = 50;
-    this.fireRate = 0.8; // Slower but powerful
-    this.projectileSpeed = 25;
-    this.projectileLifetime = 3;
-    this.projectileColor = 0xff00ff;
-    this.splashRadius = 5;
+    this.damage = 60;
+    this.fireRate = 1.0; // Slower but powerful
+    this.projectileSpeed = 30;
+    this.projectileLifetime = 3.5;
+    this.projectileColor = 0x0066ff;
+    this.splashRadius = 6;
     this.viewModelId = "plasmaLauncher";
+    this.hudColor = "#0066ff";
+    this.ammoType = "limited";
+    this.currentAmmo = 12;
+    this.maxAmmo = 12;
+    this.reloadTime = 2.5;
+
+    this.fireSound = this.createSound("../Assets/sounds/launcher.mp3", 0.5);
+    this.reloadSound = this.createSound("../Assets/sounds/reload 4.mp3", 0.6);
   }
 
   fire(origin, target, camera, cameraDirection) {

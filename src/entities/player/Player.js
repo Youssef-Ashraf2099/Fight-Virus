@@ -131,6 +131,11 @@ class Player {
     this.aimWeaponRot = new THREE.Euler(-0.015, 0.04, 0);
     this.weaponGroup.rotation.copy(this.baseWeaponRot);
 
+    this.defaultBaseWeaponPos = this.baseWeaponPos.clone();
+    this.defaultAimWeaponPos = this.aimWeaponPos.clone();
+    this.defaultBaseWeaponRot = this.baseWeaponRot.clone();
+    this.defaultAimWeaponRot = this.aimWeaponRot.clone();
+
     this.weaponGroup.renderOrder = 2;
     this.weaponGroup.frustumCulled = false;
 
@@ -144,8 +149,14 @@ class Player {
     this.activeWeaponModel = null;
     this.energyCore = null;
     this.weaponLightBaseIntensity = 1.1;
-
-    this.setWeaponViewModel("pulseCannon");
+    this.currentWeaponAccent = 0x00ff99;
+    this.activeWeaponAnimator = null;
+    this.activeHandData = null;
+    this.weaponHUD = null;
+    this.weaponHUDLastStats = null;
+    this.reloadDuration = 0;
+    this.reloadEndTime = 0;
+    this.handRecoil = 0;
 
     console.log("✓ Weapon viewmodel system initialized");
   }
@@ -230,13 +241,52 @@ class Player {
     }
 
     const modelData = this.weaponModels[weaponId];
+    if (!modelData || !modelData.group) return;
+
     this.weaponGroup.add(modelData.group);
 
-    this.weaponMuzzle = modelData.muzzle;
-    this.muzzleFlash = modelData.flash;
+    this.weaponMuzzle = modelData.muzzle || null;
+    this.muzzleFlash = modelData.flash || null;
     this.energyCore = modelData.energyCore || null;
     this.activeWeaponModel = modelData;
+    this.activeWeaponAnimator = modelData.animate || null;
+    this.activeHandData = modelData.handData || null;
+    this.weaponHUD = modelData.hud || null;
+    this.weaponHUDLastStats = null;
     this.currentWeaponModelId = weaponId;
+
+    const viewTransform = modelData.viewTransform || null;
+    if (viewTransform) {
+      const hipPos = viewTransform.hip?.position;
+      const hipRot = viewTransform.hip?.rotation;
+      const aimPos = viewTransform.aim?.position;
+      const aimRot = viewTransform.aim?.rotation;
+
+      this.baseWeaponPos = hipPos
+        ? hipPos.clone()
+        : this.defaultBaseWeaponPos.clone();
+      this.baseWeaponRot = hipRot
+        ? hipRot.clone()
+        : this.defaultBaseWeaponRot.clone();
+      this.aimWeaponPos = aimPos
+        ? aimPos.clone()
+        : this.defaultAimWeaponPos.clone();
+      this.aimWeaponRot = aimRot
+        ? aimRot.clone()
+        : this.defaultAimWeaponRot.clone();
+    } else {
+      this.baseWeaponPos = this.defaultBaseWeaponPos.clone();
+      this.baseWeaponRot = this.defaultBaseWeaponRot.clone();
+      this.aimWeaponPos = this.defaultAimWeaponPos.clone();
+      this.aimWeaponRot = this.defaultAimWeaponRot.clone();
+    }
+
+    this.weaponGroup.position.copy(this.baseWeaponPos);
+    this.weaponGroup.rotation.copy(this.baseWeaponRot);
+
+    if (this.weaponHUD && typeof this.weaponHUD.update === "function") {
+      this.weaponHUD.update({ status: "READY" });
+    }
 
     if (modelData.flash && modelData.flash.material) {
       modelData.flash.material.opacity = 0;
@@ -250,217 +300,42 @@ class Player {
       this.weaponLight.intensity = modelData.lightIntensity;
       this.weaponLightBaseIntensity = modelData.lightIntensity;
     }
+
+    if (modelData.accentColor) {
+      this.currentWeaponAccent = modelData.accentColor;
+    }
   }
 
   buildWeaponModel(weaponId) {
-    const group = new THREE.Group();
-    let muzzle;
-    let flash;
-    let energyCore = null;
-    let lightColor = 0x00ff99;
-    let lightIntensity = 1.1;
+    const model = DetailedWeaponModels.createWeaponModel(weaponId);
 
-    const makePhong = (color, options = {}) =>
-      new THREE.MeshPhongMaterial({
-        color,
-        specular: options.specular || 0x333333,
-        shininess: options.shininess || 30,
-        emissive: options.emissive || 0x000000,
-        emissiveIntensity: options.emissiveIntensity || 0,
-        transparent: options.transparent || false,
-        opacity: options.opacity || 1,
-        wireframe: options.wireframe || false,
-        flatShading: options.flatShading || false,
-      });
+    if (!model) {
+      return this.buildFallbackWeaponModel();
+    }
 
-    switch (weaponId) {
-      case "laserRifle": {
-        lightColor = 0x00ffff;
-        lightIntensity = 1.3;
+    const group = model.group || new THREE.Group();
+    group.frustumCulled = false;
+    let muzzle = model.muzzle || null;
+    let flash = null;
 
-        const body = new THREE.Mesh(
-          new THREE.BoxGeometry(0.09, 0.1, 0.6),
-          makePhong(0x202833, { specular: 0x556677, shininess: 45 })
-        );
-        body.position.set(0, 0, -0.05);
-        group.add(body);
+    if (muzzle) {
+      flash = this.createMuzzleFlash(
+        model.flashColor || model.accentColor || 0x00ff99,
+        model.flashRadius || 0.09
+      );
+      muzzle.add(flash);
+    }
 
-        const spine = new THREE.Mesh(
-          new THREE.BoxGeometry(0.05, 0.04, 0.7),
-          makePhong(0x10161d, { specular: 0x222222, shininess: 20 })
-        );
-        spine.position.set(0, 0.07, -0.05);
-        group.add(spine);
+    if (model.hud && model.hud.mesh && model.hud.mesh.parent !== group) {
+      group.add(model.hud.mesh);
+    }
 
-        const barrel = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.02, 0.018, 0.9, 16),
-          makePhong(0x00ffff, { emissive: 0x00ffff, emissiveIntensity: 1 })
-        );
-        barrel.rotation.x = Math.PI / 2;
-        barrel.position.set(0, 0.02, -0.45);
-        group.add(barrel);
-
-        const scope = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.025, 0.025, 0.28, 12),
-          makePhong(0x111118, { specular: 0x444444 })
-        );
-        scope.rotation.z = Math.PI / 2;
-        scope.position.set(0.05, 0.09, -0.1);
-        group.add(scope);
-
-        const fins = new THREE.Mesh(
-          new THREE.BoxGeometry(0.02, 0.06, 0.4),
-          makePhong(0x182028)
-        );
-        fins.position.set(-0.05, 0.02, -0.05);
-        group.add(fins);
-
-        muzzle = new THREE.Object3D();
-        muzzle.position.set(0, 0.02, -0.85);
-        group.add(muzzle);
-
-        flash = this.createMuzzleFlash(0x00ffff, 0.08);
-        muzzle.add(flash);
-        break;
-      }
-      case "plasmaLauncher": {
-        lightColor = 0xff66ff;
-        lightIntensity = 1.4;
-
-        const body = new THREE.Mesh(
-          new THREE.BoxGeometry(0.16, 0.18, 0.42),
-          makePhong(0x301030, { specular: 0x663366, shininess: 50 })
-        );
-        body.position.set(0, 0, -0.05);
-        group.add(body);
-
-        const chamber = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.06, 0.06, 0.35, 12),
-          makePhong(0xaa22aa, {
-            emissive: 0xff55ff,
-            emissiveIntensity: 1.2,
-          })
-        );
-        chamber.rotation.x = Math.PI / 2;
-        chamber.position.set(0, 0.05, -0.35);
-        group.add(chamber);
-
-        const stabilizers = new THREE.Mesh(
-          new THREE.BoxGeometry(0.18, 0.02, 0.5),
-          makePhong(0x1a041a)
-        );
-        stabilizers.position.set(0, -0.06, -0.1);
-        group.add(stabilizers);
-
-        energyCore = new THREE.Mesh(
-          new THREE.SphereGeometry(0.07, 12, 12),
-          makePhong(0xff55ff, {
-            emissive: 0xff55ff,
-            emissiveIntensity: 1.6,
-            transparent: true,
-            opacity: 0.8,
-          })
-        );
-        energyCore.position.set(0.09, 0.02, -0.1);
-        group.add(energyCore);
-
-        muzzle = new THREE.Object3D();
-        muzzle.position.set(0, 0.05, -0.55);
-        group.add(muzzle);
-
-        flash = this.createMuzzleFlash(0xff66ff, 0.11);
-        muzzle.add(flash);
-        break;
-      }
-      case "shockwaveEmitter": {
-        lightColor = 0xfff080;
-        lightIntensity = 1.2;
-
-        const body = new THREE.Mesh(
-          new THREE.BoxGeometry(0.13, 0.14, 0.32),
-          makePhong(0x353000, { specular: 0x665500 })
-        );
-        body.position.set(0, 0, -0.05);
-        group.add(body);
-
-        const emitter = new THREE.Mesh(
-          new THREE.TorusGeometry(0.12, 0.04, 8, 16),
-          makePhong(0xfff000, {
-            emissive: 0xffdd44,
-            emissiveIntensity: 1.1,
-          })
-        );
-        emitter.rotation.y = Math.PI / 2;
-        emitter.position.set(0, 0.03, -0.28);
-        group.add(emitter);
-
-        const prongsGeometry = new THREE.BoxGeometry(0.02, 0.08, 0.3);
-        const prongMaterial = makePhong(0x2a2400);
-        for (let i = 0; i < 3; i++) {
-          const prong = new THREE.Mesh(prongsGeometry, prongMaterial);
-          prong.position.set(
-            Math.cos((i / 3) * Math.PI * 2) * 0.12,
-            -0.02,
-            -0.25
-          );
-          prong.rotation.z = (i / 3) * Math.PI * 2;
-          group.add(prong);
-        }
-
-        muzzle = new THREE.Object3D();
-        muzzle.position.set(0, 0.03, -0.4);
-        group.add(muzzle);
-
-        flash = this.createMuzzleFlash(0xfff08a, 0.1);
-        muzzle.add(flash);
-        break;
-      }
-      default: {
-        const body = new THREE.Mesh(
-          new THREE.BoxGeometry(0.12, 0.16, 0.48),
-          makePhong(0x313131, { specular: 0x555555, shininess: 35 })
-        );
-        group.add(body);
-
-        const rail = new THREE.Mesh(
-          new THREE.BoxGeometry(0.05, 0.03, 0.32),
-          makePhong(0x171717, { specular: 0x303030 })
-        );
-        rail.position.set(0, 0.08, -0.04);
-        group.add(rail);
-
-        const barrel = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.028, 0.028, 0.6, 12),
-          makePhong(0x00ff88, {
-            emissive: 0x00ff88,
-            emissiveIntensity: 1,
-            shininess: 70,
-          })
-        );
-        barrel.rotation.x = Math.PI / 2;
-        barrel.position.set(0, 0.03, -0.38);
-        group.add(barrel);
-
-        energyCore = new THREE.Mesh(
-          new THREE.SphereGeometry(0.05, 12, 12),
-          makePhong(0x00ff99, {
-            emissive: 0x00ff99,
-            emissiveIntensity: 1.4,
-            transparent: true,
-            opacity: 0.85,
-          })
-        );
-        energyCore.position.set(0.07, 0, -0.12);
-        group.add(energyCore);
-
-        muzzle = new THREE.Object3D();
-        muzzle.position.set(0, 0.03, -0.62);
-        group.add(muzzle);
-
-        flash = this.createMuzzleFlash(0x00ff99, 0.09);
-        muzzle.add(flash);
-        break;
-      }
+    if (
+      model.handData &&
+      model.handData.group &&
+      model.handData.group.parent !== group
+    ) {
+      group.add(model.handData.group);
     }
 
     this.applyWeaponRenderSettings(group);
@@ -469,9 +344,72 @@ class Player {
       group,
       muzzle,
       flash,
-      energyCore,
-      lightColor,
-      lightIntensity,
+      energyCore: model.energyCore || null,
+      lightColor: model.lightColor ?? model.accentColor ?? 0x00ff99,
+      lightIntensity: model.lightIntensity ?? 1.1,
+      animate: model.animate || null,
+      handData: model.handData || null,
+      hud: model.hud || null,
+      accentColor: model.accentColor ?? model.lightColor ?? 0x00ff99,
+      viewTransform: model.viewTransform || null,
+    };
+  }
+
+  buildFallbackWeaponModel() {
+    const group = new THREE.Group();
+    const material = new THREE.MeshPhongMaterial({
+      color: 0x1f2a33,
+      specular: 0x556677,
+      shininess: 40,
+    });
+
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, 0.16, 0.5),
+      material
+    );
+    body.position.set(0, 0, -0.1);
+    group.add(body);
+
+    const barrel = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.03, 0.03, 0.6, 12),
+      new THREE.MeshPhongMaterial({
+        color: 0x00ff99,
+        emissive: 0x00ffcc,
+        emissiveIntensity: 1.2,
+      })
+    );
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.set(0, 0.02, -0.42);
+    group.add(barrel);
+
+    const grip = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.16, 0.08),
+      new THREE.MeshPhongMaterial({ color: 0x141920 })
+    );
+    grip.position.set(-0.05, -0.16, 0.02);
+    grip.rotation.z = 0.25;
+    group.add(grip);
+
+    const muzzle = new THREE.Object3D();
+    muzzle.position.set(0, 0.02, -0.62);
+    group.add(muzzle);
+
+    const flash = this.createMuzzleFlash(0x00ffcc, 0.09);
+    muzzle.add(flash);
+
+    this.applyWeaponRenderSettings(group);
+
+    return {
+      group,
+      muzzle,
+      flash,
+      energyCore: null,
+      lightColor: 0x00ffcc,
+      lightIntensity: 1.1,
+      animate: null,
+      handData: null,
+      hud: null,
+      accentColor: 0x00ffcc,
     };
   }
 
@@ -481,9 +419,12 @@ class Player {
       if (!child.isMesh) return;
       child.renderOrder = 2;
       if (child.material) {
-        child.material.depthTest = true;
-        const isTransparent = child.material.transparent === true;
-        child.material.depthWrite = !isTransparent;
+        const preserveDepth = child.material.userData?.preserveDepth === true;
+        if (!preserveDepth) {
+          child.material.depthTest = true;
+          const isTransparent = child.material.transparent === true;
+          child.material.depthWrite = !isTransparent;
+        }
         child.material.needsUpdate = true;
       }
       child.castShadow = false;
@@ -748,8 +689,86 @@ class Player {
       }
     }
 
+    this.animateWeaponView(deltaTime, this.time);
+
     // Update crosshair for aiming
     this.updateCrosshair();
+  }
+
+  animateWeaponView(deltaTime = 0, time = this.time) {
+    if (!this.activeWeaponModel) return;
+
+    if (this.activeWeaponModel.animate) {
+      this.activeWeaponModel.animate(time, deltaTime, {
+        recoil: this.handRecoil,
+        movement: this.velocity.length(),
+        aim: this.aimProgress,
+      });
+    } else if (this.activeWeaponModel.group) {
+      DetailedWeaponModels.animateWeapon(this.activeWeaponModel.group, time);
+    }
+
+    if (
+      this.activeWeaponModel.hud &&
+      typeof this.activeWeaponModel.hud.pulse === "function"
+    ) {
+      this.activeWeaponModel.hud.pulse(time, deltaTime);
+    }
+
+    if (this.handRecoil > 0) {
+      this.handRecoil = Math.max(0, this.handRecoil - deltaTime * 3);
+    }
+  }
+
+  updateWeaponHUD(weapon) {
+    if (
+      !this.weaponHUD ||
+      !weapon ||
+      typeof this.weaponHUD.update !== "function"
+    ) {
+      return;
+    }
+
+    const now = performance.now() / 1000;
+    let reloadProgress = 0;
+    let status = "READY";
+
+    if (weapon.isReloading || now < this.reloadEndTime) {
+      status = "RELOADING";
+      if (this.reloadDuration > 0) {
+        const remaining = Math.max(0, this.reloadEndTime - now);
+        reloadProgress = 1 - remaining / this.reloadDuration;
+        if (remaining <= 0) {
+          this.reloadDuration = 0;
+          this.reloadEndTime = 0;
+        }
+      }
+    } else if (weapon.ammoType === "limited" && weapon.currentAmmo === 0) {
+      status = "EMPTY";
+    } else if (weapon.cooldown > 0.05) {
+      status = "COOLDOWN";
+    }
+
+    const stats = {
+      name: weapon.name || "UNKNOWN",
+      ammo: weapon.getAmmoDisplay ? weapon.getAmmoDisplay() : "∞",
+      damage: weapon.damage ?? 0,
+      fireRate: weapon.fireRate > 0 ? 1 / weapon.fireRate : 0,
+      range: (weapon.projectileSpeed || 0) * (weapon.projectileLifetime || 0),
+      status,
+      reloadProgress: THREE.MathUtils.clamp(reloadProgress, 0, 1),
+    };
+
+    this.weaponHUD.update(stats);
+    this.weaponHUDLastStats = stats;
+  }
+
+  notifyWeaponReload(duration) {
+    this.reloadDuration = duration;
+    this.reloadEndTime = performance.now() / 1000 + duration;
+    if (this.weaponHUD && typeof this.weaponHUD.update === "function") {
+      this.weaponHUD.update({ status: "RELOADING", reloadProgress: 0 });
+    }
   }
 
   updateCrosshair() {
@@ -771,6 +790,12 @@ class Player {
 
     // Recoil
     this.weaponGroup.position.z -= 0.05;
+
+    this.handRecoil = Math.min(0.35, this.handRecoil + 0.22);
+
+    if (this.weaponHUD && typeof this.weaponHUD.flash === "function") {
+      this.weaponHUD.flash();
+    }
 
     // Camera shake could be added here
   }

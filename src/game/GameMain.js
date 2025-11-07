@@ -67,7 +67,7 @@ class GameMain {
     }
   }
 
-  init() {
+  async init() {
     // Setup camera for FPS (will be controlled by player)
     this.camera.position.set(0, 1.8, 0);
 
@@ -79,6 +79,18 @@ class GameMain {
 
     // Create environment
     this.environment = new Environment(this.scene);
+
+    // Initialize weapon blueprints before creating player
+    if (window.DetailedWeaponModels) {
+      try {
+        await DetailedWeaponModels.init();
+      } catch (err) {
+        console.warn(
+          "Failed to load weapon blueprints, fallback weapons will be used:",
+          err
+        );
+      }
+    }
 
     // Create player (FPS mode - player controls camera)
     this.player = new Player(this.scene, this.camera, this.environment);
@@ -161,6 +173,12 @@ class GameMain {
     this.inputManager.on("weaponPrev", () =>
       this.weaponManager.cycleWeapon(-1)
     );
+
+    this.inputManager.on("reload", () => {
+      if (this.gameStarted && this.isRunning) {
+        this.weaponManager.reload();
+      }
+    });
 
     // Special ability
     this.inputManager.on("special", () => {

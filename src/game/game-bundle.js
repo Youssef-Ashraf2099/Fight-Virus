@@ -32,6 +32,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     "./environment/maps/GPUEnvironment.js",
     "./environment/maps/MotherboardEnvironment.js",
     "./environment/maps/HardDriveEnvironment.js",
+    "./environment/maps/FirewallEnvironment.js",
     "./environment/maps/RetroTerminalEnvironment.js",
     "./environment/maps/NetworkHubEnvironment.js",
     "./environment/maps/AINeuralNetworkEnvironment.js",
@@ -58,6 +59,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     // Weapons
     "./weapons/Projectile.js",
     "./weapons/BaseWeapon.js",
+    "./weapons/DetailedWeaponModels.js",
     "./weapons/types/PulseCannon.js",
     "./weapons/types/LaserRifle.js",
     "./weapons/types/PlasmaLauncher.js",

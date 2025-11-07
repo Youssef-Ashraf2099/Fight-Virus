@@ -27,6 +27,10 @@ class InputManager {
 
       // Restart game
       if (e.key === "r" || e.key === "R") {
+        if (document.pointerLockElement) {
+          e.preventDefault();
+        }
+        this.emit("reload");
         this.emit("restart");
       }
     });

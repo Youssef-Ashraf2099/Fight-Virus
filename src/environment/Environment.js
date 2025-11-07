@@ -38,6 +38,7 @@ class Environment {
       { key: "gpu", factory: () => new GPUEnvironment(this) },
       { key: "motherboard", factory: () => new MotherboardEnvironment(this) },
       { key: "harddrive", factory: () => new HardDriveEnvironment(this) },
+      { key: "firewall", factory: () => new FirewallEnvironment(this) },
       { key: "terminal", factory: () => new RetroTerminalEnvironment(this) },
       { key: "network", factory: () => new NetworkHubEnvironment(this) },
       { key: "ai-core", factory: () => new AINeuralNetworkEnvironment(this) },
