@@ -348,6 +348,7 @@ class Game {
           direction.set(Math.random() - 0.5, 0, Math.random() - 0.5);
         }
 
+        direction.y = 0;
         direction.normalize();
 
         // Calculate overlap amount
@@ -367,8 +368,26 @@ class Game {
           this.player.group.position.copy(this.player.position);
         }
 
+        // Keep collision checks in sync with the adjusted player location
+        playerPos.copy(this.player.position);
+        playerPos.yaw = this.player.yaw;
+
         // Strong knockback velocity for continuous separation
         this.player.applyKnockback(direction.clone(), 12);
+
+        // Also push the enemy backward to create breathing room
+        const enemyPushStrength = Math.max(overlap * 1.4, 0.35);
+        const enemyPushVector = direction
+          .clone()
+          .multiplyScalar(-enemyPushStrength);
+        enemy.position.add(enemyPushVector);
+        if (enemy.group) {
+          enemy.group.position.copy(enemy.position);
+        }
+
+        if (typeof enemy.onKnockback === "function") {
+          enemy.onKnockback(enemyPushVector, enemyPushStrength);
+        }
 
         // Apply contact damage
         const damage = enemy.contactDamage;

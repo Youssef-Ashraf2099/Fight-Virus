@@ -102,67 +102,95 @@ class DetailedWeaponModels {
     rearStrut.rotation.set(0.08, 0.04, -0.16);
     weaponHolder.add(rearStrut);
 
-    const centralFrame = new THREE.Mesh(
-      new THREE.BoxGeometry(0.14, 0.12, 0.56),
-      shellMaterial
-    );
-    centralFrame.position.set(0.02, -0.02, -0.22);
-    weaponHolder.add(centralFrame);
+    const rearSight = new THREE.Group();
+    rearSight.position.set(0.02, 0.11, -0.1);
+    weaponHolder.add(rearSight);
 
-    const lowerKeel = new THREE.Mesh(
-      new THREE.BoxGeometry(0.1, 0.04, 0.5),
-      accentMaterial
-    );
-    lowerKeel.position.set(0.02, -0.12, -0.2);
-    lowerKeel.rotation.x = 0.04;
-    weaponHolder.add(lowerKeel);
-
-    const upperRail = new THREE.Mesh(
-      new THREE.BoxGeometry(0.08, 0.04, 0.62),
+    const rearSightBase = new THREE.Mesh(
+      new THREE.BoxGeometry(0.06, 0.018, 0.024),
       baseMaterial
     );
-    upperRail.position.set(0.02, 0.07, -0.22);
-    weaponHolder.add(upperRail);
+    rearSightBase.position.set(0, -0.015, 0);
+    rearSight.add(rearSightBase);
 
-    const scopeBridge = new THREE.Mesh(
-      new THREE.BoxGeometry(0.12, 0.05, 0.24),
-      baseMaterial
-    );
-    scopeBridge.position.set(0.02, 0.09, -0.12);
-    weaponHolder.add(scopeBridge);
-
-    const scopeMountPillars = new THREE.Mesh(
-      new THREE.BoxGeometry(0.06, 0.06, 0.2),
+    const rearSightPostLeft = new THREE.Mesh(
+      new THREE.BoxGeometry(0.012, 0.045, 0.024),
       accentMaterial
     );
-    scopeMountPillars.position.set(0.02, 0.07, -0.12);
-    weaponHolder.add(scopeMountPillars);
+    rearSightPostLeft.position.set(-0.025, 0.012, 0);
+    rearSight.add(rearSightPostLeft);
 
-    const scopeTubing = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.036, 0.036, 0.25, 24),
+    const rearSightPostRight = rearSightPostLeft.clone();
+    rearSightPostRight.position.x = 0.025;
+    rearSight.add(rearSightPostRight);
+
+    const rearSightCrossbar = new THREE.Mesh(
+      new THREE.BoxGeometry(0.032, 0.01, 0.01),
       shellMaterial
     );
-    scopeTubing.rotation.x = Math.PI / 2;
-    scopeTubing.position.set(0.02, 0.133, -0.12);
-    weaponHolder.add(scopeTubing);
+    rearSightCrossbar.position.set(0, 0.018, -0.006);
+    rearSight.add(rearSightCrossbar);
 
-    const scopeLensFrontMaterial = glowTemplate.clone();
-    const scopeLensFront = new THREE.Mesh(
-      new THREE.CircleGeometry(0.032, 24),
-      scopeLensFrontMaterial
+    const rearSightGlowMaterial = new THREE.MeshBasicMaterial({
+      color: accent,
+      transparent: true,
+      opacity: 0.22,
+      blending: THREE.AdditiveBlending,
+      depthTest: false,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    const rearSightGlow = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.05, 0.025),
+      rearSightGlowMaterial
     );
-    scopeLensFront.position.set(0.02, 0.133, -0.24);
-    scopeLensFront.rotation.x = -Math.PI / 2;
-    weaponHolder.add(scopeLensFront);
+    rearSightGlow.rotation.x = -Math.PI / 2;
+    rearSightGlow.position.set(0, 0.012, -0.01);
+    rearSight.add(rearSightGlow);
 
-    const scopeLensRearMaterial = beamMaterial.clone();
-    const scopeLensRear = new THREE.Mesh(
-      new THREE.CircleGeometry(0.028, 24),
-      scopeLensRearMaterial
+    const frontSight = new THREE.Group();
+    frontSight.position.set(0.02, 0.095, -0.74);
+    weaponHolder.add(frontSight);
+
+    const frontSightBase = new THREE.Mesh(
+      new THREE.BoxGeometry(0.026, 0.02, 0.04),
+      baseMaterial
     );
-    scopeLensRear.position.set(0.02, 0.133, 0);
-    scopeLensRear.rotation.x = -Math.PI / 2;
-    weaponHolder.add(scopeLensRear);
+    frontSightBase.position.set(0, -0.01, 0.012);
+    frontSight.add(frontSightBase);
+
+    const frontSightPost = new THREE.Mesh(
+      new THREE.BoxGeometry(0.01, 0.055, 0.012),
+      accentMaterial
+    );
+    frontSightPost.position.set(0, 0.03, -0.005);
+    frontSight.add(frontSightPost);
+
+    const frontSightTip = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.006, 0.006, 0.01, 16),
+      glowTemplate.clone()
+    );
+    frontSightTip.rotation.x = Math.PI / 2;
+    frontSightTip.position.set(0, 0.055, -0.012);
+    frontSight.add(frontSightTip);
+    const frontSightTipMaterial = frontSightTip.material;
+
+    const frontSightGlowMaterial = new THREE.MeshBasicMaterial({
+      color: accent,
+      transparent: true,
+      opacity: 0.4,
+      blending: THREE.AdditiveBlending,
+      depthTest: false,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    const frontSightGlow = new THREE.Mesh(
+      new THREE.CircleGeometry(0.018, 24),
+      frontSightGlowMaterial
+    );
+    frontSightGlow.rotation.x = -Math.PI / 2;
+    frontSightGlow.position.set(0, 0.034, -0.02);
+    frontSight.add(frontSightGlow);
 
     const energySpine = new THREE.Mesh(
       new THREE.CylinderGeometry(0.06, 0.06, 0.64, 28),
@@ -263,6 +291,22 @@ class DetailedWeaponModels {
       muzzleBlades.push(blade);
     }
 
+    const muzzleHaloMaterial = new THREE.MeshBasicMaterial({
+      color: accent,
+      transparent: true,
+      opacity: 0.35,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    const muzzleHalo = new THREE.Mesh(
+      new THREE.RingGeometry(0.09, 0.15, 32),
+      muzzleHaloMaterial
+    );
+    muzzleHalo.rotation.x = -Math.PI / 2;
+    muzzleHalo.position.set(0.02, -0.01, -1.08);
+    muzzleArray.add(muzzleHalo);
+
     const grip = new THREE.Mesh(
       new THREE.BoxGeometry(0.065, 0.16, 0.07),
       baseMaterial
@@ -341,10 +385,15 @@ class DetailedWeaponModels {
         blade.rotation.z += delta * (index % 2 === 0 ? 1.3 : -1.3);
       });
 
-      scopeLensFrontMaterial.emissiveIntensity =
-        1.2 + Math.sin(time * 2.4) * 0.25;
-      scopeLensRearMaterial.emissiveIntensity =
-        1.3 + Math.sin(time * 2.8) * 0.28;
+      frontSightTipMaterial.emissiveIntensity =
+        1.25 + Math.sin(time * 5.1) * 0.35;
+      frontSightGlowMaterial.opacity = 0.36 + Math.sin(time * 4.2) * 0.14;
+      frontSightGlow.scale.setScalar(0.95 + Math.sin(time * 3.8) * 0.06);
+
+      rearSightGlowMaterial.opacity = 0.2 + Math.sin(time * 3.1) * 0.08;
+      rearSightGlow.scale.setScalar(0.94 + Math.sin(time * 2.5) * 0.05);
+      rearSight.position.y = 0.11 + Math.sin(time * 1.7) * 0.002;
+      frontSight.position.y = 0.095 + Math.sin(time * 2.1) * 0.002;
 
       powerCoreMaterial.emissiveIntensity = 1.2 + Math.sin(time * 2.6) * 0.3;
 
@@ -353,6 +402,9 @@ class DetailedWeaponModels {
       const crownPulse = 1.15 + Math.sin(time * 4.8) * 0.3;
       muzzleCrownMaterial.emissiveIntensity = crownPulse;
       muzzleCrown.scale.setScalar(1 + Math.sin(time * 5) * 0.04);
+      muzzleHalo.scale.setScalar(1 + Math.sin(time * 6.4) * 0.07);
+      muzzleHalo.rotation.z += delta * 1.6;
+      muzzleHaloMaterial.opacity = 0.28 + Math.sin(time * 6.8) * 0.12;
     };
 
     return {
