@@ -9,6 +9,7 @@ class WaveManager {
     this.waveDelay = 3; // Seconds between waves
     this.difficulty = 1;
     this.bossFightTriggered = false;
+    this.lastWaveHadBoss = false;
     this.mapCenterPosition = new THREE.Vector3(0, 0, 0); // Center of map for boss spawns
   }
 
@@ -17,6 +18,7 @@ class WaveManager {
     this.waveActive = true;
     this.bossActive = false;
     this.bossFightTriggered = false;
+    this.lastWaveHadBoss = false;
     this.difficulty = 1 + (this.currentWave - 1) * 0.15;
 
     this.uiManager.updateWave(this.currentWave);
@@ -107,6 +109,7 @@ class WaveManager {
       // Boss defeated or no boss this wave - wave complete
       this.waveActive = false;
       this.bossActive = false;
+      this.lastWaveHadBoss = this.bossFightTriggered;
       return true; // Wave completed
     }
 
@@ -125,11 +128,16 @@ class WaveManager {
     return this.bossActive;
   }
 
+  wasLastWaveBoss() {
+    return this.lastWaveHadBoss;
+  }
+
   reset() {
     this.currentWave = 0;
     this.waveActive = false;
     this.bossActive = false;
     this.bossFightTriggered = false;
+    this.lastWaveHadBoss = false;
     this.difficulty = 1;
   }
 }

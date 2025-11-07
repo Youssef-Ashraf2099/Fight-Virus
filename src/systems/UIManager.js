@@ -9,6 +9,12 @@ class UIManager {
     this.ammoCount = document.getElementById("ammoCount");
     this.message = document.getElementById("message");
 
+    this.upgradeOverlay = document.getElementById("upgradeOverlay");
+    this.upgradeCardsContainer = document.getElementById("upgradeCards");
+    this.upgradeSkipButton = document.getElementById("upgradeSkipButton");
+    this.upgradeScoreValue = document.getElementById("upgradeScoreValue");
+    this.upgradeSubtitle = document.getElementById("upgradeSubtitle");
+
     this.messageTimeout = null;
 
     // Minimap setup
@@ -47,6 +53,7 @@ class UIManager {
 
   updateScore(score) {
     this.scoreValue.textContent = score;
+    this.updateUpgradeScoreDisplay(score);
   }
 
   updateWave(wave) {
@@ -79,6 +86,97 @@ class UIManager {
 
   hideMessage() {
     this.message.style.display = "none";
+  }
+
+  showUpgradeSelection(options, score, callbacks = {}) {
+    if (!this.upgradeOverlay || !this.upgradeCardsContainer) {
+      callbacks.onSkip?.();
+      return;
+    }
+
+    this.upgradeCardsContainer.innerHTML = "";
+    this.updateUpgradeScoreDisplay(score);
+
+    if (this.upgradeSubtitle) {
+      this.upgradeSubtitle.textContent =
+        "Select one upgrade. Score will be spent to install new protocols.";
+    }
+
+    this.upgradeOverlay.classList.add("visible");
+    document.body?.classList.add("upgrade-select-open");
+
+    options.forEach((option) => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "upgrade-card";
+
+      const affordable = score >= option.cost;
+      if (!affordable) {
+        card.classList.add("locked");
+        card.disabled = true;
+      }
+
+      const levelText = option.maxStacks
+        ? `Rank ${option.currentLevel + 1}/${option.maxStacks}`
+        : `Rank ${option.currentLevel + 1}`;
+      const detailMarkup = option.detail
+        ? `<div class="upgrade-card-detail">${option.detail}</div>`
+        : "";
+
+      card.innerHTML = `
+        <div class="upgrade-card-icon">${option.icon || ""}</div>
+        <div class="upgrade-card-content">
+          <div class="upgrade-card-title">${option.name}</div>
+          <div class="upgrade-card-description">${option.description}</div>
+          ${detailMarkup}
+        </div>
+        <div class="upgrade-card-footer">
+          <span class="upgrade-card-cost">${option.cost.toLocaleString()} SCORE</span>
+          <span class="upgrade-card-level">${levelText}</span>
+        </div>
+        ${
+          affordable
+            ? ""
+            : '<span class="upgrade-card-lock">NEED MORE SCORE</span>'
+        }
+      `;
+
+      if (affordable) {
+        card.addEventListener("click", () => {
+          this.hideUpgradeSelection();
+          callbacks.onSelect?.(option);
+        });
+      }
+
+      this.upgradeCardsContainer.appendChild(card);
+    });
+
+    if (this.upgradeSkipButton) {
+      this.upgradeSkipButton.onclick = () => {
+        this.hideUpgradeSelection();
+        callbacks.onSkip?.();
+      };
+    }
+  }
+
+  hideUpgradeSelection() {
+    if (!this.upgradeOverlay) return;
+
+    this.upgradeOverlay.classList.remove("visible");
+    document.body?.classList.remove("upgrade-select-open");
+
+    if (this.upgradeSkipButton) {
+      this.upgradeSkipButton.onclick = null;
+    }
+  }
+
+  updateUpgradeScoreDisplay(score) {
+    if (this.upgradeScoreValue) {
+      const numericScore = Number(score);
+      this.upgradeScoreValue.textContent = Number.isFinite(numericScore)
+        ? numericScore.toLocaleString()
+        : "0";
+    }
   }
 
   updateMinimap(playerPosition, enemies, phaseName) {

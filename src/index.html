@@ -5,6 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Virus Hunter</title>
     <style>
+      @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&display=swap");
+
+      :root {
+        --primary: #00ff88;
+        --primary-soft: rgba(0, 255, 136, 0.14);
+        --accent: #22d1ff;
+        --danger: #ff4d6d;
+        --panel-bg: rgba(2, 16, 10, 0.82);
+        --panel-border: rgba(0, 255, 136, 0.38);
+        --text-main: #00ff88;
+        --text-soft: rgba(0, 255, 136, 0.75);
+        --heading-font: "Orbitron", "Courier New", monospace;
+        --body-font: "Courier New", monospace;
+        --shadow-strong: 0 0 35px rgba(0, 255, 136, 0.4);
+      }
+
       * {
         margin: 0;
         padding: 0;
@@ -12,13 +28,39 @@
       }
 
       body {
-        font-family: "Courier New", monospace;
+        font-family: var(--body-font);
         overflow: hidden;
-        background: #000;
-        color: #0f0;
+        background: radial-gradient(
+          circle at top,
+          rgba(15, 40, 25, 0.7),
+          #020805
+        );
+        color: var(--text-main);
         cursor: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2232%22%20height%3D%2232%22%20viewBox%3D%220%200%2032%2032%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%2300ff88%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M16%202v6M16%2024v6M2%2016h6M24%2016h6%22%2F%3E%3Ccircle%20cx%3D%2216%22%20cy%3D%2216%22%20r%3D%225%22%20stroke%3D%22%2300ff88%22%20fill%3D%22rgba%280%2C255%2C136%2C0.25%29%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E")
             16 16,
           crosshair;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: linear-gradient(
+            135deg,
+            rgba(34, 209, 255, 0.08),
+            transparent
+          ),
+          radial-gradient(
+            circle at 20% 20%,
+            rgba(0, 255, 136, 0.08),
+            transparent 45%
+          ),
+          radial-gradient(
+            circle at 80% 30%,
+            rgba(0, 180, 255, 0.05),
+            transparent 35%
+          );
+        z-index: -2;
       }
 
       #loadingOverlay {
@@ -54,6 +96,221 @@
       #loadingOverlay .loading-message {
         font-size: 18px;
         opacity: 0.8;
+      }
+
+      #upgradeOverlay {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(
+            circle at center,
+            rgba(0, 255, 136, 0.08),
+            rgba(2, 10, 6, 0.94)
+          ),
+          rgba(0, 0, 0, 0.82);
+        backdrop-filter: blur(7px);
+        z-index: 180000;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+      }
+
+      #upgradeOverlay.visible {
+        display: flex;
+        pointer-events: all;
+        opacity: 1;
+      }
+
+      .upgrade-panel {
+        max-width: 980px;
+        width: calc(100% - 120px);
+        background: rgba(2, 18, 12, 0.92);
+        border: 2px solid rgba(0, 255, 136, 0.45);
+        border-radius: 18px;
+        padding: 34px 40px 30px;
+        box-shadow: 0 0 45px rgba(0, 255, 136, 0.32);
+        display: flex;
+        flex-direction: column;
+        gap: 26px;
+      }
+
+      .upgrade-header {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        text-align: left;
+      }
+
+      .upgrade-title {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-family: var(--heading-font);
+        letter-spacing: 3px;
+      }
+
+      .upgrade-title h2 {
+        font-size: 30px;
+        text-shadow: 0 0 20px rgba(0, 255, 136, 0.7);
+      }
+
+      .upgrade-title-icon {
+        font-size: 32px;
+        filter: drop-shadow(0 0 12px rgba(0, 255, 136, 0.6));
+      }
+
+      .upgrade-header p {
+        font-size: 15px;
+        color: rgba(173, 255, 214, 0.8);
+        line-height: 1.6;
+      }
+
+      .upgrade-card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 22px;
+      }
+
+      .upgrade-card {
+        background: linear-gradient(
+          135deg,
+          rgba(0, 255, 136, 0.2),
+          rgba(0, 40, 28, 0.55)
+        );
+        border: 1px solid rgba(0, 255, 136, 0.4);
+        border-radius: 14px;
+        padding: 20px 22px 18px;
+        text-align: left;
+        color: var(--text-main);
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease,
+          border-color 0.2s ease;
+        position: relative;
+      }
+
+      .upgrade-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 18px 45px rgba(34, 209, 255, 0.25);
+        border-color: rgba(34, 209, 255, 0.7);
+      }
+
+      .upgrade-card.locked {
+        cursor: not-allowed;
+        opacity: 0.55;
+        border-color: rgba(255, 77, 109, 0.65);
+        box-shadow: none;
+        filter: grayscale(0.15);
+      }
+
+      .upgrade-card-icon {
+        font-size: 36px;
+        line-height: 1;
+        margin-bottom: 14px;
+        text-shadow: 0 0 14px rgba(0, 255, 136, 0.6);
+      }
+
+      .upgrade-card-title {
+        font-family: var(--heading-font);
+        font-size: 18px;
+        letter-spacing: 2px;
+        margin-bottom: 8px;
+      }
+
+      .upgrade-card-description {
+        font-size: 14px;
+        line-height: 1.5;
+        color: rgba(178, 255, 214, 0.84);
+      }
+
+      .upgrade-card-detail {
+        margin-top: 10px;
+        font-size: 12px;
+        letter-spacing: 1px;
+        color: rgba(0, 255, 136, 0.75);
+      }
+
+      .upgrade-card-footer {
+        margin-top: 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        letter-spacing: 1px;
+      }
+
+      .upgrade-card-cost {
+        font-weight: bold;
+        color: var(--accent);
+        text-shadow: 0 0 12px rgba(34, 209, 255, 0.45);
+      }
+
+      .upgrade-card-level {
+        color: rgba(173, 255, 214, 0.8);
+      }
+
+      .upgrade-card.locked .upgrade-card-cost {
+        color: var(--danger);
+        text-shadow: none;
+      }
+
+      .upgrade-card-lock {
+        display: inline-block;
+        margin-top: 12px;
+        font-size: 11px;
+        letter-spacing: 1.2px;
+        color: var(--danger);
+      }
+
+      .upgrade-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        flex-wrap: wrap;
+      }
+
+      .upgrade-score {
+        font-size: 16px;
+        color: rgba(173, 255, 214, 0.9);
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+      }
+
+      .upgrade-score span {
+        font-family: var(--heading-font);
+        font-size: 22px;
+        margin-left: 8px;
+        color: var(--text-main);
+      }
+
+      #upgradeSkipButton {
+        font-family: var(--heading-font);
+        font-size: 16px;
+        padding: 12px 28px;
+        border-radius: 10px;
+        border: 2px solid rgba(34, 209, 255, 0.65);
+        background: linear-gradient(
+          135deg,
+          rgba(34, 209, 255, 0.2),
+          rgba(0, 50, 70, 0.5)
+        );
+        color: #baf6ff;
+        cursor: pointer;
+        text-shadow: 0 0 10px rgba(34, 209, 255, 0.55);
+        transition: transform 0.2s ease, box-shadow 0.2s ease,
+          border-color 0.2s ease;
+      }
+
+      #upgradeSkipButton:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 35px rgba(34, 209, 255, 0.25);
+        border-color: rgba(34, 209, 255, 0.9);
+      }
+
+      body.upgrade-select-open {
+        cursor: default;
       }
 
       #gameCanvas {
@@ -136,61 +393,395 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.9);
+        padding: 60px 40px;
+        background: rgba(0, 0, 0, 0.86);
         display: flex;
-        flex-direction: column;
         justify-content: center;
         align-items: center;
+        overflow: hidden;
         pointer-events: all;
       }
 
-      #startScreen h1 {
-        font-size: 72px;
-        margin-bottom: 20px;
-        text-shadow: 0 0 20px #0f0, 0 0 40px #0f0, 0 0 60px #0f0;
-        animation: pulse 2s infinite;
-      }
-
-      #startScreen p {
-        font-size: 20px;
-        margin-bottom: 40px;
-        max-width: 600px;
-        text-align: center;
-        line-height: 1.6;
-      }
-
-      #startScreen button {
-        font-family: "Courier New", monospace;
-        font-size: 24px;
-        padding: 15px 40px;
-        background: transparent;
-        color: #0f0;
-        border: 3px solid #0f0;
-        cursor: inherit;
-        text-shadow: 0 0 10px #0f0;
-        box-shadow: 0 0 20px #0f0;
-        transition: all 0.3s;
-        pointer-events: all;
-        position: relative;
-        z-index: 10000;
-      }
-
-      #startScreen button:hover {
-        background: #0f0;
-        color: #000;
-        box-shadow: 0 0 30px #0f0, 0 0 50px #0f0;
-        transform: scale(1.05);
-      }
-
-      #startScreen button:active {
-        transform: scale(0.95);
-      }
-
-      #controls {
-        margin-top: 30px;
-        font-size: 14px;
-        text-align: center;
+      #startScreen::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+            circle at center,
+            rgba(0, 255, 136, 0.08),
+            transparent 60%
+          ),
+          linear-gradient(135deg, rgba(34, 209, 255, 0.08), transparent 70%);
         opacity: 0.7;
+        pointer-events: none;
+      }
+
+      .menu-wrapper {
+        max-width: 1100px;
+        width: 100%;
+        background: var(--panel-bg);
+        border: 2px solid var(--panel-border);
+        border-radius: 18px;
+        box-shadow: var(--shadow-strong);
+        padding: 48px 55px 42px;
+        display: grid;
+        grid-template-rows: auto auto auto;
+        gap: 28px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .menu-wrapper::before {
+        content: "";
+        position: absolute;
+        inset: 18px;
+        border: 1px solid rgba(0, 255, 136, 0.15);
+        border-radius: 12px;
+        pointer-events: none;
+      }
+
+      .menu-header h1 {
+        font-family: var(--heading-font);
+        font-size: 68px;
+        letter-spacing: 6px;
+        text-align: center;
+        margin-bottom: 12px;
+        text-shadow: 0 0 30px rgba(0, 255, 136, 0.6),
+          0 0 45px rgba(34, 209, 255, 0.4);
+        animation: pulse 2.2s infinite;
+      }
+
+      .menu-header p {
+        max-width: 780px;
+        margin: 0 auto;
+        text-align: center;
+        font-size: 18px;
+        line-height: 1.7;
+        color: var(--text-soft);
+      }
+
+      .menu-secondary {
+        text-align: center;
+        font-size: 14px;
+        color: rgba(175, 255, 210, 0.65);
+        max-width: 620px;
+        margin: -10px auto 6px;
+      }
+
+      .menu-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 16px;
+      }
+
+      .menu-actions button {
+        font-family: var(--heading-font);
+        font-size: 20px;
+        letter-spacing: 1px;
+        padding: 16px 40px;
+        background: linear-gradient(
+          135deg,
+          rgba(0, 255, 136, 0.18),
+          rgba(0, 255, 136, 0.05)
+        );
+        color: var(--text-main);
+        border: 2px solid rgba(0, 255, 136, 0.7);
+        border-radius: 12px;
+        cursor: pointer;
+        text-shadow: 0 0 12px rgba(0, 255, 136, 0.6);
+        box-shadow: 0 15px 35px rgba(0, 255, 136, 0.18);
+        transition: transform 0.25s ease, box-shadow 0.25s ease,
+          border-color 0.25s ease;
+        pointer-events: all;
+      }
+
+      .menu-actions button:hover {
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 20px 45px rgba(34, 209, 255, 0.2);
+        border-color: rgba(34, 209, 255, 0.8);
+      }
+
+      .menu-actions button:active {
+        transform: translateY(1px) scale(0.98);
+      }
+
+      .menu-actions .secondary {
+        background: linear-gradient(
+          135deg,
+          rgba(34, 209, 255, 0.14),
+          rgba(0, 255, 136, 0.05)
+        );
+        border-color: rgba(34, 209, 255, 0.7);
+        color: #afffff;
+      }
+
+      .menu-sections {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+        gap: 24px;
+      }
+
+      .menu-card {
+        background: rgba(2, 20, 14, 0.82);
+        border: 1px solid rgba(0, 255, 136, 0.25);
+        border-radius: 14px;
+        padding: 24px 26px;
+        box-shadow: inset 0 0 25px rgba(0, 255, 136, 0.04);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .menu-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(0, 255, 136, 0.08),
+          transparent 60%
+        );
+        opacity: 0.4;
+        pointer-events: none;
+      }
+
+      .menu-card h2 {
+        font-family: var(--heading-font);
+        font-size: 22px;
+        letter-spacing: 2px;
+        margin-bottom: 16px;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .menu-card h2 span {
+        font-size: 14px;
+        font-weight: 400;
+        letter-spacing: 0;
+        text-transform: none;
+        color: rgba(255, 255, 255, 0.5);
+      }
+
+      .menu-list {
+        list-style: none;
+        display: grid;
+        gap: 10px;
+        font-size: 15px;
+        color: rgba(210, 255, 231, 0.85);
+      }
+
+      .menu-list li {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 10px;
+        background: rgba(0, 255, 136, 0.06);
+        border-radius: 8px;
+        border: 1px solid rgba(0, 255, 136, 0.1);
+      }
+
+      .menu-key {
+        min-width: 44px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1px solid rgba(0, 255, 136, 0.45);
+        background: rgba(0, 255, 136, 0.12);
+        text-align: center;
+        font-size: 13px;
+        font-weight: bold;
+        letter-spacing: 1px;
+        color: #afffd6;
+        box-shadow: 0 0 12px rgba(0, 255, 136, 0.15);
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .menu-key.wide {
+        min-width: 68px;
+      }
+
+      .menu-key.modifier {
+        min-width: 58px;
+        background: rgba(34, 209, 255, 0.12);
+        border-color: rgba(34, 209, 255, 0.45);
+        color: #b6f0ff;
+      }
+
+      .menu-note {
+        margin-top: 16px;
+        font-size: 13px;
+        color: rgba(175, 255, 210, 0.6);
+        line-height: 1.5;
+      }
+
+      #menuFooter {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+        color: rgba(160, 255, 210, 0.6);
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      #menuFooter span {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      #menuFooter .badge {
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(34, 209, 255, 0.4);
+        background: rgba(34, 209, 255, 0.12);
+        font-size: 12px;
+        letter-spacing: 1px;
+        color: #b6f0ff;
+      }
+
+      #tutorialPanel {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 40px;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(8px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+        z-index: 150000;
+      }
+
+      #tutorialPanel.open {
+        opacity: 1;
+        pointer-events: all;
+      }
+
+      .tutorial-content {
+        max-width: 1000px;
+        width: 100%;
+        background: rgba(2, 16, 12, 0.92);
+        border: 2px solid rgba(0, 255, 136, 0.35);
+        border-radius: 16px;
+        box-shadow: 0 0 45px rgba(0, 255, 136, 0.25);
+        padding: 36px 42px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .tutorial-content::before {
+        content: "";
+        position: absolute;
+        inset: 20px;
+        border: 1px solid rgba(0, 255, 136, 0.14);
+        border-radius: 12px;
+        pointer-events: none;
+      }
+
+      .tutorial-heading {
+        font-family: var(--heading-font);
+        font-size: 36px;
+        letter-spacing: 4px;
+        margin-bottom: 8px;
+        text-align: center;
+      }
+
+      .tutorial-subtitle {
+        text-align: center;
+        font-size: 16px;
+        color: rgba(175, 255, 210, 0.7);
+        margin-bottom: 28px;
+      }
+
+      .tutorial-close {
+        position: absolute;
+        top: 18px;
+        right: 22px;
+        font-size: 28px;
+        background: none;
+        border: none;
+        color: rgba(175, 255, 210, 0.75);
+        cursor: pointer;
+        transition: color 0.2s ease;
+        pointer-events: all;
+      }
+
+      .tutorial-close:hover {
+        color: #ffffff;
+      }
+
+      .mode-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 28px;
+      }
+
+      .mode-section {
+        background: rgba(0, 255, 136, 0.05);
+        border: 1px solid rgba(0, 255, 136, 0.2);
+        border-radius: 12px;
+        padding: 22px 24px;
+        box-shadow: inset 0 0 20px rgba(0, 255, 136, 0.05);
+      }
+
+      .mode-section h3 {
+        font-family: var(--heading-font);
+        font-size: 20px;
+        letter-spacing: 2px;
+        margin-bottom: 16px;
+        text-transform: uppercase;
+      }
+
+      .control-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      .control-table tr + tr td {
+        border-top: 1px solid rgba(0, 255, 136, 0.12);
+      }
+
+      .control-table td {
+        padding: 10px 6px;
+        vertical-align: top;
+        color: rgba(210, 255, 231, 0.85);
+      }
+
+      .control-table td:first-child {
+        width: 34%;
+        font-weight: bold;
+        color: rgba(255, 255, 255, 0.82);
+        letter-spacing: 1px;
+      }
+
+      .control-table .input-hint {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: rgba(175, 255, 210, 0.7);
+      }
+
+      .tutorial-tips {
+        margin-top: 30px;
+        display: grid;
+        gap: 14px;
+        font-size: 14px;
+        color: rgba(175, 255, 210, 0.75);
+      }
+
+      .tutorial-tip {
+        padding: 14px 16px;
+        border: 1px solid rgba(34, 209, 255, 0.24);
+        border-radius: 10px;
+        background: rgba(34, 209, 255, 0.08);
       }
 
       @keyframes pulse {
@@ -335,35 +926,212 @@
 
     <div id="ui">
       <div id="startScreen">
-        <h1>VIRUS HUNTER</h1>
-        <p>
-          You are a Digital Guardian inside a computer system.<br />
-          Eliminate all viruses before they corrupt the data!<br />
-          Different virus types require different strategies.
-        </p>
-        <div
-          style="
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            margin-top: 20px;
-          "
-        >
-          <button id="startButton">PLAY MODE</button>
-          <button id="spectatorButton">SPECTATOR MODE</button>
+        <div class="menu-wrapper">
+          <div class="menu-header">
+            <h1>VIRUS HUNTER</h1>
+            <p>
+              Deploy the Guardian, stabilize infected sectors, and keep the
+              system core intact. Choose a mode below or review the tactical
+              tutorial for a full briefing.
+            </p>
+            <p class="menu-secondary">
+              Launching Play Mode will capture your cursor for precision aim.
+              Review the guided controls first if it&rsquo;s your first
+              deployment.
+            </p>
+          </div>
+
+          <div class="menu-actions">
+            <button id="startButton">▶ LAUNCH PLAY MODE</button>
+            <button id="spectatorButton">👁 EXPLORE SPECTATOR MODE</button>
+            <button id="tutorialToggle" class="secondary">
+              📘 GUIDED CONTROLS
+            </button>
+          </div>
+
+          <div id="menuFooter">
+            <span
+              >Build: <span class="badge">ENHANCED UI</span> &middot; Electron /
+              Three.js</span
+            >
+            <span
+              >Need a refresher later? Hit the
+              <strong>Guided Controls</strong> button anytime before
+              launching.</span
+            >
+          </div>
         </div>
-        <div id="controls">
-          <p>
-            <strong>Play Mode:</strong> WASD - Move | Mouse - Look Around | Left
-            Click - Fire | Right Click - Aim<br />
-            1-4 - Switch Weapons | Space - Jump | Shift - Sprint | E - Special
-            Ability
-          </p>
-          <p style="margin-top: 10px">
-            <strong>Spectator Mode:</strong> WASD - Move Camera | Mouse - Look
-            Around | Space/Shift - Up/Down<br />
-            1-9 / 0 - Jump to Environment | ESC - Return to Menu
-          </p>
+      </div>
+
+      <div id="tutorialPanel">
+        <div class="tutorial-content">
+          <button
+            class="tutorial-close"
+            id="tutorialClose"
+            aria-label="Close tutorial"
+          >
+            &times;
+          </button>
+          <div class="tutorial-heading">Guardian Operations Manual</div>
+          <div class="tutorial-subtitle">
+            Key bindings and tips for keeping the system secure.
+          </div>
+
+          <div class="mode-grid">
+            <section class="mode-section">
+              <h3>Play Mode &mdash; Guardian Control</h3>
+              <table class="control-table">
+                <tr>
+                  <td>Movement</td>
+                  <td>
+                    <span class="input-hint"
+                      ><span class="menu-key wide">WASD</span> Navigate /
+                      strafe</span
+                    ><br />
+                    <span class="input-hint"
+                      ><span class="menu-key">Space</span> Jump obstacles</span
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Weapons</td>
+                  <td>
+                    <span class="input-hint"
+                      ><span class="menu-key">LMB</span> Fire current
+                      weapon</span
+                    ><br />
+                    <span class="input-hint"
+                      ><span class="menu-key">RMB</span> Aim for precision</span
+                    ><br />
+                    <span class="input-hint"
+                      ><span class="menu-key">1&ndash;4</span> Quick swap &bull;
+                      Scroll wheel cycles</span
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Utility</td>
+                  <td>
+                    <span class="input-hint"
+                      ><span class="menu-key">E</span> Deploy special
+                      ability</span
+                    ><br />
+                    <span class="input-hint"
+                      ><span class="menu-key">Shift</span> Sprint while
+                      energized</span
+                    ><br />
+                    <span class="input-hint"
+                      ><span class="menu-key">R</span> Reload / restart after
+                      defeat</span
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Camera</td>
+                  <td>
+                    <span class="input-hint"
+                      ><span class="menu-key">Mouse</span> Look and target</span
+                    >
+                  </td>
+                </tr>
+              </table>
+            </section>
+
+            <section class="mode-section">
+              <h3>Spectator Mode &mdash; Freefly</h3>
+              <table class="control-table">
+                <tr>
+                  <td>Navigation</td>
+                  <td>
+                    <span class="input-hint"
+                      ><span class="menu-key wide">WASD</span> Move camera
+                      rig</span
+                    ><br />
+                    <span class="input-hint"
+                      ><span class="menu-key">Space</span> Rise</span
+                    ><br />
+                    <span class="input-hint"
+                      ><span class="menu-key modifier">Shift</span>
+                      Descend</span
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>View</td>
+                  <td>
+                    <span class="input-hint"
+                      ><span class="menu-key">Mouse</span> Look / orbit</span
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Environment</td>
+                  <td>
+                    <span class="input-hint"
+                      ><span class="menu-key">1&ndash;9</span> Jump to themed
+                      arenas</span
+                    ><br />
+                    <span class="input-hint"
+                      ><span class="menu-key">0</span> System overview
+                      panorama</span
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>Tools</td>
+                  <td>
+                    <span class="input-hint"
+                      ><span class="menu-key">I</span> Toggle interactive
+                      FX</span
+                    ><br />
+                    <span class="input-hint"
+                      ><span class="menu-key">ESC</span> Return to the main
+                      menu</span
+                    >
+                  </td>
+                </tr>
+              </table>
+            </section>
+
+            <section class="mode-section">
+              <h3>Advanced Tactics</h3>
+              <table class="control-table">
+                <tr>
+                  <td>Pointer Lock</td>
+                  <td>
+                    Click inside the viewport after launch to capture the cursor
+                    for full mouse control.
+                  </td>
+                </tr>
+                <tr>
+                  <td>HUD Intel</td>
+                  <td>
+                    Keep an eye on wave callsigns and ammo indicators in the
+                    lower corners for upgrades.
+                  </td>
+                </tr>
+                <tr>
+                  <td>Audio Cues</td>
+                  <td>
+                    Weapon sounds provide reload prompts; ambient music shifts
+                    when bosses deploy.
+                  </td>
+                </tr>
+              </table>
+            </section>
+          </div>
+
+          <div class="tutorial-tips">
+            <div class="tutorial-tip">
+              🌐 Need a break? Pause by pressing
+              <span class="menu-key">ESC</span> and use the mouse to navigate
+              back to the hub.
+            </div>
+            <div class="tutorial-tip">
+              🔁 You can revisit these instructions anytime before launching a
+              mode. Perfect for briefing new squad members.
+            </div>
+          </div>
         </div>
       </div>
 
@@ -495,6 +1263,28 @@
       </div>
 
       <div id="message"></div>
+
+      <div id="upgradeOverlay">
+        <div class="upgrade-panel">
+          <div class="upgrade-header">
+            <div class="upgrade-title">
+              <span class="upgrade-title-icon">🏆</span>
+              <h2>BOSS CORE DISMANTLED</h2>
+            </div>
+            <p id="upgradeSubtitle">
+              Select one upgrade card and invest score to install new combat
+              protocols.
+            </p>
+          </div>
+          <div id="upgradeCards" class="upgrade-card-grid"></div>
+          <div class="upgrade-footer">
+            <div class="upgrade-score">
+              Available Score: <span id="upgradeScoreValue">0</span>
+            </div>
+            <button id="upgradeSkipButton" type="button">Skip Upgrade</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Load Three.js first (non-module version) -->
@@ -502,6 +1292,44 @@
 
     <!-- Load GLTFLoader from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <script>
+      window.addEventListener("DOMContentLoaded", () => {
+        const tutorialToggle = document.getElementById("tutorialToggle");
+        const tutorialPanel = document.getElementById("tutorialPanel");
+        const tutorialClose = document.getElementById("tutorialClose");
+        const tutorialContent =
+          tutorialPanel?.querySelector(".tutorial-content");
+
+        const setTutorialVisibility = (open) => {
+          if (!tutorialPanel) return;
+          tutorialPanel.classList.toggle("open", open);
+        };
+
+        tutorialToggle?.addEventListener("click", () =>
+          setTutorialVisibility(true)
+        );
+        tutorialClose?.addEventListener("click", () =>
+          setTutorialVisibility(false)
+        );
+
+        tutorialPanel?.addEventListener("click", (event) => {
+          if (!tutorialContent) return;
+          if (!tutorialContent.contains(event.target)) {
+            setTutorialVisibility(false);
+          }
+        });
+
+        window.addEventListener("keydown", (event) => {
+          if (
+            event.key === "Escape" &&
+            tutorialPanel?.classList.contains("open")
+          ) {
+            setTutorialVisibility(false);
+          }
+        });
+      });
+    </script>
 
     <!-- Then load our game -->
     <script src="./game/game-bundle.js"></script>

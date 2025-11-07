@@ -1,5 +1,6 @@
 const { app, BrowserWindow } = require("electron");
 const path = require("path");
+const fs = require("fs");
 
 let mainWindow;
 
@@ -15,7 +16,18 @@ function createWindow() {
     },
     backgroundColor: "#000000",
     title: "Virus Hunter",
-    icon: path.join(__dirname, "../assets/icon.png"),
+    // Prefer ICO for Windows (packager), fall back to PNG if missing
+    icon: (function () {
+      try {
+        const ico = path.join(__dirname, "../assets/icon.ico");
+        const png = path.join(__dirname, "../assets/icon.png");
+        if (fs.existsSync(ico)) return ico;
+        if (fs.existsSync(png)) return png;
+        return undefined;
+      } catch (e) {
+        return undefined;
+      }
+    })(),
   });
 
   // Load test page if --test flag is provided, otherwise load main game

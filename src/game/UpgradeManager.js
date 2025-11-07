@@ -1,0 +1,343 @@
+class UpgradeManager {
+  constructor(player, weaponManager) {
+    this.player = player;
+    this.weaponManager = weaponManager;
+
+    this.history = {};
+    this.state = this._createDefaultState();
+
+    this.baseStats = {
+      speed: player.speed,
+      sprintMultiplier: player.sprintMultiplier,
+      jumpPower: player.jumpPower,
+      maxStepHeight: player.maxStepHeight,
+      empDamage: player.empDamage,
+      empRadius: player.empRadius,
+      specialCooldownMax: player.specialCooldownMax,
+      specialEnergyCost: player.specialEnergyCost,
+      maxHealth: player.maxHealth,
+      damageReduction: player.damageReduction || 0,
+    };
+
+    this.weaponManager?.setDamageMultiplier(this.state.weaponDamageMultiplier);
+    this.weaponManager?.setProjectileSpeedMultiplier(
+      this.state.projectileSpeedMultiplier
+    );
+
+    this.upgrades = this._createUpgradeDefinitions();
+  }
+
+  _createDefaultState() {
+    return {
+      weaponDamageMultiplier: 1,
+      projectileSpeedMultiplier: 1,
+      moveSpeedMultiplier: 1,
+      jumpMultiplier: 1,
+      empDamageMultiplier: 1,
+      empRadiusMultiplier: 1,
+      specialCooldownMultiplier: 1,
+      maxHealthMultiplier: 1,
+      damageReductionBonus: 0,
+      scoreMultiplier: 1,
+    };
+  }
+
+  _createUpgradeDefinitions() {
+    return [
+      {
+        id: "weapon-overclock",
+        name: "Overclocked Arsenal",
+        icon: "⚡",
+        baseCost: 2400,
+        waveScaling: 320,
+        levelScaling: 800,
+        maxStacks: 4,
+        description: "Weapon damage +20%. Projectiles accelerate by 8%.",
+        detail: (ctx) => {
+          const damageBonus = Math.round(
+            (ctx.state.weaponDamageMultiplier - 1) * 100
+          );
+          return damageBonus > 0
+            ? `Current bonus: +${damageBonus}% damage`
+            : "Current bonus: none";
+        },
+        apply: (ctx) => {
+          ctx.state.weaponDamageMultiplier *= 1.2;
+          ctx.state.projectileSpeedMultiplier *= 1.08;
+          ctx.weaponManager?.setDamageMultiplier(
+            ctx.state.weaponDamageMultiplier
+          );
+          ctx.weaponManager?.setProjectileSpeedMultiplier(
+            ctx.state.projectileSpeedMultiplier
+          );
+          return "Weapon cores rerouted for overclocked output.";
+        },
+      },
+      {
+        id: "kinetic-servos",
+        name: "Kinetic Servos",
+        icon: "🦾",
+        baseCost: 2200,
+        waveScaling: 280,
+        levelScaling: 620,
+        maxStacks: 4,
+        description: "Movement speed +12%.",
+        detail: (ctx) => {
+          const speedBonus = Math.round(
+            (ctx.state.moveSpeedMultiplier - 1) * 100
+          );
+          return speedBonus > 0
+            ? `Current bonus: +${speedBonus}% speed`
+            : "Current bonus: none";
+        },
+        apply: (ctx) => {
+          ctx.state.moveSpeedMultiplier *= 1.12;
+          ctx.player.speed =
+            ctx.baseStats.speed * ctx.state.moveSpeedMultiplier;
+          ctx.player.sprintMultiplier =
+            ctx.baseStats.sprintMultiplier * ctx.state.moveSpeedMultiplier;
+          return "Servo arrays calibrated for faster traversal.";
+        },
+      },
+      {
+        id: "graviton-stabilizers",
+        name: "Graviton Stabilizers",
+        icon: "🛰️",
+        baseCost: 2100,
+        waveScaling: 260,
+        levelScaling: 520,
+        maxStacks: 3,
+        description: "Jump power +25%. Improves step clearance.",
+        detail: (ctx) => {
+          const jumpBonus = Math.round((ctx.state.jumpMultiplier - 1) * 100);
+          return jumpBonus > 0
+            ? `Current bonus: +${jumpBonus}% jump power`
+            : "Current bonus: none";
+        },
+        apply: (ctx) => {
+          ctx.state.jumpMultiplier *= 1.25;
+          ctx.player.jumpPower =
+            ctx.baseStats.jumpPower * ctx.state.jumpMultiplier;
+          ctx.player.maxStepHeight =
+            ctx.baseStats.maxStepHeight *
+            (1 + (ctx.state.jumpMultiplier - 1) * 0.4);
+          return "Anti-grav stabilizers tuned for higher jumps.";
+        },
+      },
+      {
+        id: "emp-overcharger",
+        name: "EMP Overcharger",
+        icon: "💥",
+        baseCost: 2600,
+        waveScaling: 360,
+        levelScaling: 850,
+        maxStacks: 3,
+        description: "EMP radius +20%, EMP damage +30%, cooldown -10%.",
+        detail: (ctx) => {
+          const radius = Math.round(ctx.player.empRadius);
+          return `EMP radius: ${radius.toLocaleString()} units`;
+        },
+        apply: (ctx) => {
+          ctx.state.empDamageMultiplier *= 1.3;
+          ctx.state.empRadiusMultiplier *= 1.2;
+          ctx.state.specialCooldownMultiplier *= 0.9;
+          ctx.player.empDamage =
+            ctx.baseStats.empDamage * ctx.state.empDamageMultiplier;
+          ctx.player.empRadius =
+            ctx.baseStats.empRadius * ctx.state.empRadiusMultiplier;
+          ctx.player.specialCooldownMax = Math.max(
+            0.8,
+            ctx.baseStats.specialCooldownMax *
+              ctx.state.specialCooldownMultiplier
+          );
+          return "EMP capacitors charged beyond safe limits.";
+        },
+      },
+      {
+        id: "nanite-infusion",
+        name: "Nanite Infusion",
+        icon: "🧬",
+        baseCost: 2400,
+        waveScaling: 400,
+        levelScaling: 900,
+        maxStacks: 4,
+        description: "Max health +15%, restore 40% of the new maximum.",
+        detail: (ctx) => {
+          const maxHealth = ctx.player.maxHealth;
+          return `Max health: ${maxHealth.toLocaleString()}`;
+        },
+        apply: (ctx) => {
+          ctx.state.maxHealthMultiplier *= 1.15;
+          const newMax =
+            ctx.baseStats.maxHealth * ctx.state.maxHealthMultiplier;
+          const healAmount = newMax * 0.4;
+          ctx.player.maxHealth = newMax;
+          ctx.player.health = Math.min(newMax, ctx.player.health + healAmount);
+          return "Nanites reinforce host integrity.";
+        },
+      },
+      {
+        id: "adaptive-shielding",
+        name: "Adaptive Shielding",
+        icon: "🛡️",
+        baseCost: 2100,
+        waveScaling: 330,
+        levelScaling: 720,
+        maxStacks: 3,
+        description: "Damage taken reduced by 8%. Heals 10% instantly.",
+        detail: (ctx) => {
+          const reduction = Math.round(ctx.player.damageReduction * 100);
+          return `Damage reduction: ${reduction}%`;
+        },
+        apply: (ctx) => {
+          ctx.state.damageReductionBonus = Math.min(
+            0.6,
+            ctx.state.damageReductionBonus + 0.08
+          );
+          ctx.player.damageReduction = Math.min(
+            0.7,
+            ctx.baseStats.damageReduction + ctx.state.damageReductionBonus
+          );
+          ctx.player.health = Math.min(
+            ctx.player.maxHealth,
+            ctx.player.health + ctx.player.maxHealth * 0.1
+          );
+          return "Reactive shielding absorbs incoming fire.";
+        },
+      },
+      {
+        id: "quantum-dividends",
+        name: "Quantum Dividends",
+        icon: "📈",
+        baseCost: 2000,
+        waveScaling: 260,
+        levelScaling: 600,
+        maxStacks: 4,
+        description: "Score gains increased by 15%.",
+        detail: (ctx) => {
+          const bonus = Math.round((ctx.state.scoreMultiplier - 1) * 100);
+          return bonus > 0
+            ? `Current bonus: +${bonus}% score`
+            : "Current bonus: none";
+        },
+        apply: (ctx) => {
+          ctx.state.scoreMultiplier *= 1.15;
+          return "Data siphons rerouted into the reward pool.";
+        },
+      },
+    ];
+  }
+
+  _getContext() {
+    return {
+      player: this.player,
+      weaponManager: this.weaponManager,
+      baseStats: this.baseStats,
+      history: this.history,
+      state: this.state,
+    };
+  }
+
+  getUpgradeOptions(waveNumber = 1) {
+    const options = [];
+    const available = this.upgrades.filter((upgrade) => {
+      const taken = this.history[upgrade.id] || 0;
+      return upgrade.maxStacks ? taken < upgrade.maxStacks : true;
+    });
+
+    const randomPool = available.length ? [...available] : [...this.upgrades];
+    while (options.length < 3 && randomPool.length) {
+      const index = Math.floor(Math.random() * randomPool.length);
+      const upgrade = randomPool.splice(index, 1)[0];
+      options.push(this._buildOption(upgrade, waveNumber));
+    }
+
+    while (options.length < 3) {
+      const upgrade =
+        this.upgrades[Math.floor(Math.random() * this.upgrades.length)];
+      options.push(this._buildOption(upgrade, waveNumber));
+    }
+
+    return options;
+  }
+
+  _buildOption(upgrade, waveNumber) {
+    const level = this.history[upgrade.id] || 0;
+    const cost = this._calculateCost(upgrade, waveNumber, level);
+    const detail =
+      typeof upgrade.detail === "function"
+        ? upgrade.detail(this._getContext())
+        : "";
+
+    return {
+      id: upgrade.id,
+      name: upgrade.name,
+      icon: upgrade.icon,
+      description: upgrade.description,
+      detail,
+      cost,
+      currentLevel: level,
+      maxStacks: upgrade.maxStacks || null,
+    };
+  }
+
+  _calculateCost(upgrade, waveNumber, level) {
+    const base = upgrade.baseCost || 2000;
+    const wave = upgrade.waveScaling || 0;
+    const levelFactor = upgrade.levelScaling || 0;
+    const computed = base + wave * waveNumber + levelFactor * level;
+    return Math.round(computed / 10) * 10;
+  }
+
+  applyUpgrade(upgradeId) {
+    const upgrade = this.upgrades.find((item) => item.id === upgradeId);
+    if (!upgrade) {
+      return { success: false, message: "Upgrade not found." };
+    }
+
+    const taken = this.history[upgrade.id] || 0;
+    if (upgrade.maxStacks && taken >= upgrade.maxStacks) {
+      return { success: false, message: "Upgrade already at max rank." };
+    }
+
+    const context = this._getContext();
+    const resultMessage = upgrade.apply(context);
+
+    this.history[upgrade.id] = taken + 1;
+
+    return {
+      success: true,
+      message: resultMessage || `${upgrade.name} acquired.`,
+    };
+  }
+
+  getScoreMultiplier() {
+    return this.state.scoreMultiplier;
+  }
+
+  reset() {
+    this.history = {};
+    this.state = this._createDefaultState();
+
+    if (this.weaponManager) {
+      this.weaponManager.setDamageMultiplier(1);
+      this.weaponManager.setProjectileSpeedMultiplier(1);
+    }
+
+    if (!this.player) {
+      return;
+    }
+
+    this.player.speed = this.baseStats.speed;
+    this.player.sprintMultiplier = this.baseStats.sprintMultiplier;
+    this.player.jumpPower = this.baseStats.jumpPower;
+    this.player.maxStepHeight = this.baseStats.maxStepHeight;
+    this.player.empDamage = this.baseStats.empDamage;
+    this.player.empRadius = this.baseStats.empRadius;
+    this.player.specialCooldownMax = this.baseStats.specialCooldownMax;
+    this.player.specialEnergyCost = this.baseStats.specialEnergyCost;
+    this.player.maxHealth = this.baseStats.maxHealth;
+    this.player.health = Math.min(this.player.health, this.player.maxHealth);
+    this.player.damageReduction = this.baseStats.damageReduction;
+  }
+}

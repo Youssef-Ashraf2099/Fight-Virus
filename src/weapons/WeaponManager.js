@@ -23,6 +23,8 @@ class WeaponManager {
     this.currentWeaponIndex = 0;
     this.projectiles = [];
     this.time = 0;
+    this.damageMultiplier = 1;
+    this.projectileSpeedMultiplier = 1;
 
     if (this.player?.setWeaponViewModel) {
       const weapon = this.getCurrentWeapon();
@@ -71,9 +73,21 @@ class WeaponManager {
         fireDirection
       );
       if (projectile) {
+        const applyScaling = (proj) => {
+          if (!proj) return;
+          proj.damage *= this.damageMultiplier;
+          if (this.projectileSpeedMultiplier !== 1 && proj.velocity) {
+            proj.velocity.multiplyScalar(this.projectileSpeedMultiplier);
+          }
+        };
+
         if (Array.isArray(projectile)) {
-          this.projectiles.push(...projectile);
+          projectile.forEach((proj) => {
+            applyScaling(proj);
+            this.projectiles.push(proj);
+          });
         } else {
+          applyScaling(projectile);
           this.projectiles.push(projectile);
         }
       }
@@ -123,5 +137,21 @@ class WeaponManager {
   clear() {
     this.projectiles.forEach((proj) => proj.destroy());
     this.projectiles = [];
+  }
+
+  setDamageMultiplier(multiplier) {
+    this.damageMultiplier = Math.max(0.1, multiplier || 1);
+  }
+
+  getDamageMultiplier() {
+    return this.damageMultiplier;
+  }
+
+  setProjectileSpeedMultiplier(multiplier) {
+    this.projectileSpeedMultiplier = Math.max(0.1, multiplier || 1);
+  }
+
+  getProjectileSpeedMultiplier() {
+    return this.projectileSpeedMultiplier;
   }
 }

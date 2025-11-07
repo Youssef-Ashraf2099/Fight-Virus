@@ -57,6 +57,8 @@ class GameMain {
 
       this.score = 0;
       this.difficulty = 1;
+      this.awaitingUpgradeSelection = false;
+      this.pendingNextWaveTimeout = null;
 
       this.backgroundMusicTracks = [
         "../Assets/sounds/game/edm-gaming-music-335408.mp3",
@@ -130,6 +132,9 @@ class GameMain {
 
     // Create wave manager
     this.waveManager = new WaveManager(this.enemyManager, this.uiManager);
+
+    // Create upgrade manager for post-boss rewards
+    this.upgradeManager = new UpgradeManager(this.player, this.weaponManager);
 
     // Create spectator mode
     this.spectatorMode = new SpectatorMode(
@@ -356,6 +361,14 @@ class GameMain {
         this.gameStarted = true;
         this.isRunning = true;
         this.score = 0;
+        this.awaitingUpgradeSelection = false;
+        this.clearPendingWaveTimeout();
+
+        if (this.upgradeManager) {
+          this.upgradeManager.reset();
+        }
+
+        this.uiManager.hideUpgradeSelection?.();
 
         console.log("Resetting player...");
         this.player.reset();
@@ -414,6 +427,9 @@ class GameMain {
         console.log("Setting spectator state...");
         this.gameStarted = false;
         this.isRunning = false;
+        this.awaitingUpgradeSelection = false;
+        this.clearPendingWaveTimeout();
+        this.uiManager.hideUpgradeSelection?.();
 
         this.enableBackgroundMusic(false);
 
@@ -437,14 +453,15 @@ class GameMain {
   handleSpecialAbility() {
     const enemies = this.enemyManager.getEnemies();
     const playerPos = this.player.getPosition();
-    const blastRadius = 15;
+    const blastRadius = this.player?.empRadius || 15;
+    const empDamage = this.player?.empDamage || 50;
 
     enemies.forEach((enemy) => {
       const enemyPos = enemy.getPosition();
       const distance = playerPos.distanceTo(enemyPos);
 
       if (distance < blastRadius) {
-        enemy.takeDamage(50);
+        enemy.takeDamage(empDamage);
         this.particleSystem.createExplosion(enemyPos, 0x00ffff, 20);
       }
     });
@@ -679,7 +696,12 @@ class GameMain {
   }
 
   onEnemyKilled(enemy) {
-    this.score += enemy.scoreValue;
+    const scoreMultiplier = this.upgradeManager
+      ? this.upgradeManager.getScoreMultiplier()
+      : 1;
+    const scoreGain = Math.round(enemy.scoreValue * scoreMultiplier);
+
+    this.score += scoreGain;
     this.uiManager.updateScore(this.score);
     this.particleSystem.createExplosion(enemy.getPosition(), enemy.color, 30);
     this.enemyManager.removeEnemy(enemy);
@@ -691,45 +713,148 @@ class GameMain {
 
     this.uiManager.showMessage(`WAVE ${waveNumber} COMPLETE!`, 2000);
 
-    this.score += 1000 * waveNumber;
+    const scoreMultiplier = this.upgradeManager
+      ? this.upgradeManager.getScoreMultiplier()
+      : 1;
+    const waveReward = Math.round(1000 * waveNumber * scoreMultiplier);
+    this.score += waveReward;
     this.uiManager.updateScore(this.score);
 
     this.player.health = Math.min(
       this.player.maxHealth,
       this.player.health + 20
     );
+    this.uiManager.updateHealth(this.player.health, this.player.maxHealth);
 
-    setTimeout(() => {
-      if (this.gameStarted) {
-        this.waveManager.startWave();
-        const phaseChanged = this.environment.setPhaseByWave(
-          this.waveManager.getCurrentWave()
-        );
-        const phaseName = this.environment.getCurrentPhaseName();
-        const waveLabel = `WAVE ${this.waveManager.getCurrentWave()} - INCOMING!`;
+    this.clearPendingWaveTimeout();
 
-        if (phaseChanged) {
-          this.uiManager.showMessage(
-            `${phaseName ? phaseName.toUpperCase() : "NEW SECTOR"} ONLINE`,
-            2200
-          );
-          setTimeout(() => {
-            if (!this.gameStarted) return;
-            this.uiManager.showMessage(
-              `${
-                phaseName ? phaseName.toUpperCase() + "<br>" : ""
-              }${waveLabel}`,
-              2200
-            );
-          }, 2200);
-        } else {
-          this.uiManager.showMessage(
-            `${phaseName ? phaseName.toUpperCase() + "<br>" : ""}${waveLabel}`,
-            2200
-          );
-        }
+    const bossWave =
+      typeof this.waveManager.wasLastWaveBoss === "function"
+        ? this.waveManager.wasLastWaveBoss()
+        : false;
+
+    if (bossWave) {
+      this.awaitingUpgradeSelection = true;
+      this.isRunning = false;
+      if (document.pointerLockElement) {
+        document.exitPointerLock();
       }
-    }, 3000);
+
+      setTimeout(() => {
+        if (!this.gameStarted) return;
+        this.presentUpgradeSelection(waveNumber);
+      }, 900);
+    } else {
+      this.scheduleNextWave(3000);
+    }
+  }
+
+  presentUpgradeSelection(waveNumber) {
+    if (!this.upgradeManager || !this.uiManager) {
+      this.scheduleNextWave(1200);
+      return;
+    }
+
+    const options = this.upgradeManager.getUpgradeOptions(waveNumber);
+    this.uiManager.showUpgradeSelection(options, this.score, {
+      onSelect: (option) => this.handleUpgradeSelection(option),
+      onSkip: () => this.handleUpgradeSkip(),
+    });
+  }
+
+  handleUpgradeSelection(option) {
+    if (!option) {
+      this.handleUpgradeSkip();
+      return;
+    }
+
+    if (this.score < option.cost) {
+      this.uiManager.showMessage("INSUFFICIENT SCORE", 1400);
+      setTimeout(() => {
+        if (!this.gameStarted || this.awaitingUpgradeSelection) {
+          this.presentUpgradeSelection(this.waveManager.getCurrentWave());
+        }
+      }, 900);
+      return;
+    }
+
+    this.score -= option.cost;
+    this.uiManager.updateScore(this.score);
+
+    const result = this.upgradeManager.applyUpgrade(option.id);
+    const messageText = result.success
+      ? result.message
+      : result.message || "Upgrade failed.";
+
+    this.uiManager.showMessage(messageText, 2000);
+    this.uiManager.updateHealth(this.player.health, this.player.maxHealth);
+
+    this.resumeAfterUpgrade();
+  }
+
+  handleUpgradeSkip() {
+    this.uiManager.showMessage("Upgrade skipped. Score preserved.", 1500);
+    this.resumeAfterUpgrade();
+  }
+
+  resumeAfterUpgrade() {
+    if (!this.gameStarted) return;
+
+    this.awaitingUpgradeSelection = false;
+    this.uiManager.hideUpgradeSelection?.();
+    this.isRunning = true;
+    this.scheduleNextWave(1600);
+  }
+
+  scheduleNextWave(delayMs = 3000) {
+    this.clearPendingWaveTimeout();
+
+    this.pendingNextWaveTimeout = setTimeout(() => {
+      if (!this.gameStarted) return;
+      this.beginNextWave();
+    }, Math.max(0, delayMs));
+  }
+
+  beginNextWave() {
+    this.clearPendingWaveTimeout();
+
+    this.waveManager.startWave();
+
+    const phaseChanged = this.environment.setPhaseByWave(
+      this.waveManager.getCurrentWave()
+    );
+    const phaseName = this.environment.getCurrentPhaseName();
+    const waveLabel = `WAVE ${this.waveManager.getCurrentWave()} - INCOMING!`;
+
+    const showWaveMessage = () => {
+      if (!this.gameStarted) return;
+      this.uiManager.showMessage(
+        `${phaseName ? phaseName.toUpperCase() + "<br>" : ""}${waveLabel}`,
+        2200
+      );
+    };
+
+    if (phaseChanged) {
+      this.uiManager.showMessage(
+        `${phaseName ? phaseName.toUpperCase() : "NEW SECTOR"} ONLINE`,
+        2200
+      );
+
+      setTimeout(() => {
+        showWaveMessage();
+      }, 2200);
+    } else {
+      showWaveMessage();
+    }
+
+    this.isRunning = true;
+  }
+
+  clearPendingWaveTimeout() {
+    if (this.pendingNextWaveTimeout) {
+      clearTimeout(this.pendingNextWaveTimeout);
+      this.pendingNextWaveTimeout = null;
+    }
   }
 
   gameOver() {
@@ -737,6 +862,10 @@ class GameMain {
     this.gameStarted = false;
 
     this.enableBackgroundMusic(false);
+
+    this.awaitingUpgradeSelection = false;
+    this.clearPendingWaveTimeout();
+    this.uiManager.hideUpgradeSelection?.();
 
     this.uiManager.showMessage(
       `GAME OVER<br>FINAL SCORE: ${this.score}<br><small>Press R to Restart</small>`,
@@ -760,6 +889,14 @@ class GameMain {
       this.enemyManager.clear();
       this.weaponManager.clear();
       this.uiManager.hideMessage();
+      this.uiManager.hideUpgradeSelection?.();
+
+      this.awaitingUpgradeSelection = false;
+      this.clearPendingWaveTimeout();
+
+      if (this.upgradeManager) {
+        this.upgradeManager.reset();
+      }
 
       // Reset score and difficulty
       this.score = 0;
