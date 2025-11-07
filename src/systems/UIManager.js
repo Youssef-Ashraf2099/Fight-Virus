@@ -240,10 +240,12 @@ class UIManager {
       this.puzzleContent.innerHTML = "";
       this.puzzleContent.classList.remove(
         "puzzle-logic",
-        "puzzle-router",
-        "puzzle-register"
+        "puzzle-register",
+        "puzzle-password",
+        "puzzle-maze"
       );
       this.puzzleContent.style.removeProperty("--router-cols");
+      this.puzzleContent.style.removeProperty("--maze-cols");
     }
   }
 

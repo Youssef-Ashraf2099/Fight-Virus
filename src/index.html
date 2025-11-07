@@ -561,42 +561,244 @@
         letter-spacing: 2px;
       }
 
-      .puzzle-body.puzzle-router {
+      .puzzle-body.puzzle-password {
+        gap: 20px;
         align-items: center;
       }
 
-      .wire-grid {
-        display: grid;
-        grid-template-columns: repeat(var(--router-cols, 3), minmax(90px, 1fr));
-        gap: 14px;
-        width: 100%;
-        max-width: 520px;
-        margin: 0 auto;
-      }
-
-      .wire-tile {
-        position: relative;
-        aspect-ratio: 1 / 1;
+      .password-display {
+        font-family: var(--heading-font);
+        font-size: 34px;
+        letter-spacing: 10px;
+        padding: 16px 24px;
         border-radius: 12px;
-        border: 1px solid rgba(34, 209, 255, 0.3);
-        background: rgba(0, 30, 25, 0.45);
-        box-shadow: inset 0 0 18px rgba(34, 209, 255, 0.08);
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        border: 1px solid rgba(34, 209, 255, 0.35);
+        background: rgba(0, 28, 24, 0.55);
+        color: #b7f9ff;
+        text-align: center;
+        min-width: 260px;
+      }
+
+      .password-attempts {
+        font-size: 15px;
+        letter-spacing: 2px;
+        color: rgba(173, 255, 214, 0.82);
+      }
+
+      .password-keypad {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(72px, 1fr));
+        gap: 12px;
+        width: 100%;
+        max-width: 280px;
+      }
+
+      .password-key {
+        font-size: 18px;
+        padding: 12px 0;
+        border-radius: 10px;
+        border: 1px solid rgba(34, 209, 255, 0.35);
+        background: rgba(0, 36, 30, 0.6);
+        color: #b7f9ff;
         cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
       }
 
-      .wire-tile:hover {
-        transform: scale(1.04);
-        box-shadow: 0 12px 24px rgba(34, 209, 255, 0.2);
+      .password-key.primary {
+        grid-column: span 3;
+        background: rgba(0, 64, 52, 0.75);
+        border-color: rgba(34, 209, 255, 0.5);
       }
 
-      .wire-tile svg {
-        width: 70%;
-        height: 70%;
-        pointer-events: none;
+      .password-key.secondary {
+        background: rgba(0, 28, 22, 0.6);
+      }
+
+      .password-key:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 18px rgba(34, 209, 255, 0.2);
+      }
+
+      .password-key:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+
+      .password-history-title {
+        font-size: 15px;
+        letter-spacing: 2px;
+        color: rgba(173, 255, 214, 0.8);
+        align-self: flex-start;
+      }
+
+      .password-history {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        width: 100%;
+        max-width: 320px;
+        max-height: 160px;
+        overflow-y: auto;
+        border: 1px solid rgba(34, 209, 255, 0.2);
+        border-radius: 10px;
+        background: rgba(0, 32, 26, 0.45);
+      }
+
+      .password-history li {
+        padding: 8px 12px;
+        font-size: 14px;
+        letter-spacing: 1px;
+        color: rgba(183, 249, 255, 0.88);
+        border-bottom: 1px solid rgba(34, 209, 255, 0.12);
+      }
+
+      .password-history li:last-child {
+        border-bottom: none;
+      }
+
+      .password-inline-actions {
+        width: 100%;
+        max-width: 320px;
+        display: flex;
+        justify-content: center;
+        margin-top: 6px;
+      }
+
+      .password-inline-skip {
+        font-size: 14px;
+        letter-spacing: 1px;
+        padding: 10px 18px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 82, 82, 0.45);
+        background: rgba(80, 0, 12, 0.55);
+        color: #ffabab;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .password-inline-skip:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 18px rgba(255, 82, 82, 0.25);
+      }
+
+      .puzzle-body.puzzle-maze {
+        gap: 18px;
+        align-items: center;
+      }
+
+      .maze-grid {
+        display: grid;
+        grid-template-columns: repeat(var(--maze-cols, 5), minmax(52px, 1fr));
+        gap: 10px;
+        width: 100%;
+        max-width: 320px;
+      }
+
+      .maze-cell {
+        aspect-ratio: 1 / 1;
+        border-radius: 10px;
+        border: 1px solid rgba(34, 209, 255, 0.25);
+        background: rgba(0, 28, 22, 0.45);
+        position: relative;
+        box-shadow: inset 0 0 14px rgba(34, 209, 255, 0.08);
+      }
+
+      .maze-cell.wall {
+        background: rgba(5, 12, 10, 0.82);
+        border-color: rgba(34, 209, 255, 0.15);
+      }
+
+      .maze-cell.target::after {
+        content: "";
+        position: absolute;
+        inset: 16%;
+        border-radius: 50%;
+        background: radial-gradient(circle, #ff4dff 0%, #8b2dff 70%);
+        box-shadow: 0 0 12px rgba(255, 77, 255, 0.6);
+      }
+
+      .maze-cell.start::after {
+        content: "";
+        position: absolute;
+        inset: 22%;
+        border-radius: 50%;
+        background: radial-gradient(circle, #52f7ff 0%, #1495ff 70%);
+        opacity: 0.55;
+      }
+
+      .maze-cell.robot::after {
+        content: "";
+        position: absolute;
+        inset: 26%;
+        border-radius: 30%;
+        background: linear-gradient(135deg, #52f7ff, #22d1ff);
+        box-shadow: 0 0 14px rgba(34, 209, 255, 0.65);
+      }
+
+      .maze-status {
+        font-size: 15px;
+        letter-spacing: 2px;
+        color: rgba(173, 255, 214, 0.82);
+      }
+
+      .maze-controls {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .maze-control-row {
+        display: flex;
+        gap: 18px;
+        align-items: center;
+      }
+
+      .maze-control-spacer {
+        width: 32px;
+        height: 1px;
+        display: block;
+      }
+
+      .maze-control {
+        font-size: 20px;
+        width: 64px;
+        height: 48px;
+        border-radius: 10px;
+        border: 1px solid rgba(34, 209, 255, 0.35);
+        background: rgba(0, 36, 30, 0.6);
+        color: #b7f9ff;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .maze-control:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 18px rgba(34, 209, 255, 0.18);
+      }
+
+      .maze-inline-actions {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        max-width: 320px;
+      }
+
+      .maze-inline-skip {
+        font-size: 14px;
+        letter-spacing: 1px;
+        padding: 9px 18px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 82, 82, 0.45);
+        background: rgba(80, 0, 12, 0.55);
+        color: #ffabab;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .maze-inline-skip:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 18px rgba(255, 82, 82, 0.25);
       }
 
       .puzzle-body.puzzle-register {

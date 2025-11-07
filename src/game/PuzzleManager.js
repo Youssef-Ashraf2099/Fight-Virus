@@ -39,6 +39,7 @@ class PuzzleManager {
 
     this._prepareOverlay(puzzle, skipPenalty);
 
+    const skipLabel = `Skip (-${this._formatScore(skipPenalty)} SCORE)`;
     const contentEl = this.uiManager?.getPuzzleContentElement?.();
     if (contentEl) {
       const helpers = {
@@ -48,11 +49,22 @@ class PuzzleManager {
             message: message || "Puzzle complete!",
             scoreDelta: reward,
           }),
+        completeFailure: (message, options = {}) =>
+          this._complete("failure", {
+            message: message || "System lockout!",
+            scoreDelta:
+              typeof options.scoreDelta === "number"
+                ? options.scoreDelta
+                : -failPenalty,
+            reason: options.reason || "puzzle-failure",
+          }),
         updateSubmitLabel: (label) =>
           this.uiManager?.setPuzzleSubmitVisibility?.(
             puzzle.showSubmit !== false,
             label
           ),
+        getSkipLabel: () => skipLabel,
+        triggerSkip: () => this._handleSkip(),
       };
 
       const teardown = puzzle.render?.(contentEl, helpers);
@@ -221,7 +233,12 @@ class PuzzleManager {
   }
 
   _pickPuzzleType() {
-    const allTypes = ["logic-gate", "rotational-router", "register-reconfig"];
+    const allTypes = [
+      "logic-gate",
+      "password-cracker",
+      "maze-navigation",
+      "register-reconfig",
+    ];
     if (!this.lastPuzzleType) {
       const choice = allTypes[Math.floor(Math.random() * allTypes.length)];
       this.lastPuzzleType = choice;
@@ -239,8 +256,10 @@ class PuzzleManager {
     switch (type) {
       case "logic-gate":
         return this._buildLogicGatePuzzle(context);
-      case "rotational-router":
-        return this._buildRouterPuzzle(context);
+      case "password-cracker":
+        return this._buildPasswordCrackerPuzzle(context);
+      case "maze-navigation":
+        return this._buildMazePuzzle(context);
       case "register-reconfig":
         return this._buildRegisterPuzzle(context);
       default:
@@ -289,7 +308,11 @@ class PuzzleManager {
     };
 
     puzzle.render = (container, helpers) => {
-      container.classList.remove("puzzle-router", "puzzle-register");
+      container.classList.remove(
+        "puzzle-register",
+        "puzzle-password",
+        "puzzle-maze"
+      );
       container.classList.add("puzzle-logic");
 
       const grid = document.createElement("div");
@@ -459,84 +482,485 @@ class PuzzleManager {
     }
   }
 
-  _buildRouterPuzzle({ reward, failPenalty, skipPenalty }) {
-    const rows = 3;
-    const cols = 3;
-    const layout = [
-      { type: "corner", targetRotation: 1 },
-      { type: "straight", targetRotation: 1 },
-      { type: "corner", targetRotation: 2 },
-      { type: "corner", targetRotation: 0 },
-      { type: "cross", targetRotation: 0 },
-      { type: "tee", targetRotation: 3 },
-      { type: "corner", targetRotation: 0 },
-      { type: "straight", targetRotation: 1 },
-      { type: "corner", targetRotation: 3 },
-    ];
+  _buildPasswordCrackerPuzzle({ reward, failPenalty, skipPenalty }) {
+    const maxAttempts = 6;
+    const secretDigits = Array.from({ length: 4 }, () => this._randomInt(0, 9));
+    const secret = secretDigits.join("");
 
     const puzzle = {
-      id: "rotational-router",
-      title: "Data Stream Router",
-      subtitle: "Rotate each conduit until the network is synchronized.",
+      id: "password-cracker",
+      title: "Password Cracker",
+      subtitle:
+        "Reconstruct the 4-digit access key before the trace completes.",
       reward,
       failPenalty,
       skipPenalty,
       showSubmit: false,
       instructions:
-        "Rotate every conduit so each glowing port links to a neighbour—no loose ends.",
+        "Use the keypad or keyboard digits to enter a 4-digit code. Digits may repeat. Submit guesses to learn how many digits are correct and in the right slot before lockout.",
       state: {
-        rows,
-        cols,
-        tiles: [],
+        secret,
+        attemptsLeft: maxAttempts,
+        history: [],
       },
     };
 
     puzzle.render = (container, helpers) => {
-      container.classList.remove("puzzle-logic", "puzzle-register");
-      container.classList.add("puzzle-router");
-      container.style.setProperty("--router-cols", cols.toString());
+      container.classList.remove(
+        "puzzle-logic",
+        "puzzle-register",
+        "puzzle-maze"
+      );
+      container.classList.add("puzzle-password");
 
-      const grid = document.createElement("div");
-      grid.className = "wire-grid";
-      grid.style.setProperty("--router-cols", cols.toString());
+      const display = document.createElement("div");
+      display.className = "password-display";
 
-      puzzle.state.tiles = layout.map((tileConfig, index) => {
-        const tile = document.createElement("div");
-        tile.className = "wire-tile";
-        tile.dataset.index = index.toString();
-        tile.innerHTML = this._buildWireSVG(tileConfig.type);
+      const attemptsEl = document.createElement("div");
+      attemptsEl.className = "password-attempts";
 
-        let rotation = this._randomInt(0, 3);
-        if (rotation === tileConfig.targetRotation) {
-          rotation = (rotation + this._randomInt(1, 3)) % 4;
-        }
-        tile.style.transform = `rotate(${rotation * 90}deg)`;
+      const historyTitle = document.createElement("div");
+      historyTitle.className = "password-history-title";
+      historyTitle.textContent = "Attempt Log";
 
-        const row = Math.floor(index / cols);
-        const col = index % cols;
-        const tileState = {
-          element: tile,
-          type: tileConfig.type,
-          targetRotation: tileConfig.targetRotation,
-          rotation,
-          row,
-          col,
-        };
+      const historyList = document.createElement("ul");
+      historyList.className = "password-history";
 
-        tile.addEventListener("click", () => {
-          tileState.rotation = (tileState.rotation + 1) % 4;
-          tile.style.transform = `rotate(${tileState.rotation * 90}deg)`;
-          this._checkRouterSolved(puzzle, helpers);
+      const keypad = document.createElement("div");
+      keypad.className = "password-keypad";
+
+      const keypadButtons = [];
+      let currentInput = "";
+      let resolved = false;
+      let disposed = false;
+
+      const updateDisplay = () => {
+        const padded = currentInput.padEnd(4, "_");
+        display.textContent = padded
+          .split("")
+          .map((digit) => digit)
+          .join(" ");
+      };
+
+      const updateAttempts = () => {
+        attemptsEl.textContent = `Attempts remaining: ${puzzle.state.attemptsLeft}`;
+      };
+
+      const logAttempt = (guess, resultText) => {
+        const item = document.createElement("li");
+        item.textContent = `${guess} → ${resultText}`;
+        historyList.prepend(item);
+        puzzle.state.history.unshift({ guess, result: resultText });
+      };
+
+      const setDisabledState = (disabled) => {
+        keypadButtons.forEach((button) => {
+          button.disabled = disabled;
         });
+      };
 
-        grid.appendChild(tile);
-        return tileState;
+      const cleanup = () => {
+        if (disposed) return;
+        disposed = true;
+        window.removeEventListener("keydown", handleKeyDown);
+      };
+
+      const evaluateGuess = () => {
+        if (resolved) {
+          return;
+        }
+        if (currentInput.length !== 4) {
+          helpers.setFeedback?.("Enter four digits before submitting.");
+          return;
+        }
+
+        const guess = currentInput;
+        currentInput = "";
+        updateDisplay();
+
+        if (guess === puzzle.state.secret) {
+          resolved = true;
+          setDisabledState(true);
+          cleanup();
+          logAttempt(guess, "Exact match");
+          helpers.completeSuccess?.("Cipher accepted! Access granted.");
+          return;
+        }
+
+        puzzle.state.attemptsLeft -= 1;
+
+        const { correctPosition, correctDigit } = this._comparePasswordGuess(
+          puzzle.state.secret,
+          guess
+        );
+
+        const resultText = `${correctPosition} in place, ${correctDigit} misplaced`;
+        logAttempt(guess, resultText);
+        updateAttempts();
+
+        if (puzzle.state.attemptsLeft <= 0) {
+          resolved = true;
+          setDisabledState(true);
+          cleanup();
+          helpers.completeFailure?.("Lockout triggered — trace inbound!", {
+            reason: "password-lockout",
+          });
+          return;
+        }
+
+        helpers.setFeedback?.(
+          `${correctPosition} digit(s) are perfect, ${correctDigit} are correct but misplaced.`
+        );
+      };
+
+      const appendDigit = (digit) => {
+        if (resolved) return;
+        if (currentInput.length >= 4) return;
+        currentInput += digit;
+        updateDisplay();
+      };
+
+      const handleBackspace = () => {
+        if (resolved) return;
+        currentInput = currentInput.slice(0, -1);
+        updateDisplay();
+      };
+
+      const handleClear = () => {
+        if (resolved) return;
+        currentInput = "";
+        updateDisplay();
+      };
+
+      const handleKeyDown = (event) => {
+        if (resolved) return;
+        const key = event.key;
+        if (/^[0-9]$/.test(key)) {
+          appendDigit(key);
+          event.preventDefault();
+        } else if (key === "Backspace") {
+          handleBackspace();
+          event.preventDefault();
+        } else if (key === "Enter") {
+          evaluateGuess();
+          event.preventDefault();
+        }
+      };
+
+      const digitOrder = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+      digitOrder.forEach((digit) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "password-key";
+        button.textContent = digit;
+        button.addEventListener("click", () => appendDigit(digit));
+        keypad.appendChild(button);
+        keypadButtons.push(button);
       });
 
-      container.appendChild(grid);
+      const backButton = document.createElement("button");
+      backButton.type = "button";
+      backButton.className = "password-key secondary";
+      backButton.textContent = "Back";
+      backButton.addEventListener("click", handleBackspace);
+      keypad.appendChild(backButton);
+      keypadButtons.push(backButton);
+
+      const clearButton = document.createElement("button");
+      clearButton.type = "button";
+      clearButton.className = "password-key secondary";
+      clearButton.textContent = "Clear";
+      clearButton.addEventListener("click", handleClear);
+      keypad.appendChild(clearButton);
+      keypadButtons.push(clearButton);
+
+      const submitButton = document.createElement("button");
+      submitButton.type = "button";
+      submitButton.className = "password-key primary";
+      submitButton.textContent = "Submit";
+      submitButton.addEventListener("click", evaluateGuess);
+      keypad.appendChild(submitButton);
+      keypadButtons.push(submitButton);
+
+      container.appendChild(display);
+      container.appendChild(attemptsEl);
+      container.appendChild(keypad);
+      container.appendChild(historyTitle);
+      container.appendChild(historyList);
+
+      const actions = document.createElement("div");
+      actions.className = "password-inline-actions";
+      const inlineSkip = document.createElement("button");
+      inlineSkip.type = "button";
+      inlineSkip.className = "password-inline-skip";
+      inlineSkip.textContent =
+        helpers.getSkipLabel?.() ||
+        `Skip (-${this._formatScore(puzzle.skipPenalty)} SCORE)`;
+      inlineSkip.addEventListener("click", () => helpers.triggerSkip?.());
+      actions.appendChild(inlineSkip);
+      container.appendChild(actions);
+
+      puzzle.state.attemptsLeft = maxAttempts;
+      puzzle.state.history = [];
+      historyList.innerHTML = "";
+      updateDisplay();
+      updateAttempts();
       helpers.setFeedback?.(
-        "Trace the flow. Every connector must plug into an adjacent conduit."
+        "Crack the code before the firewall locks you out."
       );
+
+      window.addEventListener("keydown", handleKeyDown);
+
+      return () => {
+        cleanup();
+      };
+    };
+
+    return puzzle;
+  }
+
+  _buildMazePuzzle({ reward, failPenalty, skipPenalty }) {
+    const layout = ["S..#.", ".#.#.", ".#T#.", ".#...", "...#."];
+
+    const maxMoves = 16;
+
+    const puzzle = {
+      id: "maze-navigation",
+      title: "Pathfinding Simulator",
+      subtitle: "Route the maintenance bot to the target node.",
+      reward,
+      failPenalty,
+      skipPenalty,
+      showSubmit: false,
+      instructions:
+        "Use the arrow keys or on-screen controls to guide the bot to the magenta target. Avoid walls and reach the goal within 16 moves.",
+      state: {
+        layout,
+        maxMoves,
+      },
+    };
+
+    puzzle.render = (container, helpers) => {
+      container.classList.remove(
+        "puzzle-logic",
+        "puzzle-register",
+        "puzzle-password"
+      );
+      container.classList.add("puzzle-maze");
+
+      const rows = layout.length;
+      const cols = layout[0]?.length || 0;
+      const cells = Array.from({ length: rows }, () => Array(cols));
+
+      let robot = { row: 0, col: 0 };
+      let target = { row: rows - 1, col: cols - 1 };
+      let movesLeft = maxMoves;
+      let resolved = false;
+      let disposed = false;
+
+      const grid = document.createElement("div");
+      grid.className = "maze-grid";
+      grid.style.setProperty("--maze-cols", cols.toString());
+
+      const status = document.createElement("div");
+      status.className = "maze-status";
+
+      const controls = document.createElement("div");
+      controls.className = "maze-controls";
+
+      const updateStatus = () => {
+        status.textContent = `Moves remaining: ${movesLeft}`;
+      };
+
+      const applyRobotPosition = () => {
+        cells.forEach((rowCells) => {
+          rowCells.forEach((cell) => {
+            cell?.classList.remove("robot");
+          });
+        });
+        const currentCell = cells[robot.row]?.[robot.col];
+        if (currentCell) {
+          currentCell.classList.add("robot");
+        }
+      };
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const char = layout[row][col];
+          const cell = document.createElement("div");
+          cell.className = "maze-cell";
+
+          if (char === "#") {
+            cell.classList.add("wall");
+          } else {
+            cell.classList.add("floor");
+            if (char === "S") {
+              robot = { row, col };
+              cell.classList.add("start");
+            } else if (char === "T") {
+              target = { row, col };
+              cell.classList.add("target");
+            }
+          }
+
+          cells[row][col] = cell;
+          grid.appendChild(cell);
+        }
+      }
+
+      applyRobotPosition();
+      puzzle.state.robot = { ...robot };
+      puzzle.state.target = { ...target };
+      puzzle.state.movesLeft = movesLeft;
+
+      const cleanup = () => {
+        if (disposed) return;
+        disposed = true;
+        window.removeEventListener("keydown", handleKeyDown, true);
+      };
+
+      const attemptMove = (deltaRow, deltaCol) => {
+        if (resolved) return;
+
+        const nextRow = robot.row + deltaRow;
+        const nextCol = robot.col + deltaCol;
+
+        if (nextRow < 0 || nextRow >= rows || nextCol < 0 || nextCol >= cols) {
+          helpers.setFeedback?.("Boundary reached — choose another route.");
+          return;
+        }
+
+        if (layout[nextRow][nextCol] === "#") {
+          helpers.setFeedback?.("Obstacle detected — rerouting required.");
+          return;
+        }
+
+        robot = { row: nextRow, col: nextCol };
+        movesLeft -= 1;
+        puzzle.state.robot = { ...robot };
+        puzzle.state.movesLeft = movesLeft;
+        applyRobotPosition();
+        updateStatus();
+
+        if (robot.row === target.row && robot.col === target.col) {
+          resolved = true;
+          cleanup();
+          helpers.completeSuccess?.("Target reached. Pathfinding successful!");
+          return;
+        }
+
+        if (movesLeft <= 0) {
+          resolved = true;
+          cleanup();
+          helpers.completeFailure?.(
+            "Move budget exhausted — simulation aborted.",
+            {
+              reason: "maze-out-of-moves",
+            }
+          );
+          return;
+        }
+
+        helpers.setFeedback?.("Continue routing toward the target node.");
+      };
+
+      const createControlButton = (label, deltaRow, deltaCol) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "maze-control";
+        button.textContent = label;
+        button.addEventListener("click", () => attemptMove(deltaRow, deltaCol));
+        controls.appendChild(button);
+        return button;
+      };
+
+      const handleKeyDown = (event) => {
+        if (resolved) return;
+        let handled = true;
+        switch (event.key) {
+          case "ArrowUp":
+          case "w":
+          case "W":
+            attemptMove(-1, 0);
+            break;
+          case "ArrowDown":
+          case "s":
+          case "S":
+            attemptMove(1, 0);
+            break;
+          case "ArrowLeft":
+          case "a":
+          case "A":
+            attemptMove(0, -1);
+            break;
+          case "ArrowRight":
+          case "d":
+          case "D":
+            attemptMove(0, 1);
+            break;
+          default:
+            handled = false;
+        }
+
+        if (handled) {
+          event.preventDefault();
+        }
+      };
+
+      createControlButton("▲", -1, 0);
+      const middleRow = document.createElement("div");
+      middleRow.className = "maze-control-row";
+      const leftButton = document.createElement("button");
+      leftButton.type = "button";
+      leftButton.className = "maze-control";
+      leftButton.textContent = "◀";
+      leftButton.addEventListener("click", () => attemptMove(0, -1));
+      const staySpacer = document.createElement("span");
+      staySpacer.className = "maze-control-spacer";
+      const rightButton = document.createElement("button");
+      rightButton.type = "button";
+      rightButton.className = "maze-control";
+      rightButton.textContent = "▶";
+      rightButton.addEventListener("click", () => attemptMove(0, 1));
+      middleRow.appendChild(leftButton);
+      middleRow.appendChild(staySpacer);
+      middleRow.appendChild(rightButton);
+
+      const downButton = document.createElement("button");
+      downButton.type = "button";
+      downButton.className = "maze-control";
+      downButton.textContent = "▼";
+      downButton.addEventListener("click", () => attemptMove(1, 0));
+
+      controls.appendChild(middleRow);
+      controls.appendChild(downButton);
+
+      container.appendChild(grid);
+      container.appendChild(status);
+      container.appendChild(controls);
+
+      const actions = document.createElement("div");
+      actions.className = "maze-inline-actions";
+      const inlineSkip = document.createElement("button");
+      inlineSkip.type = "button";
+      inlineSkip.className = "maze-inline-skip";
+      inlineSkip.textContent =
+        helpers.getSkipLabel?.() ||
+        `Skip (-${this._formatScore(puzzle.skipPenalty)} SCORE)`;
+      inlineSkip.addEventListener("click", () => helpers.triggerSkip?.());
+      actions.appendChild(inlineSkip);
+      container.appendChild(actions);
+
+      updateStatus();
+      helpers.setFeedback?.(
+        "Plot a path to the goal within the allotted moves."
+      );
+
+      window.addEventListener("keydown", handleKeyDown, true);
+
+      return () => {
+        cleanup();
+      };
     };
 
     return puzzle;
@@ -584,7 +1008,11 @@ class PuzzleManager {
     };
 
     puzzle.render = (container, helpers) => {
-      container.classList.remove("puzzle-logic", "puzzle-router");
+      container.classList.remove(
+        "puzzle-logic",
+        "puzzle-password",
+        "puzzle-maze"
+      );
       container.classList.add("puzzle-register");
 
       let current = startValue;
@@ -683,106 +1111,34 @@ class PuzzleManager {
     return puzzle;
   }
 
-  _checkRouterSolved(puzzle, helpers) {
-    const state = puzzle?.state;
-    if (!state || !state.tiles || !state.tiles.length) {
-      return false;
-    }
+  _comparePasswordGuess(secret, guess) {
+    const length = Math.min(secret.length, guess.length);
+    let correctPosition = 0;
+    const secretCounts = new Array(10).fill(0);
+    const guessCounts = new Array(10).fill(0);
 
-    const rows = state.rows || 0;
-    const cols = state.cols || 0;
-    if (!rows || !cols) {
-      return false;
-    }
+    for (let index = 0; index < length; index++) {
+      const secretDigit = secret.charCodeAt(index) - 48;
+      const guessDigit = guess.charCodeAt(index) - 48;
 
-    const opposite = [2, 3, 0, 1];
-    const indexFor = (row, col) => row * cols + col;
-
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-        const tile = state.tiles[indexFor(row, col)];
-        const connections = this._getConnections(tile.type, tile.rotation);
-
-        for (const direction of connections) {
-          const neighbourRow =
-            row + (direction === 2 ? 1 : direction === 0 ? -1 : 0);
-          const neighbourCol =
-            col + (direction === 1 ? 1 : direction === 3 ? -1 : 0);
-
-          if (
-            neighbourRow < 0 ||
-            neighbourRow >= rows ||
-            neighbourCol < 0 ||
-            neighbourCol >= cols
-          ) {
-            helpers.setFeedback?.(
-              "Open link detected on the edge — reroute that conduit."
-            );
-            return false;
-          }
-
-          const neighbour = state.tiles[indexFor(neighbourRow, neighbourCol)];
-          const neighbourConnections = this._getConnections(
-            neighbour.type,
-            neighbour.rotation
-          );
-
-          if (!neighbourConnections.includes(opposite[direction])) {
-            helpers.setFeedback?.(
-              "Conduits misaligned — each connector must pair with its neighbour."
-            );
-            return false;
-          }
+      if (secretDigit === guessDigit) {
+        correctPosition += 1;
+      } else {
+        if (secretDigit >= 0 && secretDigit <= 9) {
+          secretCounts[secretDigit] += 1;
+        }
+        if (guessDigit >= 0 && guessDigit <= 9) {
+          guessCounts[guessDigit] += 1;
         }
       }
     }
 
-    helpers.completeSuccess?.("Signal routed successfully!");
-    return true;
-  }
-
-  _getConnections(type, rotation) {
-    const baseMap = {
-      straight: [0, 2],
-      corner: [0, 1],
-      tee: [0, 1, 3],
-      cross: [0, 1, 2, 3],
-    };
-
-    const base = baseMap[type] || [];
-    return base.map((dir) => (dir + rotation) % 4);
-  }
-
-  _buildWireSVG(type) {
-    switch (type) {
-      case "straight":
-        return `
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <path d="M50 0 L50 100" stroke="#00ff88" stroke-width="16" stroke-linecap="round" />
-          </svg>
-        `;
-      case "corner":
-        return `
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <path d="M50 0 L50 50 L100 50" stroke="#00ff88" stroke-width="16" stroke-linecap="round" fill="none" />
-          </svg>
-        `;
-      case "tee":
-        return `
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <path d="M50 0 L50 100" stroke="#00ff88" stroke-width="16" stroke-linecap="round" />
-            <path d="M0 50 L100 50" stroke="#00ff88" stroke-width="16" stroke-linecap="round" />
-          </svg>
-        `;
-      case "cross":
-      default:
-        return `
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <path d="M50 0 L50 100" stroke="#00ff88" stroke-width="16" stroke-linecap="round" />
-            <path d="M0 50 L100 50" stroke="#00ff88" stroke-width="16" stroke-linecap="round" />
-          </svg>
-        `;
+    let correctDigit = 0;
+    for (let digit = 0; digit < 10; digit++) {
+      correctDigit += Math.min(secretCounts[digit], guessCounts[digit]);
     }
+
+    return { correctPosition, correctDigit };
   }
 
   _computeReward(waveNumber) {
