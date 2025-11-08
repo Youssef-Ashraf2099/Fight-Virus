@@ -134,9 +134,17 @@ class UIManager {
       const detailMarkup = option.detail
         ? `<div class="upgrade-card-detail">${option.detail}</div>`
         : "";
+      const rarityMarkup = option.rarityLabel
+        ? `<div class="upgrade-card-rarity ${option.rarityClass || ""}">${
+            option.rarityLabel
+          }</div>`
+        : "";
 
       card.innerHTML = `
-        <div class="upgrade-card-icon">${option.icon || ""}</div>
+        <div class="upgrade-card-icon ${option.iconClass || ""}">${
+        option.icon || ""
+      }</div>
+        ${rarityMarkup}
         <div class="upgrade-card-content">
           <div class="upgrade-card-title">${option.name}</div>
           <div class="upgrade-card-description">${option.description}</div>
