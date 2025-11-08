@@ -155,7 +155,7 @@ class GameMain {
     // Create upgrade manager for post-boss rewards
     this.upgradeManager = new UpgradeManager(this.player, this.weaponManager);
 
-    // Create spectator mode
+    // Create learn mode manager
     this.spectatorMode = new SpectatorMode(
       this.scene,
       this.camera,
@@ -174,9 +174,9 @@ class GameMain {
     console.log("Setting up event listeners...");
 
     const startButton = document.getElementById("startButton");
-    const spectatorButton = document.getElementById("spectatorButton");
+    const learnButton = document.getElementById("learnButton");
     console.log("Start button element:", startButton);
-    console.log("Spectator button element:", spectatorButton);
+    console.log("Learn button element:", learnButton);
 
     if (!startButton) {
       console.error("Start button not found!");
@@ -188,10 +188,10 @@ class GameMain {
       this.startGame();
     });
 
-    if (spectatorButton) {
-      spectatorButton.addEventListener("click", () => {
-        console.log("👁️ SPECTATOR BUTTON CLICKED!");
-        this.startSpectatorMode();
+    if (learnButton) {
+      learnButton.addEventListener("click", () => {
+        console.log("🧠 LEARN MODE BUTTON CLICKED!");
+        this.startLearnMode();
       });
     }
 
@@ -423,12 +423,12 @@ class GameMain {
     }, 120);
   }
 
-  startSpectatorMode() {
-    console.log("👁️ startSpectatorMode() called");
+  startLearnMode() {
+    console.log("🧠 startLearnMode() called");
 
     this.showLoadingOverlay(
-      "SPECTATOR MODE",
-      "Preparing sandbox environments for exploration..."
+      "LEARN MODE",
+      "Deploying Pixel and preparing sectors for guided exploration..."
     );
 
     setTimeout(() => {
@@ -443,7 +443,7 @@ class GameMain {
         document.getElementById("minimap").style.display = "none";
         document.getElementById("crosshair").style.display = "none";
 
-        console.log("Setting spectator state...");
+        console.log("Setting learn mode state...");
         this.gameStarted = false;
         this.isRunning = false;
         this.awaitingUpgradeSelection = false;
@@ -452,14 +452,14 @@ class GameMain {
 
         this.enableBackgroundMusic(false);
 
-        console.log("Starting spectator mode...");
+        console.log("Starting learn mode...");
         this.spectatorMode.start();
 
-        console.log("✅ Spectator mode started successfully!");
+        console.log("✅ Learn mode started successfully!");
       } catch (error) {
-        console.error("❌ Error starting spectator mode:", error);
+        console.error("❌ Error starting learn mode:", error);
         alert(
-          "Error starting spectator mode: " +
+          "Error starting learn mode: " +
             error.message +
             "\n\nCheck console for details."
         );
@@ -467,6 +467,13 @@ class GameMain {
         this.hideLoadingOverlay();
       }
     }, 120);
+  }
+
+  startSpectatorMode() {
+    console.warn(
+      "startSpectatorMode() is deprecated. Forwarding to startLearnMode()."
+    );
+    this.startLearnMode();
   }
 
   handleSpecialAbility() {
@@ -490,10 +497,10 @@ class GameMain {
   }
 
   update(deltaTime) {
-    // Update spectator mode if active
+    // Update learn mode if active
     if (this.spectatorMode && this.spectatorMode.isActive()) {
       this.spectatorMode.update(deltaTime);
-      return; // Skip game updates in spectator mode
+      return; // Skip game updates while Learn Mode is active
     }
 
     if (!this.isRunning) return;

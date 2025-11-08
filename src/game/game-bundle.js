@@ -74,6 +74,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     // Game & Spectator
     "./game/SpectatorCamera.js",
+    "./game/PixelCompanion.js",
     "./game/SpectatorMode.js",
     "./game/PuzzleManager.js",
     "./game/UpgradeManager.js",
