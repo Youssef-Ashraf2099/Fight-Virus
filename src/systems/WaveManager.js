@@ -39,6 +39,22 @@ class WaveManager {
         message: "🔥⚠️ CORRUPTION CORE - SYSTEM ANNIHILATOR ⚠️🔥",
         difficultyMultiplier: 1.9,
       },
+      noise: {
+        message: "🔊 NOISE - DISK CORRUPTION DETECTED 🔊",
+        difficultyMultiplier: 1.55,
+      },
+      "firewall-archon": {
+        message: "🔥 FIREWALL ARCHON - SHIELD GRID COMMANDER 🔥",
+        difficultyMultiplier: 1.68,
+      },
+      "neural-overmind": {
+        message: "🧠 NEURAL OVERMIND - SIMULATION ARCHITECT 🧠",
+        difficultyMultiplier: 1.62,
+      },
+      "packet-hydra": {
+        message: "🌐 PACKET HYDRA - NETWORK DOMINION 🌐",
+        difficultyMultiplier: 1.6,
+      },
     };
   }
 
@@ -111,6 +127,16 @@ class WaveManager {
     if (wave >= 4) {
       pool.add("pixel-reaper");
     }
+    if (wave >= 5) {
+      pool.add("noise");
+    }
+    if (wave >= 6) {
+      pool.add("firewall-archon");
+      pool.add("packet-hydra");
+    }
+    if (wave >= 7) {
+      pool.add("neural-overmind");
+    }
     if (wave >= 7) {
       pool.add("data-wyrm");
     }
@@ -140,6 +166,22 @@ class WaveManager {
     }
     if (envName.includes("motherboard") || envName.includes("kernel")) {
       pool.add("data-wyrm");
+    }
+    if (
+      envName.includes("hard") ||
+      envName.includes("drive") ||
+      envName.includes("disk")
+    ) {
+      pool.add("noise");
+    }
+    if (envName.includes("firewall")) {
+      pool.add("firewall-archon");
+    }
+    if (envName.includes("neural") || envName.includes("ai")) {
+      pool.add("neural-overmind");
+    }
+    if (envName.includes("network") || envName.includes("hub")) {
+      pool.add("packet-hydra");
     }
 
     const candidates = Array.from(pool);
