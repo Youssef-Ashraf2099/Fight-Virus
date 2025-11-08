@@ -28,6 +28,9 @@ class BaseBoss extends BaseEnemy {
     // Arena effects
     this.arenaRadius = 50;
     this.arenaEffect = null;
+
+    this.spawnImmunityDuration = 1.4;
+    this.spawnImmunityTimer = 0;
   }
 
   /**
@@ -199,6 +202,7 @@ class BaseBoss extends BaseEnemy {
     // Mark spawn complete
     if (progress >= 1) {
       this.fullySpawned = true;
+      this.spawnImmunityTimer = this.spawnImmunityDuration;
       this.cleanupSpawnEffects();
 
       // Final burst
@@ -264,6 +268,13 @@ class BaseBoss extends BaseEnemy {
       this.attackCooldown -= deltaTime;
     }
 
+    if (this.spawnImmunityTimer > 0) {
+      this.spawnImmunityTimer = Math.max(
+        0,
+        this.spawnImmunityTimer - deltaTime
+      );
+    }
+
     // Phase transitions
     this.checkPhaseTransition();
 
@@ -313,6 +324,13 @@ class BaseBoss extends BaseEnemy {
    * Enhanced takeDamage with visual feedback
    */
   takeDamage(amount) {
+    if (!this.fullySpawned || this.spawnImmunityTimer > 0) {
+      if (this.particleSystem) {
+        this.particleSystem.createImpact(this.position, 0xffffff, 10);
+      }
+      return;
+    }
+
     super.takeDamage(amount);
 
     // Extra visual feedback for boss

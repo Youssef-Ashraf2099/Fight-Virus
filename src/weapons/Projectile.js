@@ -17,6 +17,11 @@ class Projectile {
     this.color = color;
     this.damage = damage;
     this.collisionRadius = size;
+    this.heightPadding = size * 0.6;
+    this.particleSystem = null;
+    this.destroyed = false;
+    this._stepVector = new THREE.Vector3();
+    this._previousPosition = new THREE.Vector3();
 
     this.createMesh(size);
   }
@@ -40,17 +45,41 @@ class Projectile {
     this.mesh.add(this.light);
   }
 
-  update(deltaTime) {
-    this.position.add(this.velocity.clone().multiplyScalar(deltaTime));
-    this.mesh.position.copy(this.position);
+  update(deltaTime, environment) {
+    if (this.destroyed) {
+      return false;
+    }
+
+    this._previousPosition.copy(this.position);
+    this._stepVector.copy(this.velocity).multiplyScalar(deltaTime);
+    this.position.add(this._stepVector);
+
+    if (
+      environment &&
+      typeof environment.isProjectilePathObstructed === "function" &&
+      environment.isProjectilePathObstructed(
+        this._previousPosition,
+        this.position,
+        this.collisionRadius,
+        this.heightPadding
+      )
+    ) {
+      this._handleImpact(this.position);
+      return false;
+    }
+
+    if (this.mesh) {
+      this.mesh.position.copy(this.position);
+    }
 
     this.lifetime -= deltaTime;
 
-    // Fade out near end of life
     const lifetimeRatio = this.lifetime / this.maxLifetime;
-    if (lifetimeRatio < 0.3) {
-      this.mesh.material.opacity = lifetimeRatio / 0.3;
+    if (this.mesh && lifetimeRatio < 0.3) {
+      this.mesh.material.opacity = Math.max(lifetimeRatio / 0.3, 0);
     }
+
+    return !this.isExpired();
   }
 
   getPosition() {
@@ -58,14 +87,34 @@ class Projectile {
   }
 
   isExpired() {
-    return this.lifetime <= 0;
+    return this.destroyed || this.lifetime <= 0;
   }
 
   destroy() {
+    if (this.destroyed) {
+      return;
+    }
+    this.destroyed = true;
+
+    if (this.light && this.mesh) {
+      this.mesh.remove(this.light);
+    }
+
     if (this.mesh) {
       this.scene.remove(this.mesh);
       this.mesh.geometry.dispose();
       this.mesh.material.dispose();
+      this.mesh = null;
     }
+
+    this.light = null;
+  }
+
+  _handleImpact(position) {
+    if (this.particleSystem && position) {
+      this.particleSystem.createImpact(position.clone(), this.color, 12);
+    }
+
+    this.destroy();
   }
 }

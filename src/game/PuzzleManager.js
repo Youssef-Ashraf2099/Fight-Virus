@@ -238,6 +238,7 @@ class PuzzleManager {
       "password-cracker",
       "maze-navigation",
       "register-reconfig",
+      "checksum-balancer",
     ];
     if (!this.lastPuzzleType) {
       const choice = allTypes[Math.floor(Math.random() * allTypes.length)];
@@ -262,6 +263,8 @@ class PuzzleManager {
         return this._buildMazePuzzle(context);
       case "register-reconfig":
         return this._buildRegisterPuzzle(context);
+      case "checksum-balancer":
+        return this._buildChecksumPuzzle(context);
       default:
         return this._buildLogicGatePuzzle(context);
     }
@@ -719,10 +722,10 @@ class PuzzleManager {
     return puzzle;
   }
 
-  _buildMazePuzzle({ reward, failPenalty, skipPenalty }) {
-    const layout = ["S..#.", ".#.#.", ".#T#.", ".#...", "...#."];
-
-    const maxMoves = 16;
+  _buildMazePuzzle({ reward, failPenalty, skipPenalty, waveNumber }) {
+    const layoutInfo = this._generateMazeLayout({ waveNumber });
+    const layout = layoutInfo.layout;
+    const maxMoves = layoutInfo.maxMoves;
 
     const puzzle = {
       id: "maze-navigation",
@@ -732,11 +735,11 @@ class PuzzleManager {
       failPenalty,
       skipPenalty,
       showSubmit: false,
-      instructions:
-        "Use the arrow keys or on-screen controls to guide the bot to the magenta target. Avoid walls and reach the goal within 16 moves.",
+      instructions: `Use arrow keys or on-screen controls to reach the magenta node. Walls block movement. Clear the maze within ${maxMoves} moves.`,
       state: {
         layout,
         maxMoves,
+        pathLength: layoutInfo.pathLength,
       },
     };
 
@@ -819,6 +822,12 @@ class PuzzleManager {
         window.removeEventListener("keydown", handleKeyDown, true);
       };
 
+      const isTraversable = (row, col) => {
+        const cell = layout[row]?.[col];
+        if (!cell) return false;
+        return cell !== "#";
+      };
+
       const attemptMove = (deltaRow, deltaCol) => {
         if (resolved) return;
 
@@ -830,7 +839,7 @@ class PuzzleManager {
           return;
         }
 
-        if (layout[nextRow][nextCol] === "#") {
+        if (!isTraversable(nextRow, nextCol)) {
           helpers.setFeedback?.("Obstacle detected — rerouting required.");
           return;
         }
@@ -953,7 +962,7 @@ class PuzzleManager {
 
       updateStatus();
       helpers.setFeedback?.(
-        "Plot a path to the goal within the allotted moves."
+        `Plot a path to the goal. Optimal route length: ${layoutInfo.pathLength} steps.`
       );
 
       window.addEventListener("keydown", handleKeyDown, true);
@@ -1109,6 +1118,139 @@ class PuzzleManager {
     };
 
     return puzzle;
+  }
+
+  _generateMazeLayout({ waveNumber }) {
+    const difficulty = Math.max(1, waveNumber || 1);
+    let size = 5 + Math.min(4, Math.floor(difficulty / 2)) * 2;
+    if (size % 2 === 0) {
+      size += 1;
+    }
+
+    const grid = Array.from({ length: size }, () => Array(size).fill("#"));
+    const carve = (row, col) => {
+      grid[row][col] = ".";
+      const directions = this._shuffleDirections([
+        [-1, 0],
+        [1, 0],
+        [0, -1],
+        [0, 1],
+      ]);
+
+      directions.forEach(([dr, dc]) => {
+        const nextRow = row + dr * 2;
+        const nextCol = col + dc * 2;
+        if (
+          nextRow > 0 &&
+          nextRow < size - 1 &&
+          nextCol > 0 &&
+          nextCol < size - 1 &&
+          grid[nextRow][nextCol] === "#"
+        ) {
+          grid[row + dr][col + dc] = ".";
+          carve(nextRow, nextCol);
+        }
+      });
+    };
+
+    carve(1, 1);
+
+    const extraCuts = Math.min(12, Math.floor(difficulty * 0.8));
+    for (let i = 0; i < extraCuts; i++) {
+      const row = this._randomInt(1, size - 2);
+      const col = this._randomInt(1, size - 2);
+      if (grid[row][col] === "#") {
+        const openNeighbors = [
+          [row + 1, col],
+          [row - 1, col],
+          [row, col + 1],
+          [row, col - 1],
+        ].filter(([r, c]) => grid[r]?.[c] === ".");
+        if (openNeighbors.length >= 2) {
+          grid[row][col] = ".";
+        }
+      }
+    }
+
+    const start = { row: 1, col: 1 };
+    const distances = this._mazeDistances(grid, start);
+    let furthestKey = `${start.row}:${start.col}`;
+    Object.keys(distances).forEach((key) => {
+      if (distances[key] > distances[furthestKey]) {
+        furthestKey = key;
+      }
+    });
+
+    if (furthestKey === `${start.row}:${start.col}`) {
+      const keys = Object.keys(distances).filter(
+        (key) => key !== `${start.row}:${start.col}`
+      );
+      if (keys.length) {
+        furthestKey = keys[0];
+      } else {
+        furthestKey = `${size - 2}:${size - 2}`;
+        grid[size - 2][size - 2] = ".";
+      }
+    }
+
+    const [targetRow, targetCol] = furthestKey
+      .split(":")
+      .map((value) => parseInt(value, 10));
+    const pathLength = Math.max(1, distances[furthestKey] || size);
+
+    grid[start.row][start.col] = "S";
+    grid[targetRow][targetCol] = "T";
+
+    const layout = grid.map((row) => row.join(""));
+    const allowance = 1.55 + Math.min(0.5, difficulty * 0.02);
+    const maxMoves = Math.ceil(pathLength * allowance) + 2;
+
+    return {
+      layout,
+      maxMoves,
+      pathLength,
+      start,
+      target: { row: targetRow, col: targetCol },
+    };
+  }
+
+  _mazeDistances(grid, start) {
+    const queue = [{ row: start.row, col: start.col, distance: 0 }];
+    const distances = { [`${start.row}:${start.col}`]: 0 };
+    const visited = new Set([`${start.row}:${start.col}`]);
+
+    while (queue.length) {
+      const { row, col, distance } = queue.shift();
+      const neighbors = [
+        [row + 1, col],
+        [row - 1, col],
+        [row, col + 1],
+        [row, col - 1],
+      ];
+
+      neighbors.forEach(([nRow, nCol]) => {
+        if (grid[nRow]?.[nCol] !== undefined && grid[nRow][nCol] !== "#") {
+          const key = `${nRow}:${nCol}`;
+          if (!visited.has(key)) {
+            visited.add(key);
+            distances[key] = distance + 1;
+            queue.push({ row: nRow, col: nCol, distance: distance + 1 });
+          }
+        }
+      });
+    }
+
+    return distances;
+  }
+
+  _shuffleDirections(directions) {
+    for (let i = directions.length - 1; i > 0; i--) {
+      const j = this._randomInt(0, i);
+      const temp = directions[i];
+      directions[i] = directions[j];
+      directions[j] = temp;
+    }
+    return directions;
   }
 
   _comparePasswordGuess(secret, guess) {

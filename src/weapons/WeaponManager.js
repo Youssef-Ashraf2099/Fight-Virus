@@ -1,8 +1,9 @@
 class WeaponManager {
-  constructor(scene, player, particleSystem) {
+  constructor(scene, player, particleSystem, environment) {
     this.scene = scene;
     this.player = player;
     this.particleSystem = particleSystem;
+    this.environment = environment || null;
 
     this.weapons = [
       new PulseCannon(scene, particleSystem),
@@ -14,8 +15,16 @@ class WeaponManager {
     this.weapons.forEach((weapon) => {
       weapon.onReloadStart = (duration) => {
         this.player?.notifyWeaponReload?.(duration);
+        if (this.player?.playReloadAnimation) {
+          this.player.playReloadAnimation(
+            weapon.viewModelId || weapon.name,
+            duration,
+            weapon
+          );
+        }
       };
       weapon.onReloadEnd = () => {
+        this.player?.finishReloadAnimation?.(weapon);
         this.player?.updateWeaponHUD?.(weapon);
       };
     });
@@ -31,6 +40,10 @@ class WeaponManager {
       this.player.setWeaponViewModel(weapon.viewModelId || weapon.name);
       this.player.updateWeaponHUD?.(weapon);
     }
+  }
+
+  setEnvironment(environment) {
+    this.environment = environment || null;
   }
 
   switchWeapon(index) {
@@ -81,14 +94,20 @@ class WeaponManager {
           }
         };
 
+        const register = (proj) => {
+          if (!proj) return;
+          proj.particleSystem = this.particleSystem;
+          this.projectiles.push(proj);
+        };
+
         if (Array.isArray(projectile)) {
           projectile.forEach((proj) => {
             applyScaling(proj);
-            this.projectiles.push(proj);
+            register(proj);
           });
         } else {
           applyScaling(projectile);
-          this.projectiles.push(projectile);
+          register(projectile);
         }
       }
 
@@ -113,10 +132,26 @@ class WeaponManager {
 
     // Update projectiles
     this.projectiles = this.projectiles.filter((proj) => {
-      proj.update(deltaTime);
+      if (!proj || (proj.isExpired && proj.isExpired())) {
+        return false;
+      }
 
-      if (proj.isExpired()) {
-        proj.destroy();
+      const updateResult =
+        typeof proj.update === "function"
+          ? proj.update(deltaTime, this.environment)
+          : true;
+
+      if (updateResult === false) {
+        if (typeof proj.destroy === "function") {
+          proj.destroy();
+        }
+        return false;
+      }
+
+      if (typeof proj.isExpired === "function" && proj.isExpired()) {
+        if (typeof proj.destroy === "function") {
+          proj.destroy();
+        }
         return false;
       }
 

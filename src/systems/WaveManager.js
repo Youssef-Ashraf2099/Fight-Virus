@@ -11,6 +11,35 @@ class WaveManager {
     this.bossFightTriggered = false;
     this.lastWaveHadBoss = false;
     this.mapCenterPosition = new THREE.Vector3(0, 0, 0); // Center of map for boss spawns
+
+    this.environment = enemyManager?.environment || null;
+    this.previousBossType = null;
+    this.bossConfigs = {
+      "circuit-overlord": {
+        message: "⚡ CIRCUIT OVERLORD - SYSTEM GUARDIAN ⚡",
+        difficultyMultiplier: 1.35,
+      },
+      "lady-bug-sentinel": {
+        message: "🐞 LADYBUG SENTINEL - MEMORY PATROLLER 🐞",
+        difficultyMultiplier: 1.45,
+      },
+      "pixel-reaper": {
+        message: "🎮💥 PIXEL REAPER - RENDER ENGINE SABOTEUR 💥🎮",
+        difficultyMultiplier: 1.5,
+      },
+      "trojan-horse-colossus": {
+        message: "🐎 TROJAN WARHORSE - NETWORK SIEGE ENGINE 🐎",
+        difficultyMultiplier: 1.75,
+      },
+      "data-wyrm": {
+        message: "🐉🔥 DATA WYRM - MAINFRAME GUARDIAN 🔥🐉",
+        difficultyMultiplier: 1.7,
+      },
+      "corruption-core": {
+        message: "🔥⚠️ CORRUPTION CORE - SYSTEM ANNIHILATOR ⚠️🔥",
+        difficultyMultiplier: 1.9,
+      },
+    };
   }
 
   startWave() {
@@ -31,43 +60,18 @@ class WaveManager {
     this.bossActive = true;
     this.bossFightTriggered = true;
 
-    // Determine boss type based on wave - Progressive difficulty
-    let bossType = "circuit-overlord";
-    let bossTitle = "";
-
-    if (this.currentWave % 10 === 0) {
-      // Every 10 waves: CORRUPTION CORE - The ultimate challenge
-      bossType = "corruption-core";
-      bossTitle = "⚠️💀 CORRUPTION CORE - SYSTEM DESTROYER 💀⚠️";
-      this.uiManager.showMessage(bossTitle, 4000);
-    } else if (this.currentWave >= 8 && this.currentWave % 3 === 2) {
-      // Waves 8, 11, 14, etc: DATA WYRM - Dragon boss (Motherboard waves)
-      bossType = "data-wyrm";
-      bossTitle = "🐉🔥 DATA WYRM - CORRUPTED MAINFRAME GUARDIAN 🔥🐉";
-      this.uiManager.showMessage(bossTitle, 3500);
-    } else if (this.currentWave >= 4 && this.currentWave % 3 === 1) {
-      // Waves 4, 7, 10, etc: PIXEL REAPER - GPU boss
-      bossType = "pixel-reaper";
-      bossTitle = "🎮💥 PIXEL REAPER - CORRUPTED RENDERING ENGINE 💥🎮";
-      this.uiManager.showMessage(bossTitle, 3200);
-    } else if (this.currentWave % 5 === 0) {
-      // Every 5 waves: CORRUPTION CORE - Major boss
-      bossType = "corruption-core";
-      bossTitle = "🔥 CORRUPTION CORE DETECTED! 🔥";
-      this.uiManager.showMessage(bossTitle, 3000);
-    } else if (this.currentWave % 3 === 0) {
-      // Every 3 waves: CIRCUIT OVERLORD - First boss
-      bossType = "circuit-overlord";
-      bossTitle = "⚡ CIRCUIT OVERLORD - FIRST GUARDIAN ⚡";
-      this.uiManager.showMessage(bossTitle, 2500);
+    const bossConfig = this._selectBossConfig();
+    const bossType = bossConfig.type;
+    if (bossConfig.message) {
+      this.uiManager.showMessage(
+        bossConfig.message,
+        bossConfig.messageDuration || 3200
+      );
     }
 
-    // ALWAYS spawn boss at map center with dramatic entrance
     const bossPosition = this.mapCenterPosition.clone();
-    const bossDifficulty =
-      this.difficulty * (this.currentWave % 10 === 0 ? 2 : 1.5);
+    const bossDifficulty = this.difficulty * bossConfig.difficultyMultiplier;
 
-    // Use the new boss spawning system
     const boss = this.enemyManager.spawnBoss(
       bossType,
       bossPosition,
@@ -78,6 +82,7 @@ class WaveManager {
       console.log(
         `Boss spawned: ${boss.bossName || bossType} at center position`
       );
+      this.previousBossType = bossType;
     }
   }
 
@@ -88,6 +93,76 @@ class WaveManager {
     if (position) {
       this.mapCenterPosition.copy(position);
     }
+  }
+
+  setEnvironment(environment) {
+    this.environment = environment || null;
+  }
+
+  _selectBossConfig() {
+    const wave = Math.max(1, this.currentWave);
+    const pool = new Set();
+
+    pool.add("circuit-overlord");
+
+    if (wave >= 3) {
+      pool.add("lady-bug-sentinel");
+    }
+    if (wave >= 4) {
+      pool.add("pixel-reaper");
+    }
+    if (wave >= 7) {
+      pool.add("data-wyrm");
+    }
+    if (wave >= 8) {
+      pool.add("trojan-horse-colossus");
+    }
+    if (wave % 5 === 0) {
+      pool.add("corruption-core");
+    }
+    if (wave % 10 === 0) {
+      pool.add("trojan-horse-colossus");
+      pool.add("corruption-core");
+    }
+
+    const envName = (this.environment?.getCurrentPhaseName?.() || "")
+      .toString()
+      .toLowerCase();
+
+    if (envName.includes("gpu")) {
+      pool.add("pixel-reaper");
+    }
+    if (envName.includes("memory") || envName.includes("ram")) {
+      pool.add("lady-bug-sentinel");
+    }
+    if (envName.includes("network") || envName.includes("firewall")) {
+      pool.add("trojan-horse-colossus");
+    }
+    if (envName.includes("motherboard") || envName.includes("kernel")) {
+      pool.add("data-wyrm");
+    }
+
+    const candidates = Array.from(pool);
+    const filtered = candidates.filter(
+      (type) => type !== this.previousBossType
+    );
+    const selectionPool = filtered.length ? filtered : candidates;
+    const selectedType =
+      selectionPool[Math.floor(Math.random() * selectionPool.length)] ||
+      "circuit-overlord";
+
+    const config = this.bossConfigs[selectedType] || {
+      difficultyMultiplier: 1.4,
+      message: "⚔️ BOSS INBOUND ⚔️",
+      messageDuration: 3000,
+    };
+
+    return {
+      type: selectedType,
+      difficultyMultiplier: config.difficultyMultiplier || 1.4,
+      message: config.message || null,
+      messageDuration: config.messageDuration || 3200,
+    };
   }
 
   update(deltaTime) {

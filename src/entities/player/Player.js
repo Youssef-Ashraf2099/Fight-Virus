@@ -159,6 +159,15 @@ class Player {
     this.reloadDuration = 0;
     this.reloadEndTime = 0;
     this.handRecoil = 0;
+    this.reloadAnimation = null;
+    this.reloadAnimators = this._createReloadAnimators();
+    this.reloadTintTargets = [];
+    this.reloadTintColor = new THREE.Color(0xff3030);
+    this.reloadTintStrength = 0.85;
+    this.reloadTintLightBase = this.weaponLight
+      ? this.weaponLight.color.clone()
+      : new THREE.Color(0xffffff);
+    this.reloadLightBoost = 0;
 
     console.log("✓ Weapon viewmodel system initialized");
   }
@@ -306,6 +315,13 @@ class Player {
     if (modelData.accentColor) {
       this.currentWeaponAccent = modelData.accentColor;
     }
+
+    this.reloadTintTargets = [];
+    this._collectReloadTintTargets(modelData.group);
+    if (this.weaponLight) {
+      this.reloadTintLightBase = this.weaponLight.color.clone();
+    }
+    this._updateReloadTint(null);
   }
 
   buildWeaponModel(weaponId) {
@@ -604,6 +620,8 @@ class Player {
       this.bobTime = 0;
     }
 
+    this._applyReloadAnimation(targetPos, targetRot, deltaTime);
+
     // Smooth weapon position and rotation transition
     this.weaponGroup.position.lerp(targetPos, deltaTime * 12);
     this.weaponGroup.rotation.x = THREE.MathUtils.lerp(
@@ -671,7 +689,8 @@ class Player {
     if (this.weaponLight) {
       const targetIntensity =
         this.weaponLightBaseIntensity *
-        (0.75 + (this.health / this.maxHealth) * 0.25);
+        (0.75 + (this.health / this.maxHealth) * 0.25) *
+        (1 + (this.reloadLightBoost || 0) * 0.7);
       this.weaponLight.intensity = THREE.MathUtils.lerp(
         this.weaponLight.intensity,
         targetIntensity,
@@ -772,6 +791,209 @@ class Player {
     if (this.weaponHUD && typeof this.weaponHUD.update === "function") {
       this.weaponHUD.update({ status: "RELOADING", reloadProgress: 0 });
     }
+  }
+
+  playReloadAnimation(weaponId, duration = 1, weapon = null) {
+    if (!this.reloadAnimators) {
+      this.reloadAnimators = this._createReloadAnimators();
+    }
+    const key = this._normalizeWeaponKey(
+      weaponId || weapon?.name || this.currentWeaponModelId || ""
+    );
+    const resolvedKey = this.reloadAnimators[key] ? key : "default";
+
+    this.reloadAnimation = {
+      key: resolvedKey,
+      duration: Math.max(0.2, duration || 0.2),
+      elapsed: 0,
+      forceFinish: false,
+    };
+  }
+
+  finishReloadAnimation() {
+    if (this.reloadAnimation) {
+      this.reloadAnimation.elapsed = this.reloadAnimation.duration;
+      this.reloadAnimation.forceFinish = true;
+    }
+  }
+
+  _applyReloadAnimation(targetPos, targetRot, deltaTime) {
+    if (!this.reloadAnimation) {
+      this._updateReloadTint(null);
+      return;
+    }
+
+    if (!this.reloadAnimators) {
+      this.reloadAnimators = this._createReloadAnimators();
+    }
+
+    const state = this.reloadAnimation;
+    if (!state.duration || state.duration <= 0) {
+      this.reloadAnimation = null;
+      return;
+    }
+
+    if (state.forceFinish) {
+      state.elapsed = state.duration;
+    } else {
+      state.elapsed = Math.min(state.elapsed + deltaTime, state.duration);
+    }
+
+    const progress = THREE.MathUtils.clamp(
+      state.elapsed / state.duration,
+      0,
+      1
+    );
+
+    const animator =
+      this.reloadAnimators[state.key] || this.reloadAnimators.default;
+    if (typeof animator === "function") {
+      animator({
+        progress,
+        duration: state.duration,
+        deltaTime,
+        targetPos,
+        targetRot,
+      });
+    }
+
+    this._updateReloadTint(progress);
+
+    if (state.elapsed >= state.duration) {
+      this.reloadAnimation = null;
+      this._updateReloadTint(null);
+    }
+  }
+
+  _createReloadAnimators() {
+    const symmetric = (t) => Math.sin(Math.PI * THREE.MathUtils.clamp(t, 0, 1));
+    const triangular = (t) => {
+      const clamped = THREE.MathUtils.clamp(t, 0, 1);
+      return clamped < 0.5 ? clamped * 2 : (1 - clamped) * 2;
+    };
+
+    return {
+      pulsecannon: ({ progress, targetPos, targetRot }) => {
+        const swing = symmetric(progress);
+        const bob = Math.sin(progress * Math.PI * 2) * 0.08 * swing;
+        targetPos.y -= swing * 0.12;
+        targetPos.z += swing * 0.08;
+        targetRot.x += swing * 0.55;
+        targetRot.y += bob * 0.6;
+        targetRot.z += swing * 0.25;
+      },
+      laserrifle: ({ progress, targetPos, targetRot }) => {
+        const swing = symmetric(progress);
+        const slide = triangular(progress);
+        targetPos.x -= slide * 0.1;
+        targetPos.y -= swing * 0.06;
+        targetPos.z += slide * 0.06;
+        targetRot.z -= slide * 0.5;
+        targetRot.y -= swing * 0.22;
+        targetRot.x += swing * 0.18;
+      },
+      plasmalauncher: ({ progress, targetPos, targetRot }) => {
+        const swing = symmetric(progress);
+        const wrap = progress < 0.65 ? progress / 0.65 : (1 - progress) / 0.35;
+        targetPos.y -= swing * 0.09;
+        targetPos.z += swing * 0.14;
+        targetRot.x += swing * 0.4;
+        targetRot.y += THREE.MathUtils.clamp(wrap, 0, 1) * 0.2;
+        targetRot.z += swing * 0.12;
+      },
+      shockwaveemitter: ({ progress, targetPos, targetRot }) => {
+        const pump = triangular(progress);
+        const oscillation = Math.sin(progress * Math.PI * 2) * 0.08 * pump;
+        targetPos.z += pump * 0.22;
+        targetPos.y -= pump * 0.05;
+        targetRot.x -= pump * 0.25;
+        targetRot.y += pump * 0.18;
+        targetRot.z += oscillation;
+      },
+      default: ({ progress, targetPos, targetRot }) => {
+        const swing = symmetric(progress);
+        targetPos.y -= swing * 0.08;
+        targetRot.x += swing * 0.3;
+      },
+    };
+  }
+
+  _normalizeWeaponKey(value) {
+    return (value || "")
+      .toString()
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+  }
+
+  _collectReloadTintTargets(root) {
+    if (!root) {
+      return;
+    }
+
+    const seen = new Set();
+    const addMaterial = (material) => {
+      if (!material || seen.has(material)) {
+        return;
+      }
+      if (material.userData && material.userData.preserveDepth) {
+        return;
+      }
+      seen.add(material);
+      this.reloadTintTargets.push({
+        material,
+        baseColor: material.color ? material.color.clone() : null,
+        baseEmissive: material.emissive ? material.emissive.clone() : null,
+      });
+    };
+
+    root.traverse((child) => {
+      if (!child.material) {
+        return;
+      }
+
+      if (Array.isArray(child.material)) {
+        child.material.forEach(addMaterial);
+      } else {
+        addMaterial(child.material);
+      }
+    });
+  }
+
+  _updateReloadTint(progress) {
+    const strength =
+      typeof progress === "number"
+        ? Math.max(0, Math.sin(progress * Math.PI)) * this.reloadTintStrength
+        : 0;
+
+    if (!this.reloadTintTargets || !this.reloadTintTargets.length) {
+      this.reloadLightBoost = strength;
+      return;
+    }
+
+    this.reloadTintTargets.forEach(({ material, baseColor, baseEmissive }) => {
+      if (baseColor && material.color) {
+        material.color.copy(baseColor);
+        if (strength > 0) {
+          material.color.lerp(this.reloadTintColor, strength);
+        }
+      }
+
+      if (baseEmissive && material.emissive) {
+        material.emissive.copy(baseEmissive);
+        if (strength > 0) {
+          material.emissive.lerp(this.reloadTintColor, strength * 0.9);
+        }
+      }
+    });
+
+    if (this.weaponLight && this.reloadTintLightBase) {
+      this.weaponLight.color.copy(this.reloadTintLightBase);
+      if (strength > 0) {
+        this.weaponLight.color.lerp(this.reloadTintColor, strength);
+      }
+    }
+
+    this.reloadLightBoost = strength;
   }
 
   updateCrosshair() {

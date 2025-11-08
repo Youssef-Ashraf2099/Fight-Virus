@@ -25,7 +25,13 @@ class EnemyManager {
       "corruption-core": CorruptionCore, // Second boss - Wave 5+
       "pixel-reaper": PixelReaper, // GPU boss - Wave 4+ (GPU environment)
       "data-wyrm": DataWyrm, // Dragon boss - Wave 8+ (Motherboard)
+      "lady-bug-sentinel": LadyBugSentinel,
+      "trojan-horse-colossus": TrojanHorseColossus,
     };
+  }
+
+  setEnvironment(environment) {
+    this.environment = environment || null;
   }
 
   spawnEnemy(type, position, difficulty = 1) {

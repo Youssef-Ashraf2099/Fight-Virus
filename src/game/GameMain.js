@@ -132,7 +132,8 @@ class GameMain {
     this.weaponManager = new WeaponManager(
       this.scene,
       this.player,
-      this.particleSystem
+      this.particleSystem,
+      this.environment
     );
 
     // Create enemy manager
@@ -147,6 +148,9 @@ class GameMain {
 
     // Create wave manager
     this.waveManager = new WaveManager(this.enemyManager, this.uiManager);
+    if (typeof this.waveManager.setEnvironment === "function") {
+      this.waveManager.setEnvironment(this.environment);
+    }
 
     // Create upgrade manager for post-boss rewards
     this.upgradeManager = new UpgradeManager(this.player, this.weaponManager);

@@ -226,6 +226,9 @@ class DataWyrm extends BaseBoss {
     }
 
     this.group.scale.set(1.5, 1.5, 1.5);
+    this.group.position.copy(this.position);
+    this.group.visible = false;
+    this.scene.add(this.group);
   }
 
   updateBehavior(deltaTime, playerPosition) {

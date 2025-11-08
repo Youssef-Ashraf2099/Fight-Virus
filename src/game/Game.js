@@ -75,20 +75,28 @@ class Game {
     this.environment = new Environment(this.scene);
 
     // Create player
-    this.player = new Player(this.scene, this.camera);
+    this.player = new Player(this.scene, this.camera, this.environment);
 
     // Create weapon system
     this.weaponManager = new WeaponManager(
       this.scene,
       this.player,
-      this.particleSystem
+      this.particleSystem,
+      this.environment
     );
 
     // Create enemy manager
-    this.enemyManager = new EnemyManager(this.scene, this.particleSystem);
+    this.enemyManager = new EnemyManager(
+      this.scene,
+      this.particleSystem,
+      this.environment
+    );
 
     // Create wave manager
     this.waveManager = new WaveManager(this.enemyManager, this.uiManager);
+    if (typeof this.waveManager.setEnvironment === "function") {
+      this.waveManager.setEnvironment(this.environment);
+    }
 
     // Setup event listeners
     this.setupEventListeners();

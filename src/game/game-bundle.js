@@ -54,6 +54,8 @@ window.addEventListener("DOMContentLoaded", async () => {
     "./entities/bosses/CorruptionCore.js",
     "./entities/bosses/PixelReaper.js",
     "./entities/bosses/DataWyrm.js",
+    "./entities/bosses/LadyBugSentinel.js",
+    "./entities/bosses/TrojanHorseColossus.js",
     "./entities/enemies/EnemyManager.js",
 
     // Weapons
