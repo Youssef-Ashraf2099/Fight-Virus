@@ -17,6 +17,8 @@ class UpgradeManager {
       specialEnergyCost: player.specialEnergyCost,
       maxHealth: player.maxHealth,
       damageReduction: player.damageReduction || 0,
+      empStunDuration: player.empStunDuration,
+      jetpackBaseFuel: player.jetpackBaseMaxFuel || 3,
     };
 
     this.weaponManager?.setDamageMultiplier(this.state.weaponDamageMultiplier);
@@ -34,11 +36,14 @@ class UpgradeManager {
       moveSpeedMultiplier: 1,
       jumpMultiplier: 1,
       empDamageMultiplier: 1,
+      empStunDurationBonus: 0,
       empRadiusMultiplier: 1,
       specialCooldownMultiplier: 1,
       maxHealthMultiplier: 1,
       damageReductionBonus: 0,
       scoreMultiplier: 1,
+      jetpackUnlocked: false,
+      jetpackFuelBonus: 0,
     };
   }
 
@@ -132,25 +137,33 @@ class UpgradeManager {
         waveScaling: 360,
         levelScaling: 850,
         maxStacks: 3,
-        description: "EMP radius +20%, EMP damage +30%, cooldown -10%.",
+        description:
+          "EMP radius +20%, damage +30%, stun duration +0.6s, cooldown -10%.",
         detail: (ctx) => {
           const radius = Math.round(ctx.player.empRadius);
-          return `EMP radius: ${radius.toLocaleString()} units`;
+          const damage = Math.round(ctx.player.empDamage);
+          const stunSeconds = ctx.player.empStunDuration
+            ? ctx.player.empStunDuration.toFixed(1)
+            : ctx.baseStats.empStunDuration.toFixed(1);
+          return `Radius: ${radius} | Damage: ${damage} | Stun: ${stunSeconds}s`;
         },
         apply: (ctx) => {
           ctx.state.empDamageMultiplier *= 1.3;
+          ctx.state.empStunDurationBonus += 0.6;
           ctx.state.empRadiusMultiplier *= 1.2;
           ctx.state.specialCooldownMultiplier *= 0.9;
           ctx.player.empDamage =
             ctx.baseStats.empDamage * ctx.state.empDamageMultiplier;
           ctx.player.empRadius =
             ctx.baseStats.empRadius * ctx.state.empRadiusMultiplier;
+          ctx.player.empStunDuration =
+            ctx.baseStats.empStunDuration + ctx.state.empStunDurationBonus;
           ctx.player.specialCooldownMax = Math.max(
             0.8,
             ctx.baseStats.specialCooldownMax *
               ctx.state.specialCooldownMultiplier
           );
-          return "EMP capacitors charged beyond safe limits.";
+          return "EMP capacitors overcharged for maximum destruction and repulsion.";
         },
       },
       {
@@ -223,6 +236,74 @@ class UpgradeManager {
         apply: (ctx) => {
           ctx.state.scoreMultiplier *= 1.15;
           return "Data siphons rerouted into the reward pool.";
+        },
+      },
+      {
+        id: "unlock-jetpack",
+        name: "Apex Flight Systems",
+        icon: "🚀",
+        iconClass: "rarity-legendary",
+        rarity: "legendary",
+        weight: 0.6,
+        baseCost: 4600,
+        waveScaling: 420,
+        levelScaling: 0,
+        maxStacks: 1,
+        description:
+          "Install VX-9 thrusters. Hold jump to sustain 3s of flight.",
+        detail: (ctx) =>
+          ctx.state.jetpackUnlocked
+            ? `Burn time: ${ctx.player.jetpackMaxFuel.toFixed(1)}s`
+            : "Status: Offline",
+        availability: (ctx) => !ctx.state.jetpackUnlocked,
+        apply: (ctx) => {
+          ctx.state.jetpackUnlocked = true;
+          if (typeof ctx.player.unlockJetpack === "function") {
+            ctx.player.unlockJetpack();
+          } else {
+            ctx.player.jetpackUnlocked = true;
+            ctx.player.jetpackFuel = ctx.player.jetpackMaxFuel;
+          }
+          if (typeof ctx.player.setJetpackFuelBonus === "function") {
+            ctx.player.setJetpackFuelBonus(ctx.state.jetpackFuelBonus);
+            ctx.player.refillJetpack?.();
+          }
+          return "VX-9 jetpack online. Hold SPACE to ignite thrusters.";
+        },
+      },
+      {
+        id: "jetpack-reservoirs",
+        name: "Cryo Fuel Reservoirs",
+        icon: "🛢️",
+        iconClass: "rarity-epic",
+        rarity: "epic",
+        weight: 1.1,
+        baseCost: 3200,
+        waveScaling: 360,
+        levelScaling: 940,
+        maxStacks: 5,
+        description: "Extends jetpack fuel reserves by +3 seconds.",
+        detail: (ctx) => {
+          const burnTime =
+            typeof ctx.player?.jetpackMaxFuel === "number"
+              ? ctx.player.jetpackMaxFuel
+              : ctx.baseStats.jetpackBaseFuel + ctx.state.jetpackFuelBonus;
+          return `Burn time: ${burnTime.toFixed(1)}s`;
+        },
+        availability: (ctx) => ctx.state.jetpackUnlocked === true,
+        apply: (ctx) => {
+          ctx.state.jetpackFuelBonus += 3;
+          if (typeof ctx.player.addJetpackFuelBonus === "function") {
+            ctx.player.addJetpackFuelBonus(3);
+          } else {
+            const baseFuel =
+              typeof ctx.player.jetpackMaxFuel === "number"
+                ? ctx.player.jetpackMaxFuel
+                : ctx.baseStats.jetpackBaseFuel;
+            ctx.player.jetpackMaxFuel = baseFuel + 3;
+            ctx.player.jetpackFuel = ctx.player.jetpackMaxFuel;
+          }
+          return "Fuel reservoirs expanded. +3s sustained thruster burn.";
         },
       },
       {
@@ -489,10 +570,22 @@ class UpgradeManager {
     this.player.maxStepHeight = this.baseStats.maxStepHeight;
     this.player.empDamage = this.baseStats.empDamage;
     this.player.empRadius = this.baseStats.empRadius;
+    this.player.empStunDuration = this.baseStats.empStunDuration;
     this.player.specialCooldownMax = this.baseStats.specialCooldownMax;
     this.player.specialEnergyCost = this.baseStats.specialEnergyCost;
     this.player.maxHealth = this.baseStats.maxHealth;
     this.player.health = Math.min(this.player.health, this.player.maxHealth);
     this.player.damageReduction = this.baseStats.damageReduction;
+
+    if (typeof this.player.resetJetpackToBase === "function") {
+      this.player.resetJetpackToBase();
+    } else {
+      this.player.jetpackUnlocked = false;
+      this.player.jetpackFuel = 0;
+      this.player.jetpackMaxFuel = this.baseStats.jetpackBaseFuel;
+      this.player.jetpackFuelBonus = 0;
+      this.player.jetpackRefuelTimer = 0;
+      this.player.jetpackIsActive = false;
+    }
   }
 }

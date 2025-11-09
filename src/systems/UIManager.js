@@ -8,6 +8,9 @@ class UIManager {
     this.weaponName = document.getElementById("weaponName");
     this.ammoCount = document.getElementById("ammoCount");
     this.message = document.getElementById("message");
+    this.jetpackStat = document.getElementById("jetpackStat");
+    this.jetpackBar = document.getElementById("jetpackBar");
+    this.jetpackStatus = document.getElementById("jetpackStatus");
 
     this.upgradeOverlay = document.getElementById("upgradeOverlay");
     this.upgradeCardsContainer = document.getElementById("upgradeCards");
@@ -27,10 +30,10 @@ class UIManager {
     this.puzzleSubmitHandler = null;
     this.puzzleSkipHandler = null;
 
-  this.pauseOverlay = document.getElementById("pauseOverlay");
-  this.pauseResumeButton = document.getElementById("pauseResumeButton");
-  this.pauseRestartButton = document.getElementById("pauseRestartButton");
-  this.pauseQuitButton = document.getElementById("pauseQuitButton");
+    this.pauseOverlay = document.getElementById("pauseOverlay");
+    this.pauseResumeButton = document.getElementById("pauseResumeButton");
+    this.pauseRestartButton = document.getElementById("pauseRestartButton");
+    this.pauseQuitButton = document.getElementById("pauseQuitButton");
 
     this.messageTimeout = null;
 
@@ -66,6 +69,54 @@ class UIManager {
   updateEnergy(current, max) {
     const percentage = (current / max) * 100;
     this.energyBar.style.width = `${percentage}%`;
+  }
+
+  updateJetpack(telemetry = {}) {
+    if (!this.jetpackBar || !this.jetpackStat) {
+      return;
+    }
+
+    this.jetpackStat.style.display = "flex";
+
+    if (!telemetry.unlocked) {
+      this.jetpackBar.style.width = "0%";
+      this.jetpackBar.classList.remove("active");
+      if (this.jetpackStatus) {
+        this.jetpackStatus.textContent = "OFFLINE";
+        this.jetpackStatus.className = "jetpack-status offline";
+      }
+      return;
+    }
+
+    const ratio = telemetry.maxFuel
+      ? Math.max(0, Math.min(1, telemetry.fuel / telemetry.maxFuel))
+      : 0;
+    this.jetpackBar.style.width = `${Math.round(ratio * 100)}%`;
+
+    if (telemetry.isActive) {
+      this.jetpackBar.classList.add("active");
+    } else {
+      this.jetpackBar.classList.remove("active");
+    }
+
+    if (this.jetpackStatus) {
+      let statusText = "READY";
+      let statusClass = "jetpack-status ready";
+
+      if (telemetry.isActive) {
+        statusText = "THRUSTERS";
+        statusClass = "jetpack-status online";
+      } else if (telemetry.isDepleted) {
+        statusText = "EMPTY";
+        statusClass = "jetpack-status depleted";
+      } else if (!telemetry.canBoost) {
+        statusText = "PRESSURIZING";
+        statusClass = "jetpack-status recharging";
+      }
+
+      this.jetpackStatus.textContent = statusText;
+      this.jetpackStatus.className = statusClass;
+    }
   }
 
   updateScore(score) {
@@ -337,7 +388,8 @@ class UIManager {
 
       const subtitle = document.createElement("div");
       subtitle.className = "pause-subtitle";
-      subtitle.textContent = "Take a moment to recalibrate the defense systems.";
+      subtitle.textContent =
+        "Take a moment to recalibrate the defense systems.";
       subtitle.style.color = "rgba(173,255,214,0.78)";
       subtitle.style.fontSize = "15px";
 
@@ -371,12 +423,14 @@ class UIManager {
         b.style.padding = "12px 18px";
         b.style.borderRadius = "10px";
         b.style.border = "2px solid rgba(0,255,136,0.55)";
-        b.style.background = "linear-gradient(135deg, rgba(0,255,136,0.18), rgba(0,255,136,0.05))";
+        b.style.background =
+          "linear-gradient(135deg, rgba(0,255,136,0.18), rgba(0,255,136,0.05))";
         b.style.color = "rgba(176,255,216,0.9)";
         b.style.cursor = "pointer";
       });
       // quit button accent
-      quitBtn.style.background = "linear-gradient(135deg, rgba(255,77,109,0.18), rgba(120,0,12,0.5))";
+      quitBtn.style.background =
+        "linear-gradient(135deg, rgba(255,77,109,0.18), rgba(120,0,12,0.5))";
       quitBtn.style.borderColor = "rgba(255,77,109,0.6)";
 
       actions.appendChild(resumeBtn);

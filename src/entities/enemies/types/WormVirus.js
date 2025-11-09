@@ -5,7 +5,7 @@ class WormVirus extends BaseEnemy {
     // Worm stats - Fast, low health, rapid melee attacks
     this.maxHealth = 70 * difficulty;
     this.health = this.maxHealth;
-    this.speed = 14; // Very fast
+    this.speed = 12; // Very fast
     this.damage = 12 * difficulty; // Moderate damage but fast attacks
     this.contactDamage = 6 * difficulty; // Reduced from 10 for balance
     this.collisionRadius = 1;

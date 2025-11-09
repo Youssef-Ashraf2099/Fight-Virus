@@ -54,10 +54,10 @@ class GameMain {
       this.isRunning = false;
       this.gameStarted = false;
       this.spectatorMode = null;
-  this.isPaused = false;
-  this.wasRunningBeforePause = false;
-  this.pausedAudioShouldResume = false;
-  this.onPointerLockChange = this.handlePointerLockChange.bind(this);
+      this.isPaused = false;
+      this.wasRunningBeforePause = false;
+      this.pausedAudioShouldResume = false;
+      this.onPointerLockChange = this.handlePointerLockChange.bind(this);
 
       this.score = 0;
       this.difficulty = 1;
@@ -84,6 +84,25 @@ class GameMain {
       this.backgroundMusicVolume = 0.3;
 
       this.setupBackgroundMusic();
+
+      // Track pointer lock / fullscreen state to stabilize pause behaviour
+      this.expectingPointerUnlock = false;
+      this.pendingPointerUnlockTimeout = null;
+      this.wasFullscreenBeforePause = false;
+      this.isFullscreenActive = Boolean(this.getFullscreenElement());
+      this.fullscreenFallbackRegistered = false;
+      this.fullscreenFallbackHandler = null;
+
+      this.onFullscreenChange = this.handleFullscreenChange.bind(this);
+      document.addEventListener("fullscreenchange", this.onFullscreenChange);
+      document.addEventListener(
+        "webkitfullscreenchange",
+        this.onFullscreenChange
+      );
+      document.addEventListener("mozfullscreenchange", this.onFullscreenChange);
+      document.addEventListener("MSFullscreenChange", this.onFullscreenChange);
+
+      this.setupInitialFullscreen();
 
       console.log("Calling init()...");
       this.init();
@@ -190,6 +209,108 @@ class GameMain {
 
     // Start render loop
     this.animate();
+
+    // Initialize intro sequence
+    this.initializeIntroSequence();
+  }
+
+  initializeIntroSequence() {
+    const introOverlay = document.getElementById("introOverlay");
+    const introSkipButton = document.getElementById("introSkipButton");
+    const introStatusValue = document.getElementById("introStatusValue");
+    const startScreen = document.getElementById("startScreen");
+
+    if (!introOverlay) {
+      console.warn("Intro overlay not found, showing menu directly");
+      if (startScreen) {
+        startScreen.style.display = "flex";
+      }
+      document.body?.classList.remove("intro-active");
+      this.enableBackgroundMusic(true);
+      this.startBackgroundMusic();
+      return;
+    }
+
+    // Mark body as intro active
+    document.body?.classList.add("intro-active");
+
+    // Ensure start screen is hidden
+    if (startScreen) {
+      startScreen.style.display = "none";
+    }
+
+    // Disable background music during intro
+    this.enableBackgroundMusic(false);
+    this.stopBackgroundMusic();
+
+    const statusUpdates = [
+      { delay: 600, text: "Link Established" },
+      { delay: 1800, text: "Calibrating Neural Lattice" },
+      { delay: 3200, text: "Decrypting EdgeRunner Protocols" },
+      { delay: 4600, text: "Systems Ready" },
+    ];
+
+    const timeouts = [];
+
+    // Schedule status updates
+    statusUpdates.forEach(({ delay, text }) => {
+      const timeout = setTimeout(() => {
+        if (introStatusValue) {
+          introStatusValue.textContent = text;
+        }
+      }, delay);
+      timeouts.push(timeout);
+    });
+
+    const completeIntro = () => {
+      // Clear all scheduled timeouts
+      timeouts.forEach((t) => clearTimeout(t));
+
+      // Hide intro
+      introOverlay.classList.add("hidden");
+
+      // Show start screen after fade
+      setTimeout(() => {
+        introOverlay.style.display = "none";
+        if (startScreen) {
+          startScreen.style.display = "flex";
+        }
+        document.body?.classList.remove("intro-active");
+
+        // Start background music
+        this.enableBackgroundMusic(true);
+        this.startBackgroundMusic();
+      }, 800);
+    };
+
+    // Skip button handler
+    const handleSkip = (e) => {
+      e?.preventDefault();
+      completeIntro();
+      document.removeEventListener("keydown", handleKeydown);
+      introSkipButton?.removeEventListener("click", handleSkip);
+    };
+
+    // Keyboard handler
+    const handleKeydown = (e) => {
+      if (e.key === "Escape" || e.key === "Esc") {
+        e.preventDefault();
+        handleSkip(e);
+      }
+    };
+
+    // Attach event listeners
+    introSkipButton?.addEventListener("click", handleSkip);
+    document.addEventListener("keydown", handleKeydown);
+
+    // Auto-complete intro after animation
+    const autoCompleteTimeout = setTimeout(() => {
+      completeIntro();
+      document.removeEventListener("keydown", handleKeydown);
+      introSkipButton?.removeEventListener("click", handleSkip);
+    }, 6000);
+
+    timeouts.push(autoCompleteTimeout);
   }
 
   setupEventListeners() {
@@ -197,8 +318,10 @@ class GameMain {
 
     const startButton = document.getElementById("startButton");
     const learnButton = document.getElementById("learnButton");
+    const exitButton = document.getElementById("exitButton");
     console.log("Start button element:", startButton);
     console.log("Learn button element:", learnButton);
+    console.log("Exit button element:", exitButton);
 
     if (!startButton) {
       console.error("Start button not found!");
@@ -215,6 +338,15 @@ class GameMain {
         console.log("🧠 LEARN MODE BUTTON CLICKED!");
         this.startLearnMode();
       });
+    }
+
+    if (exitButton) {
+      exitButton.addEventListener("click", () => {
+        console.log("⛔ EXIT BUTTON CLICKED!");
+        this.exitGame();
+      });
+    } else {
+      console.warn("Exit button not found on start screen.");
     }
 
     console.log("✓ Button listeners attached");
@@ -276,21 +408,59 @@ class GameMain {
   handlePointerLockChange() {
     const hasLock = Boolean(document.pointerLockElement);
 
+    if (hasLock) {
+      if (this.pendingPointerUnlockTimeout) {
+        clearTimeout(this.pendingPointerUnlockTimeout);
+        this.pendingPointerUnlockTimeout = null;
+      }
+      this.expectingPointerUnlock = false;
+      return;
+    }
+
+    if (this.expectingPointerUnlock) {
+      this.expectingPointerUnlock = false;
+      return;
+    }
+
     if (this.isPaused) {
       return;
     }
 
-    if (!hasLock) {
-      const shouldPause =
+    const shouldPause =
+      this.gameStarted &&
+      this.isRunning &&
+      !this.awaitingUpgradeSelection &&
+      !this.awaitingPuzzleResolution;
+
+    if (!shouldPause) {
+      return;
+    }
+
+    if (this.pendingPointerUnlockTimeout) {
+      return;
+    }
+
+    this.pendingPointerUnlockTimeout = setTimeout(() => {
+      this.pendingPointerUnlockTimeout = null;
+
+      if (
+        document.pointerLockElement ||
+        this.expectingPointerUnlock ||
+        this.isPaused
+      ) {
+        return;
+      }
+
+      const stillShouldPause =
         this.gameStarted &&
         this.isRunning &&
         !this.awaitingUpgradeSelection &&
         !this.awaitingPuzzleResolution;
 
-      if (shouldPause) {
+      if (stillShouldPause) {
         this.pauseGame();
       }
-    }
+    }, 180);
   }
 
   pauseGame() {
@@ -320,10 +490,16 @@ class GameMain {
     this.wasRunningBeforePause = this.isRunning;
     this.isRunning = false;
 
+    if (this.pendingPointerUnlockTimeout) {
+      clearTimeout(this.pendingPointerUnlockTimeout);
+      this.pendingPointerUnlockTimeout = null;
+    }
+
+    this.wasFullscreenBeforePause =
+      this.isFullscreenActive || Boolean(this.getFullscreenElement());
+
     try {
-      if (document.pointerLockElement) {
-        document.exitPointerLock();
-      }
+      this.releasePointerLock();
     } catch (err) {}
 
     const audioActive = this.activeBackgroundAudio;
@@ -361,18 +537,32 @@ class GameMain {
 
     this.pausedAudioShouldResume = false;
 
-    if (
-      this.gameStarted &&
-      this.wasRunningBeforePause &&
-      !this.awaitingUpgradeSelection &&
-      !this.awaitingPuzzleResolution
-    ) {
-      this.isRunning = true;
+    const resumeGameplay = () => {
+      if (
+        this.gameStarted &&
+        this.wasRunningBeforePause &&
+        !this.awaitingUpgradeSelection &&
+        !this.awaitingPuzzleResolution
+      ) {
+        this.isRunning = true;
+      }
+
+      this.wasRunningBeforePause = false;
+      setTimeout(() => this.requestPointerLock(), 0);
+    };
+
+    const needsFullscreenRestore =
+      this.wasFullscreenBeforePause && !this.getFullscreenElement();
+
+    this.wasFullscreenBeforePause = false;
+
+    if (needsFullscreenRestore) {
+      Promise.resolve(this.requestFullscreen()).finally(() => {
+        resumeGameplay();
+      });
+    } else {
+      resumeGameplay();
     }
-
-    this.wasRunningBeforePause = false;
-
-    setTimeout(() => this.requestPointerLock(), 0);
   }
 
   handlePauseRestart() {
@@ -386,8 +576,18 @@ class GameMain {
     this.wasRunningBeforePause = false;
     this.isRunning = false;
 
-    this.restartGame();
-    setTimeout(() => this.requestPointerLock(), 0);
+    this.wasFullscreenBeforePause = false;
+
+    const restart = () => {
+      this.restartGame();
+      setTimeout(() => this.requestPointerLock(), 0);
+    };
+
+    if (!this.getFullscreenElement()) {
+      Promise.resolve(this.requestFullscreen()).finally(() => restart());
+    } else {
+      restart();
+    }
   }
 
   quitToMainMenu() {
@@ -395,10 +595,9 @@ class GameMain {
     this.isPaused = false;
     this.pausedAudioShouldResume = false;
     this.wasRunningBeforePause = false;
+    this.wasFullscreenBeforePause = false;
 
-    if (document.pointerLockElement) {
-      document.exitPointerLock();
-    }
+    this.releasePointerLock();
 
     this.enableBackgroundMusic(false);
     this.stopBackgroundMusic();
@@ -464,6 +663,50 @@ class GameMain {
     }
   }
 
+  exitGame() {
+    console.log("GameMain: attempting to exit application");
+
+    this.quitToMainMenu();
+    this.enableBackgroundMusic(false);
+    this.stopBackgroundMusic();
+
+    let closed = false;
+
+    if (typeof require === "function") {
+      try {
+        const electron = require("electron");
+        if (electron?.remote?.app?.quit) {
+          electron.remote.app.quit();
+          closed = true;
+        } else if (electron?.ipcRenderer) {
+          electron.ipcRenderer.send("app:quit");
+          closed = true;
+        }
+      } catch (error) {
+        console.warn("Electron quit attempt failed:", error);
+      }
+    }
+
+    if (!closed && typeof window !== "undefined") {
+      try {
+        if (typeof window.close === "function") {
+          window.close();
+          closed = true;
+        }
+      } catch (error) {
+        console.warn("Window close failed:", error);
+      }
+    }
+
+    if (!closed) {
+      console.warn("Unable to automatically exit; prompting user manually.");
+      this.uiManager?.showMessage?.(
+        "Close the window or press Alt+F4 to exit.",
+        2800
+      );
+    }
+  }
+
   requestPointerLock() {
     const canvas = document.getElementById("gameCanvas");
     if (!canvas || typeof canvas.requestPointerLock !== "function") {
@@ -478,6 +721,121 @@ class GameMain {
         console.warn("requestPointerLock failed:", error && error.message);
       }
     }, 120);
+  }
+
+  releasePointerLock() {
+    if (!document.pointerLockElement) {
+      this.expectingPointerUnlock = false;
+      return;
+    }
+
+    this.expectingPointerUnlock = true;
+    try {
+      document.exitPointerLock();
+    } catch (error) {
+      this.expectingPointerUnlock = false;
+      console.warn("Error exiting pointer lock:", error);
+    }
+  }
+
+  getFullscreenElement() {
+    return (
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.mozFullScreenElement ||
+      document.msFullscreenElement ||
+      null
+    );
+  }
+
+  requestFullscreen() {
+    const elem = document.documentElement;
+    if (!elem) {
+      return Promise.resolve(false);
+    }
+
+    try {
+      if (elem.requestFullscreen) {
+        return elem.requestFullscreen().catch((err) => {
+          console.warn("Fullscreen request failed:", err);
+          return false;
+        });
+      } else if (elem.webkitRequestFullscreen) {
+        elem.webkitRequestFullscreen();
+        return Promise.resolve(true);
+      } else if (elem.msRequestFullscreen) {
+        elem.msRequestFullscreen();
+        return Promise.resolve(true);
+      } else if (elem.mozRequestFullScreen) {
+        elem.mozRequestFullScreen();
+        return Promise.resolve(true);
+      }
+    } catch (error) {
+      console.warn("Error requesting fullscreen:", error);
+      return Promise.resolve(false);
+    }
+
+    return Promise.resolve(false);
+  }
+
+  handleFullscreenChange() {
+    this.isFullscreenActive = Boolean(this.getFullscreenElement());
+    if (this.isFullscreenActive) {
+      this.clearFullscreenFallbackHandlers();
+    }
+  }
+
+  setupInitialFullscreen() {
+    Promise.resolve(this.requestFullscreen()).then(() => {
+      if (!this.getFullscreenElement()) {
+        this.registerFullscreenFallbackHandlers();
+      }
+    });
+  }
+
+  registerFullscreenFallbackHandlers() {
+    if (this.fullscreenFallbackRegistered) {
+      return;
+    }
+
+    this.fullscreenFallbackRegistered = true;
+    this.fullscreenFallbackHandler = () => {
+      this.clearFullscreenFallbackHandlers();
+      this.requestFullscreen();
+    };
+
+    const options = { once: true };
+    document.addEventListener(
+      "pointerdown",
+      this.fullscreenFallbackHandler,
+      options
+    );
+    document.addEventListener(
+      "keydown",
+      this.fullscreenFallbackHandler,
+      options
+    );
+    document.addEventListener(
+      "mousedown",
+      this.fullscreenFallbackHandler,
+      options
+    );
+  }
+
+  clearFullscreenFallbackHandlers() {
+    if (!this.fullscreenFallbackRegistered || !this.fullscreenFallbackHandler) {
+      this.fullscreenFallbackRegistered = false;
+      this.fullscreenFallbackHandler = null;
+      return;
+    }
+
+    const handler = this.fullscreenFallbackHandler;
+    ["pointerdown", "keydown", "mousedown"].forEach((eventName) => {
+      document.removeEventListener(eventName, handler);
+    });
+
+    this.fullscreenFallbackRegistered = false;
+    this.fullscreenFallbackHandler = null;
   }
 
   setupBackgroundMusic() {
@@ -602,6 +960,9 @@ class GameMain {
 
   startGame() {
     console.log("🚀 startGame() called");
+
+    // Request fullscreen mode
+    this.requestFullscreen();
 
     this.showLoadingOverlay(
       "DEPLOYING GUARDIAN",
@@ -773,6 +1134,7 @@ class GameMain {
 
     this.uiManager.updateHealth(this.player.health, this.player.maxHealth);
     this.uiManager.updateEnergy(this.player.energy, this.player.maxEnergy);
+    this.uiManager.updateJetpack(this.player.getJetpackTelemetry());
     this.uiManager.updateEnemyCount(this.enemyManager.getEnemies().length);
     this.uiManager.updateWave(this.waveManager.getCurrentWave());
 
@@ -1004,9 +1366,7 @@ class GameMain {
     if (bossWave) {
       this.awaitingUpgradeSelection = true;
       this.isRunning = false;
-      if (document.pointerLockElement) {
-        document.exitPointerLock();
-      }
+      this.releasePointerLock();
 
       setTimeout(() => {
         if (!this.gameStarted) return;
@@ -1089,9 +1449,7 @@ class GameMain {
     this.awaitingPuzzleResolution = true;
     this.isRunning = false;
 
-    if (document.pointerLockElement) {
-      document.exitPointerLock();
-    }
+    this.releasePointerLock();
 
     try {
       this.puzzleManager.startRandomPuzzle({
@@ -1263,6 +1621,8 @@ class GameMain {
     );
 
     try {
+      this.wasFullscreenBeforePause = false;
+
       this.uiManager?.hidePauseMenu?.();
       this.isPaused = false;
       this.pausedAudioShouldResume = false;

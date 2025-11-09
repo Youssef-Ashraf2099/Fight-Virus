@@ -5,7 +5,7 @@ class RansomwareVirus extends BaseEnemy {
     // Ransomware stats - Locks area, high damage, armor, AOE attacks
     this.maxHealth = 220 * difficulty;
     this.health = this.maxHealth;
-    this.speed = 3;
+    this.speed = 2;
     this.damage = 28 * difficulty;
     this.contactDamage = 10 * difficulty; // Reduced from 22 for balance
     this.collisionRadius = 1.5;

@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -8,6 +8,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 720,
+    fullscreen: true, // Start in fullscreen mode
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -71,4 +72,8 @@ app.on("activate", () => {
   if (mainWindow === null) {
     createWindow();
   }
+});
+
+ipcMain.on("app:quit", () => {
+  app.quit();
 });

@@ -242,6 +242,7 @@ class Game {
     // Update UI
     this.uiManager.updateHealth(this.player.health, this.player.maxHealth);
     this.uiManager.updateEnergy(this.player.energy, this.player.maxEnergy);
+    this.uiManager.updateJetpack(this.player.getJetpackTelemetry());
     this.uiManager.updateEnemyCount(this.enemyManager.getEnemies().length);
     this.uiManager.updateWave(this.waveManager.getCurrentWave());
 

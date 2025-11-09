@@ -53,6 +53,7 @@ class Player {
     this.specialCooldownMax = 3; // Increased cooldown for balance
     this.specialEnergyCost = 40; // Reduced cost for more frequent use
     this.empDamage = 60; // EMP damage value
+    this.empStunDuration = 3; // EMP stun duration in seconds (freezes enemies)
     this.empRadius = 18; // EMP blast radius
 
     this.time = 0;
@@ -62,6 +63,38 @@ class Player {
     // Damage indicator system
     this.damageIndicators = [];
     this.damageVignetteIntensity = 0;
+
+    // Jetpack system (initially offline until unlocked)
+    this.jetpackUnlocked = false;
+    this.jetpackBaseMaxFuel = 3; // Burn time in seconds before upgrades
+    this.jetpackFuelBonus = 0;
+    this.jetpackMaxFuel = this.jetpackBaseMaxFuel;
+    this.jetpackFuel = 0;
+    this.jetpackRefuelRate = 1.6; // Seconds of fuel restored per second
+    this.jetpackGroundRefuelMultiplier = 2.4;
+    this.jetpackRefuelDelay = 1.05;
+    this.jetpackRefuelTimer = 0;
+    this.jetpackThrustPower = 42; // Upward acceleration to overcome gravity
+    this.jetpackIsActive = false;
+
+    if (this.camera) {
+      this.jetpackGlow = new THREE.PointLight(0xffa64d, 0, 6);
+      this.jetpackGlow.position.set(0, -0.7, 0.45);
+      this.jetpackGlow.castShadow = false;
+      this.camera.add(this.jetpackGlow);
+    } else {
+      this.jetpackGlow = null;
+    }
+
+    this.jetpackAudioBaseVolume = 0.55;
+    this.jetpackAudioFadeRate = 4.2;
+    this.jetpackAudio = this._createAudio(
+      "../Assets/sounds/game/jet-engine-6753.mp3",
+      {
+        loop: true,
+        volume: 0,
+      }
+    );
 
     this.setupMouseLook();
     this.createWeaponViewModel();
@@ -501,7 +534,28 @@ class Player {
       this.isGrounded = false;
     }
 
-    this.jumpVelocity += this.gravity * deltaTime;
+    const wantsJetpack =
+      this.jetpackUnlocked && moveInput.jump && this.jetpackFuel > 0;
+
+    if (wantsJetpack) {
+      this.jetpackFuel = Math.max(0, this.jetpackFuel - deltaTime);
+      this.jetpackRefuelTimer = this.jetpackRefuelDelay;
+    }
+
+    this.jetpackIsActive = wantsJetpack;
+
+    let verticalAcceleration = this.gravity;
+    if (this.jetpackIsActive) {
+      verticalAcceleration += this.jetpackThrustPower;
+    }
+
+    this.jumpVelocity += verticalAcceleration * deltaTime;
+
+    if (this.jetpackIsActive) {
+      const maxJetpackVelocity = 18;
+      this.jumpVelocity = Math.min(this.jumpVelocity, maxJetpackVelocity);
+    }
+
     this.position.y += this.jumpVelocity * deltaTime;
 
     const previousX = this.position.x;
@@ -570,6 +624,42 @@ class Player {
       this.isGrounded = false;
       this.currentGroundHeight = groundHeight;
     }
+
+    if (this.jetpackRefuelTimer > 0) {
+      this.jetpackRefuelTimer = Math.max(
+        0,
+        this.jetpackRefuelTimer - deltaTime
+      );
+    } else if (this.jetpackUnlocked && !this.jetpackIsActive) {
+      let regenRate = this.jetpackRefuelRate;
+      if (this.isGrounded) {
+        regenRate *= this.jetpackGroundRefuelMultiplier;
+      }
+      this.jetpackFuel = Math.min(
+        this.jetpackMaxFuel,
+        this.jetpackFuel + regenRate * deltaTime
+      );
+    }
+
+    if (!this.jetpackUnlocked) {
+      this.jetpackFuel = 0;
+    } else {
+      this.jetpackFuel = Math.min(this.jetpackFuel, this.jetpackMaxFuel);
+    }
+
+    if (this.jetpackGlow) {
+      const targetIntensity = this.jetpackIsActive
+        ? 1.8 + Math.sin(this.time * 28) * 0.3
+        : 0;
+      this.jetpackGlow.intensity = THREE.MathUtils.lerp(
+        this.jetpackGlow.intensity,
+        targetIntensity,
+        deltaTime * 12
+      );
+      this.jetpackGlow.distance = 7;
+    }
+
+    this._updateJetpackAudio(deltaTime);
 
     // Update camera position
     this.camera.position.copy(this.position);
@@ -1259,6 +1349,145 @@ class Player {
     return this.getDirection();
   }
 
+  _createAudio(relativePath, { loop = false, volume = 1 } = {}) {
+    if (typeof window === "undefined" || typeof Audio === "undefined") {
+      return null;
+    }
+
+    try {
+      const resolvedSrc = new URL(relativePath, window.location.href).href;
+      const audio = new Audio(resolvedSrc);
+      audio.loop = loop;
+      audio.volume = volume;
+      audio.preload = "auto";
+      if (typeof audio.load === "function") {
+        audio.load();
+      }
+      return audio;
+    } catch (error) {
+      console.warn("Player audio load failed:", relativePath, error);
+      return null;
+    }
+  }
+
+  _updateJetpackAudio(deltaTime) {
+    if (!this.jetpackAudio) {
+      return;
+    }
+
+    const shouldPlay = this.jetpackIsActive && this.jetpackFuel > 0.05;
+    const targetVolume = shouldPlay ? this.jetpackAudioBaseVolume : 0;
+    const fadeFactor = Math.min(1, this.jetpackAudioFadeRate * deltaTime);
+    const nextVolume = THREE.MathUtils.lerp(
+      this.jetpackAudio.volume,
+      targetVolume,
+      fadeFactor
+    );
+    this.jetpackAudio.volume = THREE.MathUtils.clamp(
+      nextVolume,
+      0,
+      this.jetpackAudioBaseVolume
+    );
+
+    if (shouldPlay) {
+      if (this.jetpackAudio.paused) {
+        try {
+          const playResult = this.jetpackAudio.play();
+          if (playResult && typeof playResult.catch === "function") {
+            playResult.catch((error) => {
+              console.warn("Jetpack audio play failed:", error);
+            });
+          }
+        } catch (error) {
+          console.warn("Jetpack audio play failed:", error);
+        }
+      }
+    } else if (!this.jetpackAudio.paused && this.jetpackAudio.volume <= 0.01) {
+      this._stopJetpackAudio();
+    }
+  }
+
+  _stopJetpackAudio(resetTime = true) {
+    if (!this.jetpackAudio) {
+      return;
+    }
+
+    try {
+      if (!this.jetpackAudio.paused) {
+        this.jetpackAudio.pause();
+      }
+      if (resetTime) {
+        this.jetpackAudio.currentTime = 0;
+      }
+    } catch (error) {
+      console.warn("Jetpack audio stop failed:", error);
+    }
+
+    this.jetpackAudio.volume = 0;
+  }
+
+  unlockJetpack() {
+    if (this.jetpackUnlocked) {
+      this.refillJetpack();
+      return false;
+    }
+
+    this.jetpackUnlocked = true;
+    this.refillJetpack();
+    return true;
+  }
+
+  refillJetpack(amount = null) {
+    const target = amount ?? this.jetpackMaxFuel;
+    this.jetpackFuel = Math.min(this.jetpackMaxFuel, target);
+    this.jetpackRefuelTimer = 0;
+  }
+
+  setJetpackFuelBonus(bonusSeconds) {
+    this.jetpackFuelBonus = Math.max(0, bonusSeconds);
+    this.jetpackMaxFuel = this.jetpackBaseMaxFuel + this.jetpackFuelBonus;
+    if (this.jetpackUnlocked) {
+      this.jetpackFuel = Math.min(this.jetpackFuel, this.jetpackMaxFuel);
+    } else {
+      this.jetpackFuel = 0;
+    }
+  }
+
+  addJetpackFuelBonus(amount) {
+    this.setJetpackFuelBonus(this.jetpackFuelBonus + amount);
+    if (this.jetpackUnlocked) {
+      this.refillJetpack();
+    }
+  }
+
+  resetJetpackToBase() {
+    this.jetpackUnlocked = false;
+    this.jetpackFuelBonus = 0;
+    this.jetpackMaxFuel = this.jetpackBaseMaxFuel;
+    this.jetpackFuel = 0;
+    this.jetpackRefuelTimer = 0;
+    this.jetpackIsActive = false;
+    if (this.jetpackGlow) {
+      this.jetpackGlow.intensity = 0;
+    }
+    this._stopJetpackAudio();
+  }
+
+  getJetpackTelemetry() {
+    return {
+      unlocked: this.jetpackUnlocked,
+      fuel: this.jetpackFuel,
+      maxFuel: this.jetpackMaxFuel,
+      isActive: this.jetpackIsActive,
+      isDepleted: this.jetpackFuel <= 0.05,
+      canBoost:
+        this.jetpackUnlocked &&
+        this.jetpackFuel > 0.05 &&
+        this.jetpackRefuelTimer <= 0,
+      refuelTimer: this.jetpackRefuelTimer,
+    };
+  }
+
   reset() {
     this.health = this.maxHealth;
     this.energy = this.maxEnergy;
@@ -1280,6 +1509,18 @@ class Player {
     this.specialCooldown = 0;
     this.isInvulnerable = false;
     this.lastDamageTime = 0;
+
+    if (this.jetpackUnlocked) {
+      this.jetpackFuel = this.jetpackMaxFuel;
+    } else {
+      this.jetpackFuel = 0;
+    }
+    this.jetpackRefuelTimer = 0;
+    this.jetpackIsActive = false;
+    if (this.jetpackGlow) {
+      this.jetpackGlow.intensity = 0;
+    }
+    this._stopJetpackAudio();
 
     this.cameraShakeOffset.x = 0;
     this.cameraShakeOffset.z = 0;
@@ -1307,5 +1548,13 @@ class Player {
       this.damageDirectionContainer.remove();
     }
     this.damageIndicators = [];
+
+    this._stopJetpackAudio();
+    this.jetpackAudio = null;
+
+    if (this.jetpackGlow && this.jetpackGlow.parent) {
+      this.jetpackGlow.parent.remove(this.jetpackGlow);
+    }
+    this.jetpackGlow = null;
   }
 }

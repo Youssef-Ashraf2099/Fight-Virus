@@ -5,7 +5,7 @@ class RootkitVirus extends BaseEnemy {
     // Rootkit stats - ULTIMATE BOSS - MASSIVE AND INTIMIDATING
     this.maxHealth = 1000 * difficulty;
     this.health = this.maxHealth;
-    this.speed = 3;
+    this.speed = 2;
     this.damage = 45 * difficulty;
     this.contactDamage = 25 * difficulty;
     this.collisionRadius = 6;
