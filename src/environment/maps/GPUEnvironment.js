@@ -30,6 +30,7 @@ class GPUEnvironment extends BaseEnvironmentMap {
     this.buildPCIeConnector();
     this.buildBackplate();
     this.buildShaderProcessors();
+    this.buildPixelStormBoundaries();
   }
 
   buildCardBase() {
@@ -636,5 +637,225 @@ class GPUEnvironment extends BaseEnvironmentMap {
         });
       }
     }
+  }
+
+  buildPixelStormBoundaries() {
+    // Create animated pixel particle storms as boundaries
+    const boundaryDistance = 55;
+    const collisionDistance = 57; // Slightly beyond visual boundary
+    const particleCount = 100;
+
+    const particleGeometry = new THREE.BufferGeometry();
+    const positions = [];
+    const colors = [];
+    const sizes = [];
+
+    // Create particle systems for each wall
+    const createParticleWall = (axis, position) => {
+      const particles = [];
+
+      for (let i = 0; i < particleCount; i++) {
+        let x, y, z;
+        if (axis === "x") {
+          x = position;
+          y = Math.random() * 25;
+          z = (Math.random() - 0.5) * 110;
+        } else {
+          x = (Math.random() - 0.5) * 110;
+          y = Math.random() * 25;
+          z = position;
+        }
+
+        positions.push(x, y, z);
+
+        // Pink/magenta/yellow colors for GPU theme
+        const colorChoice = Math.random();
+        if (colorChoice < 0.4) {
+          colors.push(1, 0.3, 0.6); // Pink
+        } else if (colorChoice < 0.7) {
+          colors.push(1, 0.5, 1); // Magenta
+        } else {
+          colors.push(1, 0.9, 0.4); // Yellow
+        }
+
+        sizes.push(0.8 + Math.random() * 1.2);
+
+        particles.push({
+          velocity: (Math.random() - 0.5) * 2,
+          phase: Math.random() * Math.PI * 2,
+        });
+      }
+
+      return particles;
+    };
+
+    // North wall particles
+    const northParticles = createParticleWall("z", boundaryDistance);
+
+    // South wall particles
+    const southParticles = createParticleWall("z", -boundaryDistance);
+
+    // East wall particles
+    const eastParticles = createParticleWall("x", boundaryDistance);
+
+    // West wall particles
+    const westParticles = createParticleWall("x", -boundaryDistance);
+
+    particleGeometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(positions, 3)
+    );
+    particleGeometry.setAttribute(
+      "color",
+      new THREE.Float32BufferAttribute(colors, 3)
+    );
+    particleGeometry.setAttribute(
+      "size",
+      new THREE.Float32BufferAttribute(sizes, 1)
+    );
+
+    const particleMaterial = new THREE.PointsMaterial({
+      size: 2,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.9,
+      blending: THREE.AdditiveBlending,
+      sizeAttenuation: true,
+      map: this.createPixelTexture(),
+      depthWrite: false,
+    });
+
+    const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+    this.group.add(particleSystem);
+
+    // Glowing barrier planes
+    const barrierMaterial = new THREE.MeshBasicMaterial({
+      color: 0xff4488,
+      transparent: true,
+      opacity: 0.08,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
+
+    const wallHeight = 25;
+    const wallWidth = 110;
+
+    // North barrier
+    const northBarrier = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallWidth, wallHeight),
+      barrierMaterial.clone()
+    );
+    northBarrier.position.set(0, wallHeight / 2, boundaryDistance - 1);
+    this.group.add(northBarrier);
+
+    // South barrier
+    const southBarrier = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallWidth, wallHeight),
+      barrierMaterial.clone()
+    );
+    southBarrier.position.set(0, wallHeight / 2, -boundaryDistance + 1);
+    this.group.add(southBarrier);
+
+    // East barrier
+    const eastBarrier = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallWidth, wallHeight),
+      barrierMaterial.clone()
+    );
+    eastBarrier.rotation.y = Math.PI / 2;
+    eastBarrier.position.set(boundaryDistance - 1, wallHeight / 2, 0);
+    this.group.add(eastBarrier);
+
+    // West barrier
+    const westBarrier = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallWidth, wallHeight),
+      barrierMaterial.clone()
+    );
+    westBarrier.rotation.y = Math.PI / 2;
+    westBarrier.position.set(-boundaryDistance + 1, wallHeight / 2, 0);
+    this.group.add(westBarrier);
+
+    // Add colliders
+    this.addCollider({
+      minX: -collisionDistance,
+      maxX: collisionDistance,
+      minZ: collisionDistance - 1,
+      maxZ: collisionDistance + 1,
+      height: wallHeight,
+    });
+
+    this.addCollider({
+      minX: -collisionDistance,
+      maxX: collisionDistance,
+      minZ: -collisionDistance - 1,
+      maxZ: -collisionDistance + 1,
+      height: wallHeight,
+    });
+
+    this.addCollider({
+      minX: collisionDistance - 1,
+      maxX: collisionDistance + 1,
+      minZ: -collisionDistance,
+      maxZ: collisionDistance,
+      height: wallHeight,
+    });
+
+    this.addCollider({
+      minX: -collisionDistance - 1,
+      maxX: -collisionDistance + 1,
+      minZ: -collisionDistance,
+      maxZ: collisionDistance,
+      height: wallHeight,
+    });
+
+    // Animate particles and barriers
+    this.addAnimator((delta, time) => {
+      const posArray = particleGeometry.attributes.position.array;
+      const allParticles = [
+        ...northParticles,
+        ...southParticles,
+        ...eastParticles,
+        ...westParticles,
+      ];
+
+      for (let i = 0; i < allParticles.length; i++) {
+        const particle = allParticles[i];
+        const idx = i * 3;
+
+        // Vertical bobbing
+        posArray[idx + 1] += Math.sin(time * 3 + particle.phase) * 0.02;
+
+        // Keep particles within wall bounds
+        if (posArray[idx + 1] < 0) posArray[idx + 1] = 25;
+        if (posArray[idx + 1] > 25) posArray[idx + 1] = 0;
+      }
+
+      particleGeometry.attributes.position.needsUpdate = true;
+
+      // Pulse barriers
+      const pulse = 0.05 + Math.sin(time * 4) * 0.04;
+      northBarrier.material.opacity = pulse;
+      southBarrier.material.opacity = pulse;
+      eastBarrier.material.opacity = pulse;
+      westBarrier.material.opacity = pulse;
+    });
+  }
+
+  createPixelTexture() {
+    const canvas = document.createElement("canvas");
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext("2d");
+
+    const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
+    gradient.addColorStop(0.4, "rgba(255, 100, 200, 0.8)");
+    gradient.addColorStop(1, "rgba(255, 100, 200, 0)");
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 32, 32);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
   }
 }

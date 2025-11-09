@@ -514,6 +514,22 @@ class Environment {
     return this.currentPhaseName;
   }
 
+  getCurrentMapBoundaries() {
+    if (
+      this.physicsMap &&
+      typeof this.physicsMap.getMapBoundaries === "function"
+    ) {
+      return this.physicsMap.getMapBoundaries();
+    }
+    // Default boundaries if map doesn't specify
+    return {
+      minX: -60,
+      maxX: 60,
+      minZ: -60,
+      maxZ: 60,
+    };
+  }
+
   resolvePlayerCollision(
     position,
     radius,

@@ -33,8 +33,19 @@ class CPUEnvironment extends BaseEnvironmentMap {
     canvas.height = size;
     const ctx = canvas.getContext("2d");
 
-    // Base fill
-    ctx.fillStyle = "#0a1f18";
+    // Enhanced base with radial gradient
+    const baseGradient = ctx.createRadialGradient(
+      size / 2,
+      size / 2,
+      0,
+      size / 2,
+      size / 2,
+      size / 2
+    );
+    baseGradient.addColorStop(0, "#0d2a1f");
+    baseGradient.addColorStop(0.5, "#0a1f18");
+    baseGradient.addColorStop(1, "#061410");
+    ctx.fillStyle = baseGradient;
     ctx.fillRect(0, 0, size, size);
 
     const cols = 16;
@@ -46,52 +57,66 @@ class CPUEnvironment extends BaseEnvironmentMap {
       for (let col = 0; col < cols; col++) {
         const x = col * cellW;
         const y = row * cellH;
-        const hueBase = 25 + (col / cols) * 240;
-        const hueShift = (row / rows) * 40;
+        const hueBase = 160 + (col / cols) * 40;
+        const hueShift = (row / rows) * 20;
         const gradient = ctx.createLinearGradient(x, y, x + cellW, y + cellH);
         gradient.addColorStop(
           0,
-          `hsl(${(hueBase + hueShift) % 360}, 85%, 60%)`
+          `hsl(${(hueBase + hueShift) % 360}, 90%, 55%)`
         );
         gradient.addColorStop(
           0.5,
-          `hsl(${(hueBase + hueShift + 20) % 360}, 80%, 55%)`
+          `hsl(${(hueBase + hueShift + 10) % 360}, 85%, 60%)`
         );
         gradient.addColorStop(
           1,
-          `hsl(${(hueBase + hueShift + 40) % 360}, 90%, 65%)`
+          `hsl(${(hueBase + hueShift + 20) % 360}, 95%, 65%)`
         );
         ctx.fillStyle = gradient;
         ctx.fillRect(x, y, cellW, cellH);
 
-        // Sub-structures inside each cell
-        ctx.fillStyle = "rgba(12, 40, 32, 0.35)";
-        const subdivisions = 3;
+        // Enhanced sub-structures with circuit-like pattern
+        ctx.fillStyle = "rgba(8, 30, 22, 0.45)";
+        const subdivisions = 4;
         const subW = cellW / subdivisions;
         const subH = cellH / subdivisions;
         for (let sy = 0; sy < subdivisions; sy++) {
           for (let sx = 0; sx < subdivisions; sx++) {
             if ((sx + sy) % 2 === 0) {
               ctx.fillRect(
-                x + sx * subW + subW * 0.15,
-                y + sy * subH + subH * 0.15,
-                subW * 0.7,
-                subH * 0.7
+                x + sx * subW + subW * 0.1,
+                y + sy * subH + subH * 0.1,
+                subW * 0.8,
+                subH * 0.8
               );
             }
           }
         }
 
-        // Highlight lines
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
-        ctx.lineWidth = 1;
+        // Add glowing circuit traces
+        ctx.strokeStyle = "rgba(0, 255, 200, 0.25)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y + cellH / 2);
+        ctx.lineTo(x + cellW, y + cellH / 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x + cellW / 2, y);
+        ctx.lineTo(x + cellW / 2, y + cellH);
+        ctx.stroke();
+
+        // Highlight lines with glow
+        ctx.strokeStyle = "rgba(0, 255, 200, 0.15)";
+        ctx.lineWidth = 1.5;
         ctx.strokeRect(x + 0.5, y + 0.5, cellW - 1, cellH - 1);
       }
     }
 
-    // Horizontal bus lines
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
-    ctx.lineWidth = 2;
+    // Horizontal bus lines with glow
+    ctx.shadowColor = "rgba(0, 255, 200, 0.3)";
+    ctx.shadowBlur = 5;
+    ctx.strokeStyle = "rgba(0, 255, 200, 0.2)";
+    ctx.lineWidth = 3;
     for (let r = 1; r < rows; r++) {
       const y = r * cellH;
       ctx.beginPath();
@@ -100,8 +125,8 @@ class CPUEnvironment extends BaseEnvironmentMap {
       ctx.stroke();
     }
 
-    // Vertical bus lines
-    ctx.lineWidth = 2;
+    // Vertical bus lines with glow
+    ctx.lineWidth = 3;
     for (let c = 1; c < cols; c++) {
       const x = c * cellW;
       ctx.beginPath();
@@ -109,14 +134,20 @@ class CPUEnvironment extends BaseEnvironmentMap {
       ctx.lineTo(x, size);
       ctx.stroke();
     }
+    ctx.shadowBlur = 0;
 
-    // Add subtle noise
-    const noiseDensity = 12000;
+    // Add enhanced noise with colored particles
+    const noiseDensity = 15000;
     for (let i = 0; i < noiseDensity; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
-      const brightness = 0.4 + Math.random() * 0.35;
-      ctx.fillStyle = `rgba(255, 255, 255, ${brightness * 0.05})`;
+      const brightness = 0.5 + Math.random() * 0.4;
+      const isColored = Math.random() > 0.7;
+      if (isColored) {
+        ctx.fillStyle = `rgba(0, 255, 200, ${brightness * 0.08})`;
+      } else {
+        ctx.fillStyle = `rgba(255, 255, 255, ${brightness * 0.04})`;
+      }
       ctx.fillRect(x, y, 1, 1);
     }
 
@@ -145,10 +176,10 @@ class CPUEnvironment extends BaseEnvironmentMap {
 
   buildFoundation() {
     const floorMaterial = new THREE.MeshPhongMaterial({
-      color: 0x081911,
-      emissive: 0x103927,
-      emissiveIntensity: 0.35,
-      shininess: 60,
+      color: 0x0a1f15,
+      emissive: 0x0f4832,
+      emissiveIntensity: 0.4,
+      shininess: 80,
     });
     const floor = new THREE.Mesh(
       new THREE.BoxGeometry(120, 2, 120),
@@ -159,10 +190,10 @@ class CPUEnvironment extends BaseEnvironmentMap {
     this.group.add(floor);
 
     const traceMaterial = new THREE.MeshPhongMaterial({
-      color: 0x1fffc8,
-      emissive: 0x16cfa1,
-      emissiveIntensity: 0.35,
-      shininess: 40,
+      color: 0x2bffcc,
+      emissive: 0x1affb8,
+      emissiveIntensity: 0.45,
+      shininess: 60,
     });
     const traces = new THREE.Mesh(
       new THREE.PlaneGeometry(120, 120, 30, 30),
@@ -184,11 +215,11 @@ class CPUEnvironment extends BaseEnvironmentMap {
     const dieOverlayMaterial = new THREE.MeshPhongMaterial({
       color: 0xffffff,
       map: this.getDieTexture(),
-      emissive: 0x0a2d1f,
-      emissiveIntensity: 0.22,
-      shininess: 95,
+      emissive: 0x0d3825,
+      emissiveIntensity: 0.3,
+      shininess: 110,
       transparent: true,
-      opacity: 0.95,
+      opacity: 0.98,
       side: THREE.DoubleSide,
       depthWrite: false,
       polygonOffset: true,
@@ -716,10 +747,12 @@ class CPUEnvironment extends BaseEnvironmentMap {
   }
 
   buildBinaryBoundaryWalls() {
-    // Create glowing binary digit sprites as boundary walls
-    const wallDistance = 58; // Match the floor boundary
-    const wallHeight = 15;
-    const digitSpacing = 6;
+    // Create cascading binary digit curtains as boundary walls
+    const wallDistance = 58; // Visual boundary distance
+    const collisionDistance = 60; // Collision slightly beyond visual for buffer
+    const wallHeight = 20;
+    const digitSpacing = 4;
+    const numRows = 4; // Multiple rows for curtain effect
 
     const createBinaryTexture = (digit) => {
       const canvas = document.createElement("canvas");
@@ -730,12 +763,16 @@ class CPUEnvironment extends BaseEnvironmentMap {
       // Clear background
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Glow effect
-      ctx.shadowColor = digit === "0" ? "#00ffcc" : "#ff6b6b";
-      ctx.shadowBlur = 30;
+      // Enhanced glow effect
+      ctx.shadowColor = digit === "0" ? "#00ffcc" : "#66ffee";
+      ctx.shadowBlur = 40;
 
-      // Draw digit
-      ctx.fillStyle = digit === "0" ? "#00ffcc" : "#ff6b6b";
+      // Draw digit with gradient
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, digit === "0" ? "#00ffcc" : "#66ffee");
+      gradient.addColorStop(1, digit === "0" ? "#00aa88" : "#44ccdd");
+
+      ctx.fillStyle = gradient;
       ctx.font = "bold 220px 'Courier New', monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -749,182 +786,200 @@ class CPUEnvironment extends BaseEnvironmentMap {
     const zeroTexture = createBinaryTexture("0");
     const oneTexture = createBinaryTexture("1");
 
-    const createWallSprite = (texture, x, y, z) => {
+    const createWallSprite = (texture, x, y, z, scale, delay) => {
       const material = new THREE.SpriteMaterial({
         map: texture,
         transparent: true,
-        opacity: 0.9,
+        opacity: 0.85,
         depthWrite: false,
       });
       const sprite = new THREE.Sprite(material);
       sprite.position.set(x, y, z);
-      sprite.scale.set(4, 4, 1);
+      sprite.scale.set(scale, scale, 1);
+      sprite.userData.initialOpacity = 0.85;
+      sprite.userData.delay = delay;
       return sprite;
     };
 
-    // North wall (positive Z)
-    for (let i = -wallDistance; i <= wallDistance; i += digitSpacing) {
-      const texture = Math.random() > 0.5 ? zeroTexture : oneTexture;
-      const sprite = createWallSprite(texture, i, wallHeight / 2, wallDistance);
-      this.group.add(sprite);
+    const boundarySprites = [];
 
-      // Add second row for more density
-      const sprite2 = createWallSprite(
-        texture,
-        i,
-        wallHeight / 2 + 5,
-        wallDistance
-      );
-      sprite2.scale.set(3, 3, 1);
-      this.group.add(sprite2);
+    // North wall (positive Z) - Cascading curtain
+    for (let row = 0; row < numRows; row++) {
+      for (let i = -wallDistance; i <= wallDistance; i += digitSpacing) {
+        const texture = Math.random() > 0.5 ? zeroTexture : oneTexture;
+        const yPos = wallHeight / 2 + row * 3;
+        const scale = 3.5 - row * 0.3;
+        const delay = i * 0.02 + row * 0.5;
+        const sprite = createWallSprite(
+          texture,
+          i,
+          yPos,
+          wallDistance - 1,
+          scale,
+          delay
+        );
+        boundarySprites.push(sprite);
+        this.group.add(sprite);
+      }
     }
 
-    // South wall (negative Z)
-    for (let i = -wallDistance; i <= wallDistance; i += digitSpacing) {
-      const texture = Math.random() > 0.5 ? zeroTexture : oneTexture;
-      const sprite = createWallSprite(
-        texture,
-        i,
-        wallHeight / 2,
-        -wallDistance
-      );
-      this.group.add(sprite);
-
-      const sprite2 = createWallSprite(
-        texture,
-        i,
-        wallHeight / 2 + 5,
-        -wallDistance
-      );
-      sprite2.scale.set(3, 3, 1);
-      this.group.add(sprite2);
+    // South wall (negative Z) - Cascading curtain
+    for (let row = 0; row < numRows; row++) {
+      for (let i = -wallDistance; i <= wallDistance; i += digitSpacing) {
+        const texture = Math.random() > 0.5 ? zeroTexture : oneTexture;
+        const yPos = wallHeight / 2 + row * 3;
+        const scale = 3.5 - row * 0.3;
+        const delay = i * 0.02 + row * 0.5;
+        const sprite = createWallSprite(
+          texture,
+          i,
+          yPos,
+          -wallDistance + 1,
+          scale,
+          delay
+        );
+        boundarySprites.push(sprite);
+        this.group.add(sprite);
+      }
     }
 
-    // East wall (positive X)
-    for (let i = -wallDistance; i <= wallDistance; i += digitSpacing) {
-      const texture = Math.random() > 0.5 ? zeroTexture : oneTexture;
-      const sprite = createWallSprite(texture, wallDistance, wallHeight / 2, i);
-      this.group.add(sprite);
-
-      const sprite2 = createWallSprite(
-        texture,
-        wallDistance,
-        wallHeight / 2 + 5,
-        i
-      );
-      sprite2.scale.set(3, 3, 1);
-      this.group.add(sprite2);
+    // East wall (positive X) - Cascading curtain
+    for (let row = 0; row < numRows; row++) {
+      for (let i = -wallDistance; i <= wallDistance; i += digitSpacing) {
+        const texture = Math.random() > 0.5 ? zeroTexture : oneTexture;
+        const yPos = wallHeight / 2 + row * 3;
+        const scale = 3.5 - row * 0.3;
+        const delay = i * 0.02 + row * 0.5;
+        const sprite = createWallSprite(
+          texture,
+          wallDistance - 1,
+          yPos,
+          i,
+          scale,
+          delay
+        );
+        boundarySprites.push(sprite);
+        this.group.add(sprite);
+      }
     }
 
-    // West wall (negative X)
-    for (let i = -wallDistance; i <= wallDistance; i += digitSpacing) {
-      const texture = Math.random() > 0.5 ? zeroTexture : oneTexture;
-      const sprite = createWallSprite(
-        texture,
-        -wallDistance,
-        wallHeight / 2,
-        i
-      );
-      this.group.add(sprite);
-
-      const sprite2 = createWallSprite(
-        texture,
-        -wallDistance,
-        wallHeight / 2 + 5,
-        i
-      );
-      sprite2.scale.set(3, 3, 1);
-      this.group.add(sprite2);
+    // West wall (negative X) - Cascading curtain
+    for (let row = 0; row < numRows; row++) {
+      for (let i = -wallDistance; i <= wallDistance; i += digitSpacing) {
+        const texture = Math.random() > 0.5 ? zeroTexture : oneTexture;
+        const yPos = wallHeight / 2 + row * 3;
+        const scale = 3.5 - row * 0.3;
+        const delay = i * 0.02 + row * 0.5;
+        const sprite = createWallSprite(
+          texture,
+          -wallDistance + 1,
+          yPos,
+          i,
+          scale,
+          delay
+        );
+        boundarySprites.push(sprite);
+        this.group.add(sprite);
+      }
     }
 
-    // Add invisible collision barriers at boundaries
-    const barrierMaterial = new THREE.MeshBasicMaterial({
+    // Add warning beams at boundaries (energy barriers)
+    const beamMaterial = new THREE.MeshBasicMaterial({
+      color: 0x00ffcc,
       transparent: true,
-      opacity: 0,
+      opacity: 0.15,
       side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
     });
 
-    // North barrier
-    const northBarrier = new THREE.Mesh(
-      new THREE.PlaneGeometry(wallDistance * 2, wallHeight * 2),
-      barrierMaterial
+    // North beam
+    const northBeam = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallDistance * 2, wallHeight * 1.5),
+      beamMaterial.clone()
     );
-    northBarrier.position.set(0, wallHeight, wallDistance);
-    this.group.add(northBarrier);
+    northBeam.position.set(0, wallHeight * 0.75, wallDistance - 0.5);
+    this.group.add(northBeam);
 
-    // South barrier
-    const southBarrier = new THREE.Mesh(
-      new THREE.PlaneGeometry(wallDistance * 2, wallHeight * 2),
-      barrierMaterial
+    // South beam
+    const southBeam = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallDistance * 2, wallHeight * 1.5),
+      beamMaterial.clone()
     );
-    southBarrier.position.set(0, wallHeight, -wallDistance);
-    this.group.add(southBarrier);
+    southBeam.position.set(0, wallHeight * 0.75, -wallDistance + 0.5);
+    this.group.add(southBeam);
 
-    // East barrier
-    const eastBarrier = new THREE.Mesh(
-      new THREE.PlaneGeometry(wallDistance * 2, wallHeight * 2),
-      barrierMaterial
+    // East beam
+    const eastBeam = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallDistance * 2, wallHeight * 1.5),
+      beamMaterial.clone()
     );
-    eastBarrier.rotation.y = Math.PI / 2;
-    eastBarrier.position.set(wallDistance, wallHeight, 0);
-    this.group.add(eastBarrier);
+    eastBeam.rotation.y = Math.PI / 2;
+    eastBeam.position.set(wallDistance - 0.5, wallHeight * 0.75, 0);
+    this.group.add(eastBeam);
 
-    // West barrier
-    const westBarrier = new THREE.Mesh(
-      new THREE.PlaneGeometry(wallDistance * 2, wallHeight * 2),
-      barrierMaterial
+    // West beam
+    const westBeam = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallDistance * 2, wallHeight * 1.5),
+      beamMaterial.clone()
     );
-    westBarrier.rotation.y = Math.PI / 2;
-    westBarrier.position.set(-wallDistance, wallHeight, 0);
-    this.group.add(westBarrier);
+    westBeam.rotation.y = Math.PI / 2;
+    westBeam.position.set(-wallDistance + 0.5, wallHeight * 0.75, 0);
+    this.group.add(westBeam);
 
     // Add physical colliders for player/enemy boundaries
     // North wall
     this.addCollider({
-      minX: -wallDistance,
-      maxX: wallDistance,
-      minZ: wallDistance - 2,
-      maxZ: wallDistance + 2,
+      minX: -collisionDistance,
+      maxX: collisionDistance,
+      minZ: collisionDistance - 1,
+      maxZ: collisionDistance + 1,
       height: wallHeight * 2,
     });
 
     // South wall
     this.addCollider({
-      minX: -wallDistance,
-      maxX: wallDistance,
-      minZ: -wallDistance - 2,
-      maxZ: -wallDistance + 2,
+      minX: -collisionDistance,
+      maxX: collisionDistance,
+      minZ: -collisionDistance - 1,
+      maxZ: -collisionDistance + 1,
       height: wallHeight * 2,
     });
 
     // East wall
     this.addCollider({
-      minX: wallDistance - 2,
-      maxX: wallDistance + 2,
-      minZ: -wallDistance,
-      maxZ: wallDistance,
+      minX: collisionDistance - 1,
+      maxX: collisionDistance + 1,
+      minZ: -collisionDistance,
+      maxZ: collisionDistance,
       height: wallHeight * 2,
     });
 
     // West wall
     this.addCollider({
-      minX: -wallDistance - 2,
-      maxX: -wallDistance + 2,
-      minZ: -wallDistance,
-      maxZ: wallDistance,
+      minX: -collisionDistance - 1,
+      maxX: -collisionDistance + 1,
+      minZ: -collisionDistance,
+      maxZ: collisionDistance,
       height: wallHeight * 2,
     });
 
-    // Animate the wall sprites
+    // Animate the wall sprites and beams
     this.addAnimator((delta, time) => {
-      this.group.children.forEach((child) => {
-        if (child instanceof THREE.Sprite && child.material.map) {
-          // Pulse opacity
-          child.material.opacity =
-            0.7 +
-            Math.sin(time * 2 + child.position.x + child.position.z) * 0.2;
-        }
+      // Cascading wave effect on binary digits
+      boundarySprites.forEach((sprite) => {
+        const wave = Math.sin(time * 2 + sprite.userData.delay) * 0.3;
+        sprite.material.opacity = sprite.userData.initialOpacity + wave;
+        sprite.position.y =
+          sprite.position.y +
+          Math.sin(time * 3 + sprite.userData.delay) * 0.015;
       });
+
+      // Pulsing energy beams
+      const beamPulse = 0.1 + Math.sin(time * 3) * 0.08;
+      northBeam.material.opacity = beamPulse;
+      southBeam.material.opacity = beamPulse;
+      eastBeam.material.opacity = beamPulse;
+      westBeam.material.opacity = beamPulse;
     });
   }
 

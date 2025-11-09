@@ -7,6 +7,13 @@ class BaseEnvironmentMap {
     this.displayName = "System Sector";
     this.baseFloorHeight = 0;
     this.colliders = [];
+    // Default map boundaries (can be overridden by subclasses)
+    this.mapBoundaries = {
+      minX: -60,
+      maxX: 60,
+      minZ: -60,
+      maxZ: 60,
+    };
   }
 
   build(parentGroup) {
@@ -60,6 +67,19 @@ class BaseEnvironmentMap {
 
   getColliders() {
     return this.colliders.slice();
+  }
+
+  getMapBoundaries() {
+    return this.mapBoundaries;
+  }
+
+  setMapBoundaries(boundaries) {
+    this.mapBoundaries = {
+      minX: boundaries.minX ?? this.mapBoundaries.minX,
+      maxX: boundaries.maxX ?? this.mapBoundaries.maxX,
+      minZ: boundaries.minZ ?? this.mapBoundaries.minZ,
+      maxZ: boundaries.maxZ ?? this.mapBoundaries.maxZ,
+    };
   }
 
   update(deltaTime, timeElapsed, playerPosition) {

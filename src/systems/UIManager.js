@@ -539,6 +539,22 @@ class UIManager {
     const centerX = this.minimapSize / 2;
     const centerY = this.minimapSize / 2;
 
+    // Get current map boundaries from environment
+    let currentBoundaries = { minX: -60, maxX: 60, minZ: -60, maxZ: 60 };
+    if (
+      this.game &&
+      this.game.environment &&
+      typeof this.game.environment.getCurrentMapBoundaries === "function"
+    ) {
+      currentBoundaries = this.game.environment.getCurrentMapBoundaries();
+    }
+
+    // Calculate dynamic scale based on current map size
+    const mapWidth = currentBoundaries.maxX - currentBoundaries.minX;
+    const mapHeight = currentBoundaries.maxZ - currentBoundaries.minZ;
+    const maxDimension = Math.max(mapWidth, mapHeight);
+    const dynamicScale = this.minimapSize / maxDimension;
+
     // Clear canvas
     ctx.fillStyle = "rgba(0, 10, 5, 0.85)";
     ctx.fillRect(0, 0, this.minimapSize, this.minimapSize);
@@ -558,16 +574,80 @@ class UIManager {
       ctx.stroke();
     }
 
-    // Draw boundary
-    const boundarySize = this.mapBoundary * this.minimapScale;
+    // Draw boundary rectangle with corner markers
+    const boundaryLeft =
+      centerX + (currentBoundaries.minX - playerPosition.x) * dynamicScale;
+    const boundaryRight =
+      centerX + (currentBoundaries.maxX - playerPosition.x) * dynamicScale;
+    const boundaryTop =
+      centerY + (currentBoundaries.minZ - playerPosition.z) * dynamicScale;
+    const boundaryBottom =
+      centerY + (currentBoundaries.maxZ - playerPosition.z) * dynamicScale;
+
+    // Main boundary box
     ctx.strokeStyle = "#00ff88";
     ctx.lineWidth = 2;
     ctx.strokeRect(
-      centerX - boundarySize,
-      centerY - boundarySize,
-      boundarySize * 2,
-      boundarySize * 2
+      boundaryLeft,
+      boundaryTop,
+      boundaryRight - boundaryLeft,
+      boundaryBottom - boundaryTop
     );
+
+    // Corner markers for better visibility
+    ctx.fillStyle = "#00ff88";
+    const cornerSize = 6;
+    const corners = [
+      [boundaryLeft, boundaryTop],
+      [boundaryRight, boundaryTop],
+      [boundaryLeft, boundaryBottom],
+      [boundaryRight, boundaryBottom],
+    ];
+    corners.forEach(([x, y]) => {
+      ctx.fillRect(
+        x - cornerSize / 2,
+        y - cornerSize / 2,
+        cornerSize,
+        cornerSize
+      );
+    });
+
+    // Draw boundary warning zones (when player gets close to edges)
+    const warningDistance = 10; // Distance from boundary to start warning
+    const playerDistToLeft = playerPosition.x - currentBoundaries.minX;
+    const playerDistToRight = currentBoundaries.maxX - playerPosition.x;
+    const playerDistToTop = playerPosition.z - currentBoundaries.minZ;
+    const playerDistToBottom = currentBoundaries.maxZ - playerPosition.z;
+
+    ctx.strokeStyle = "rgba(255, 100, 0, 0.6)";
+    ctx.lineWidth = 3;
+    ctx.setLineDash([5, 5]);
+
+    if (playerDistToLeft < warningDistance) {
+      ctx.beginPath();
+      ctx.moveTo(boundaryLeft, boundaryTop);
+      ctx.lineTo(boundaryLeft, boundaryBottom);
+      ctx.stroke();
+    }
+    if (playerDistToRight < warningDistance) {
+      ctx.beginPath();
+      ctx.moveTo(boundaryRight, boundaryTop);
+      ctx.lineTo(boundaryRight, boundaryBottom);
+      ctx.stroke();
+    }
+    if (playerDistToTop < warningDistance) {
+      ctx.beginPath();
+      ctx.moveTo(boundaryLeft, boundaryTop);
+      ctx.lineTo(boundaryRight, boundaryTop);
+      ctx.stroke();
+    }
+    if (playerDistToBottom < warningDistance) {
+      ctx.beginPath();
+      ctx.moveTo(boundaryLeft, boundaryBottom);
+      ctx.lineTo(boundaryRight, boundaryBottom);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
 
     // Draw scan lines
     const scanLineOffset = (Date.now() / 50) % 10;
@@ -584,8 +664,8 @@ class UIManager {
     if (enemies && enemies.length) {
       enemies.forEach((enemy) => {
         const enemyPos = enemy.getPosition();
-        const relX = (enemyPos.x - playerPosition.x) * this.minimapScale;
-        const relZ = (enemyPos.z - playerPosition.z) * this.minimapScale;
+        const relX = (enemyPos.x - playerPosition.x) * dynamicScale;
+        const relZ = (enemyPos.z - playerPosition.z) * dynamicScale;
         // Map enemy position using same orientation as player arrow (negative Z is up)
         const mapX = centerX + relX;
         const mapY = centerY + relZ;
