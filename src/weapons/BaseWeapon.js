@@ -1,3 +1,5 @@
+import { createAudioElement } from "../utils/audio.js";
+
 export default class BaseWeapon {
   constructor(scene, particleSystem) {
     this.scene = scene;
@@ -107,20 +109,7 @@ export default class BaseWeapon {
   }
 
   createSound(relativePath, volume = 1) {
-    if (typeof window === "undefined" || typeof Audio === "undefined") {
-      return null;
-    }
-
-    try {
-      const resolvedSrc = new URL(relativePath, window.location.href).href;
-      const audio = new Audio(resolvedSrc);
-      audio.volume = volume;
-      audio.preload = "auto";
-      return audio;
-    } catch (error) {
-      console.warn("Audio load failed:", relativePath, error);
-      return null;
-    }
+    return createAudioElement(relativePath, { volume });
   }
 
   playSound(sound) {

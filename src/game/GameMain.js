@@ -14,6 +14,7 @@ import WaveManager from "../systems/WaveManager.js";
 import UpgradeManager from "./UpgradeManager.js";
 import SpectatorMode from "./SpectatorMode.js";
 import DetailedWeaponModels from "../weapons/DetailedWeaponModels.js";
+import { createAudioElement } from "../utils/audio.js";
 
 class GameMain {
   constructor() {
@@ -865,25 +866,23 @@ class GameMain {
 
     this.backgroundMusicElements = this.backgroundMusicTracks
       .map((relativePath) => {
-        try {
-          const resolvedSrc = new URL(relativePath, window.location.href).href;
-          const audio = new Audio(resolvedSrc);
-          audio.volume = this.backgroundMusicVolume;
-          audio.preload = "auto";
-          audio.addEventListener("ended", () => {
-            if (!this.shouldLoopBackgroundMusic) {
-              return;
-            }
-            this.playNextBackgroundTrack();
-          });
-          if (typeof audio.load === "function") {
-            audio.load();
-          }
-          return audio;
-        } catch (error) {
-          console.warn("Failed to load background track:", relativePath, error);
+        const audio = createAudioElement(relativePath, {
+          volume: this.backgroundMusicVolume,
+        });
+
+        if (!audio) {
+          console.warn("Failed to load background track:", relativePath);
           return null;
         }
+
+        audio.addEventListener("ended", () => {
+          if (!this.shouldLoopBackgroundMusic) {
+            return;
+          }
+          this.playNextBackgroundTrack();
+        });
+
+        return audio;
       })
       .filter(Boolean);
 

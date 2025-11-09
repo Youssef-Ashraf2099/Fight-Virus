@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import DetailedWeaponModels from "../../weapons/DetailedWeaponModels.js";
+import { createAudioElement } from "../../utils/audio.js";
 
 export default class Player {
   constructor(scene, camera, environment) {
@@ -1353,24 +1354,11 @@ export default class Player {
   }
 
   _createAudio(relativePath, { loop = false, volume = 1 } = {}) {
-    if (typeof window === "undefined" || typeof Audio === "undefined") {
-      return null;
+    const audio = createAudioElement(relativePath, { loop, volume });
+    if (!audio) {
+      console.warn("Player audio load failed:", relativePath);
     }
-
-    try {
-      const resolvedSrc = new URL(relativePath, window.location.href).href;
-      const audio = new Audio(resolvedSrc);
-      audio.loop = loop;
-      audio.volume = volume;
-      audio.preload = "auto";
-      if (typeof audio.load === "function") {
-        audio.load();
-      }
-      return audio;
-    } catch (error) {
-      console.warn("Player audio load failed:", relativePath, error);
-      return null;
-    }
+    return audio;
   }
 
   _updateJetpackAudio(deltaTime) {

@@ -18,7 +18,11 @@ export default class InputManager {
       // Accept different possible key representations for Escape
       if (e.key === "Escape" || e.key === "Esc" || e.code === "Escape") {
         // Debug print so we can verify key is captured
-        console.log("InputManager: Escape pressed - emitting pause (key,code)", e.key, e.code);
+        console.log(
+          "InputManager: Escape pressed - emitting pause (key,code)",
+          e.key,
+          e.code
+        );
         try {
           e.preventDefault();
         } catch (err) {}
