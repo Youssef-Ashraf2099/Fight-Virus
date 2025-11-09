@@ -7,7 +7,7 @@ class DataWyrm extends BaseBoss {
     this.bossTitle = "Corrupted Guardian of the Mainframe";
 
     // Enhanced stats for dragon boss
-    this.maxHealth = 8000 * difficulty;
+    this.maxHealth = 6000 * difficulty;
     this.health = this.maxHealth;
     this.damage = 45 * difficulty;
     this.speed = 7;
