@@ -97,7 +97,7 @@ class TrojanHorseColossus extends BaseBoss {
       emissive: this.secondaryColor,
       emissiveIntensity: 0.6,
     });
-    
+
     // Main skull
     const skullGeometry = new THREE.BoxGeometry(4, 3.5, 5);
     this.head = new THREE.Mesh(skullGeometry, headMaterial);
@@ -148,12 +148,11 @@ class TrojanHorseColossus extends BaseBoss {
         1.5 - i * 0.1,
         0.5
       );
-      const maneSegment = new THREE.Mesh(maneGeometry, maneGlowMaterial.clone());
-      maneSegment.position.set(
-        0,
-        7 - i * 0.8,
-        11.5 - i * 1.2
+      const maneSegment = new THREE.Mesh(
+        maneGeometry,
+        maneGlowMaterial.clone()
       );
+      maneSegment.position.set(0, 7 - i * 0.8, 11.5 - i * 1.2);
       maneSegment.rotation.x = -0.2;
       this.group.add(maneSegment);
     }
@@ -166,10 +165,10 @@ class TrojanHorseColossus extends BaseBoss {
     });
 
     const legPositions = [
-      { x: -3, z: 8 },   // Front left
-      { x: 3, z: 8 },    // Front right
-      { x: -3, z: -5 },  // Back left
-      { x: 3, z: -5 },   // Back right
+      { x: -3, z: 8 }, // Front left
+      { x: 3, z: 8 }, // Front right
+      { x: -3, z: -5 }, // Back left
+      { x: 3, z: -5 }, // Back right
     ];
 
     legPositions.forEach((pos) => {
