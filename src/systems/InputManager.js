@@ -1,4 +1,4 @@
-class InputManager {
+export default class InputManager {
   constructor() {
     this.keys = {};
     this.mouseButtons = {}; // Track individual mouse buttons

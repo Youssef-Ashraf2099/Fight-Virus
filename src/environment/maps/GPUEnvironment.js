@@ -1,4 +1,7 @@
-class GPUEnvironment extends BaseEnvironmentMap {
+import * as THREE from "three";
+import BaseEnvironmentMap from "./BaseEnvironmentMap.js";
+
+export default class GPUEnvironment extends BaseEnvironmentMap {
   constructor(environment) {
     super(environment);
     this.displayName = "GPU FORGE";

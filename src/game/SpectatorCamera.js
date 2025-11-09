@@ -2,6 +2,7 @@
  * SpectatorCamera.js
  * Free-flying camera for exploring environments without combat
  */
+import * as THREE from "three";
 
 class SpectatorCamera {
   constructor(camera, inputManager) {
@@ -224,6 +225,8 @@ class SpectatorCamera {
     this.pitch = 0;
   }
 }
+
+export default SpectatorCamera;
 
 // Make available globally
 window.SpectatorCamera = SpectatorCamera;

@@ -1,3 +1,6 @@
+import * as THREE from "three";
+import BaseEnvironmentMap from "./BaseEnvironmentMap.js";
+
 const MOTHERBOARD_TEXTURE_SCOPE_OV =
   typeof window !== "undefined" ? window : globalThis;
 
@@ -133,7 +136,7 @@ if (!MOTHERBOARD_TEXTURE_SCOPE_OV.getMotherboardFloorTexture) {
   };
 }
 
-class SystemOverviewEnvironment extends BaseEnvironmentMap {
+export default class SystemOverviewEnvironment extends BaseEnvironmentMap {
   constructor(environment) {
     super(environment);
     this.displayName = "SYSTEM OVERVIEW - ALL SECTORS";

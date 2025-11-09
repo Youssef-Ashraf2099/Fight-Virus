@@ -1,4 +1,7 @@
-class MemoryEnvironment extends BaseEnvironmentMap {
+import * as THREE from "three";
+import BaseEnvironmentMap from "./BaseEnvironmentMap.js";
+
+export default class MemoryEnvironment extends BaseEnvironmentMap {
   constructor(environment) {
     super(environment);
     this.displayName = "RAM MEMORY BANKS";

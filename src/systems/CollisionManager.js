@@ -1,4 +1,4 @@
-class CollisionManager {
+export default class CollisionManager {
   checkCollision(obj1, obj2) {
     const pos1 = obj1.getPosition();
     const pos2 = obj2.getPosition();

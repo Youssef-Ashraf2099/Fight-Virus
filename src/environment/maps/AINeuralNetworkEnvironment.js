@@ -1,4 +1,7 @@
-class AINeuralNetworkEnvironment extends BaseEnvironmentMap {
+import * as THREE from "three";
+import BaseEnvironmentMap from "./BaseEnvironmentMap.js";
+
+export default class AINeuralNetworkEnvironment extends BaseEnvironmentMap {
   constructor(environment) {
     super(environment);
     this.displayName = "AI NEURAL NETWORK CORE";

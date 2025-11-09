@@ -1,3 +1,7 @@
+import * as THREE from "three";
+
+import BaseWeapon from "../BaseWeapon.js";
+
 class PlasmaLauncher extends BaseWeapon {
   constructor(scene, particleSystem) {
     super(scene, particleSystem);
@@ -185,3 +189,5 @@ class PlasmaOrb {
     }
   }
 }
+
+export default PlasmaLauncher;

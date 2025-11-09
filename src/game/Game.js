@@ -1,3 +1,15 @@
+import * as THREE from "three";
+
+import InputManager from "../systems/InputManager.js";
+import UIManager from "../systems/UIManager.js";
+import ParticleSystem from "../effects/ParticleSystem.js";
+import CollisionManager from "../systems/CollisionManager.js";
+import Environment from "../environment/Environment.js";
+import Player from "../entities/player/Player.js";
+import WeaponManager from "../weapons/WeaponManager.js";
+import EnemyManager from "../entities/enemies/EnemyManager.js";
+import WaveManager from "../systems/WaveManager.js";
+
 class Game {
   constructor() {
     console.log("Game constructor called");
@@ -621,3 +633,5 @@ class Game {
     }
   }
 }
+
+export default Game;

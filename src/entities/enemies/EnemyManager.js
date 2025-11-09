@@ -1,4 +1,22 @@
-class EnemyManager {
+import * as THREE from "three";
+import TrojanVirus from "./types/TrojanVirus.js";
+import WormVirus from "./types/WormVirus.js";
+import SpywareVirus from "./types/SpywareVirus.js";
+import RansomwareVirus from "./types/RansomwareVirus.js";
+import AdwareVirus from "./types/AdwareVirus.js";
+import RootkitVirus from "./types/RootkitVirus.js";
+import CircuitOverlord from "../bosses/CircuitOverlord.js";
+import CorruptionCore from "../bosses/CorruptionCore.js";
+import PixelReaper from "../bosses/PixelReaper.js";
+import DataWyrm from "../bosses/DataWyrm.js";
+import LadyBugSentinel from "../bosses/LadyBugSentinel.js";
+import TrojanHorseColossus from "../bosses/TrojanHorseColossus.js";
+import Noise from "../bosses/Noise.js";
+import FirewallArchon from "../bosses/FirewallArchon.js";
+import NeuralOvermind from "../bosses/NeuralOvermind.js";
+import PacketHydra from "../bosses/PacketHydra.js";
+
+export default class EnemyManager {
   constructor(scene, particleSystem, environment) {
     this.scene = scene;
     this.particleSystem = particleSystem;

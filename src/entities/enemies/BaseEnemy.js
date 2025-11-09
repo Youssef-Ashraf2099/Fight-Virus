@@ -1,4 +1,6 @@
-class BaseEnemy {
+import * as THREE from "three";
+
+export default class BaseEnemy {
   constructor(scene, position, particleSystem, difficulty = 1) {
     this.scene = scene;
     this.particleSystem = particleSystem;

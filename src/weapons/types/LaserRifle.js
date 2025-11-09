@@ -1,3 +1,7 @@
+import * as THREE from "three";
+
+import BaseWeapon from "../BaseWeapon.js";
+
 class LaserRifle extends BaseWeapon {
   constructor(scene, particleSystem) {
     super(scene, particleSystem);
@@ -171,3 +175,5 @@ class LaserBeam {
     }
   }
 }
+
+export default LaserRifle;

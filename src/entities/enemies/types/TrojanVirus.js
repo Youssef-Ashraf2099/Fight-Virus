@@ -1,4 +1,7 @@
-class TrojanVirus extends BaseEnemy {
+import * as THREE from "three";
+import BaseEnemy from "../BaseEnemy.js";
+
+export default class TrojanVirus extends BaseEnemy {
   constructor(scene, position, particleSystem, difficulty = 1) {
     super(scene, position, particleSystem, difficulty);
 

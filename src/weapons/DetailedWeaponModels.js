@@ -3,7 +3,9 @@
  * Bespoke weapon view-model builders with unique geometry per weapon.
  */
 
-class DetailedWeaponModels {
+import * as THREE from "three";
+
+export default class DetailedWeaponModels {
   static createWeaponModel(type) {
     const key = (type || "").toString().toLowerCase().replace(/\s+/g, "");
 

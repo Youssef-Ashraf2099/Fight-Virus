@@ -1,3 +1,8 @@
+import * as THREE from "three";
+
+import Projectile from "../Projectile.js";
+import BaseWeapon from "../BaseWeapon.js";
+
 class PulseCannon extends BaseWeapon {
   constructor(scene, particleSystem) {
     super(scene, particleSystem);
@@ -70,3 +75,5 @@ class PulseCannon extends BaseWeapon {
     );
   }
 }
+
+export default PulseCannon;

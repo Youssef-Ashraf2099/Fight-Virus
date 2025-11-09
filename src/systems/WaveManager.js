@@ -1,4 +1,6 @@
-class WaveManager {
+import * as THREE from "three";
+
+export default class WaveManager {
   constructor(enemyManager, uiManager) {
     this.enemyManager = enemyManager;
     this.uiManager = uiManager;

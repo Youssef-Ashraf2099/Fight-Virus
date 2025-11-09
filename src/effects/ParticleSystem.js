@@ -1,4 +1,6 @@
-class ParticleSystem {
+import * as THREE from "three";
+
+export default class ParticleSystem {
   constructor(scene) {
     this.scene = scene;
     this.particles = [];

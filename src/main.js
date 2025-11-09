@@ -31,12 +31,26 @@ function createWindow() {
     })(),
   });
 
-  // Load test page if --test flag is provided, otherwise load main game
+  const devServerUrl = process.env.VITE_DEV_SERVER_URL;
   const loadTestPage = process.argv.includes("--test");
-  mainWindow.loadFile(loadTestPage ? "src/test.html" : "src/index.html");
+  const buildIndexPath = path.join(__dirname, "../build/renderer/index.html");
+  const testPagePath = path.join(__dirname, "test.html");
+
+  if (loadTestPage) {
+    mainWindow.loadFile(testPagePath);
+  } else if (devServerUrl) {
+    mainWindow.loadURL(devServerUrl);
+  } else {
+    if (!fs.existsSync(buildIndexPath)) {
+      console.warn(
+        "Renderer bundle not found. Run `npm run build:renderer` before launching Electron in production mode."
+      );
+    }
+    mainWindow.loadFile(buildIndexPath);
+  }
 
   // Open DevTools in development mode
-  if (process.argv.includes("--dev") || loadTestPage) {
+  if (devServerUrl || process.argv.includes("--dev") || loadTestPage) {
     mainWindow.webContents.openDevTools();
   }
 

@@ -1,4 +1,7 @@
-class Player {
+import * as THREE from "three";
+import DetailedWeaponModels from "../../weapons/DetailedWeaponModels.js";
+
+export default class Player {
   constructor(scene, camera, environment) {
     this.scene = scene;
     this.camera = camera;

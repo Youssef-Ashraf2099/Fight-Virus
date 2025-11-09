@@ -1,4 +1,6 @@
-class Projectile {
+import * as THREE from "three";
+
+export default class Projectile {
   constructor(
     scene,
     position,

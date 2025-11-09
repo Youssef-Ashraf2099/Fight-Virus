@@ -1,4 +1,20 @@
 // Main Game Class - Non-module version
+import * as THREE from "three";
+
+import InputManager from "../systems/InputManager.js";
+import UIManager from "../systems/UIManager.js";
+import PuzzleManager from "./PuzzleManager.js";
+import ParticleSystem from "../effects/ParticleSystem.js";
+import CollisionManager from "../systems/CollisionManager.js";
+import Environment from "../environment/Environment.js";
+import Player from "../entities/player/Player.js";
+import WeaponManager from "../weapons/WeaponManager.js";
+import EnemyManager from "../entities/enemies/EnemyManager.js";
+import WaveManager from "../systems/WaveManager.js";
+import UpgradeManager from "./UpgradeManager.js";
+import SpectatorMode from "./SpectatorMode.js";
+import DetailedWeaponModels from "../weapons/DetailedWeaponModels.js";
+
 class GameMain {
   constructor() {
     console.log("GameMain constructor called");
@@ -155,7 +171,7 @@ class GameMain {
     this.environment = new Environment(this.scene);
 
     // Initialize weapon blueprints before creating player
-    if (window.DetailedWeaponModels) {
+    if (typeof DetailedWeaponModels?.init === "function") {
       try {
         await DetailedWeaponModels.init();
       } catch (err) {
@@ -1738,5 +1754,7 @@ class GameMain {
     this.loadingOverlay.style.display = "none";
   }
 }
+
+export default GameMain;
 
 console.log("✓ GameMain class defined");

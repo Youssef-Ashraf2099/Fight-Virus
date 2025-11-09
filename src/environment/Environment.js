@@ -1,4 +1,16 @@
-class Environment {
+import * as THREE from "three";
+import CPUEnvironment from "./maps/CPUEnvironment.js";
+import KernelEnvironment from "./maps/KernelEnvironment.js";
+import MemoryEnvironment from "./maps/MemoryEnvironment.js";
+import GPUEnvironment from "./maps/GPUEnvironment.js";
+import MotherboardEnvironment from "./maps/MotherboardEnvironment.js";
+import HardDriveEnvironment from "./maps/HardDriveEnvironment.js";
+import FirewallEnvironment from "./maps/FirewallEnvironment.js";
+import RetroTerminalEnvironment from "./maps/RetroTerminalEnvironment.js";
+import NetworkHubEnvironment from "./maps/NetworkHubEnvironment.js";
+import AINeuralNetworkEnvironment from "./maps/AINeuralNetworkEnvironment.js";
+
+export default class Environment {
   constructor(scene) {
     this.scene = scene;
     this.time = 0;

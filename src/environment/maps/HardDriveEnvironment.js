@@ -1,4 +1,7 @@
-class HardDriveEnvironment extends BaseEnvironmentMap {
+import * as THREE from "three";
+import BaseEnvironmentMap from "./BaseEnvironmentMap.js";
+
+export default class HardDriveEnvironment extends BaseEnvironmentMap {
   constructor(environment) {
     super(environment);
     this.displayName = "HARD DRIVE SECTOR";

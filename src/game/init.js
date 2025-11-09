@@ -1,16 +1,16 @@
 // Game initialization module
 console.log("=== GAME INIT MODULE LOADING ===");
 
-import * as THREE from "../lib/three.module.js";
-import { Player } from "../entities/player/Player.js";
-import { EnemyManager } from "../entities/enemies/EnemyManager.js";
-import { WeaponManager } from "../weapons/WeaponManager.js";
-import { Environment } from "../environment/Environment.js";
-import { ParticleSystem } from "../effects/ParticleSystem.js";
-import { CollisionManager } from "../systems/CollisionManager.js";
-import { InputManager } from "../systems/InputManager.js";
-import { UIManager } from "../systems/UIManager.js";
-import { WaveManager } from "../systems/WaveManager.js";
+import * as THREE from "three";
+import Player from "../entities/player/Player.js";
+import EnemyManager from "../entities/enemies/EnemyManager.js";
+import WeaponManager from "../weapons/WeaponManager.js";
+import Environment from "../environment/Environment.js";
+import ParticleSystem from "../effects/ParticleSystem.js";
+import CollisionManager from "../systems/CollisionManager.js";
+import InputManager from "../systems/InputManager.js";
+import UIManager from "../systems/UIManager.js";
+import WaveManager from "../systems/WaveManager.js";
 
 console.log("All modules imported successfully!");
 console.log("THREE:", THREE);

@@ -1,4 +1,7 @@
-class TrojanHorseColossus extends BaseBoss {
+import * as THREE from "three";
+import BaseBoss from "./BaseBoss.js";
+
+export default class TrojanHorseColossus extends BaseBoss {
   constructor(scene, position, particleSystem, difficulty = 1) {
     super(scene, position, particleSystem, difficulty);
 

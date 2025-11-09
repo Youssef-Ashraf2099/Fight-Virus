@@ -2,6 +2,7 @@
  * PixelCompanion.js
  * Lightweight holographic guide that hovers near the Learn Mode camera.
  */
+import * as THREE from "three";
 
 class PixelCompanion {
   constructor(scene, spectatorCamera) {
@@ -227,5 +228,7 @@ class PixelCompanion {
     this.outerRing.scale.setScalar(1 + Math.sin(this.elapsed * 1.8) * 0.04);
   }
 }
+
+export default PixelCompanion;
 
 window.PixelCompanion = PixelCompanion;

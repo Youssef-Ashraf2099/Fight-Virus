@@ -3,7 +3,10 @@
  * Cybersecurity fortress with network firewalls, packet filters, and security systems
  */
 
-class FirewallEnvironment extends BaseEnvironmentMap {
+import * as THREE from "three";
+import BaseEnvironmentMap from "./BaseEnvironmentMap.js";
+
+export default class FirewallEnvironment extends BaseEnvironmentMap {
   constructor(env) {
     super(env);
     this.displayName = "FIREWALL FORTRESS";

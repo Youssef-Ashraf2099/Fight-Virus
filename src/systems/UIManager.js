@@ -1,4 +1,4 @@
-class UIManager {
+export default class UIManager {
   constructor() {
     this.healthBar = document.getElementById("healthBar");
     this.energyBar = document.getElementById("energyBar");

@@ -2,6 +2,10 @@
  * SpectatorMode.js
  * Manages Learn Mode (formerly spectator) for exploring environments with guidance
  */
+import * as THREE from "three";
+
+import SpectatorCamera from "./SpectatorCamera.js";
+import PixelCompanion from "./PixelCompanion.js";
 
 class SpectatorMode {
   constructor(scene, camera, inputManager, environment) {
@@ -578,6 +582,8 @@ class SpectatorMode {
     return this.environmentCatalog[this.currentPhase]?.name;
   }
 }
+
+export default SpectatorMode;
 
 // Make available globally
 window.SpectatorMode = SpectatorMode;

@@ -133,7 +133,10 @@ if (!MOTHERBOARD_TEXTURE_SCOPE.__motherboardFloorTexture) {
   };
 }
 
-class MotherboardEnvironment extends BaseEnvironmentMap {
+import * as THREE from "three";
+import BaseEnvironmentMap from "./BaseEnvironmentMap.js";
+
+export default class MotherboardEnvironment extends BaseEnvironmentMap {
   constructor(environment) {
     super(environment);
     this.displayName = "MOTHERBOARD EXPANSE";

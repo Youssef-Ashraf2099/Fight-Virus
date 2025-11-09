@@ -589,3 +589,5 @@ class UpgradeManager {
     }
   }
 }
+
+export default UpgradeManager;

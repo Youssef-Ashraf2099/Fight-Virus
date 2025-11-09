@@ -1,4 +1,4 @@
-class BaseWeapon {
+export default class BaseWeapon {
   constructor(scene, particleSystem) {
     this.scene = scene;
     this.particleSystem = particleSystem;

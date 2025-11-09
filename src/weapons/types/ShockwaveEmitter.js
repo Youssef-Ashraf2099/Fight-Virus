@@ -1,3 +1,7 @@
+import * as THREE from "three";
+
+import BaseWeapon from "../BaseWeapon.js";
+
 class ShockwaveEmitter extends BaseWeapon {
   constructor(scene, particleSystem) {
     super(scene, particleSystem);
@@ -192,3 +196,5 @@ class ShockwavePulse {
     }
   }
 }
+
+export default ShockwaveEmitter;

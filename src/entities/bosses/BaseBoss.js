@@ -1,4 +1,7 @@
-class BaseBoss extends BaseEnemy {
+import * as THREE from "three";
+import BaseEnemy from "../enemies/BaseEnemy.js";
+
+export default class BaseBoss extends BaseEnemy {
   constructor(scene, position, particleSystem, difficulty = 1) {
     super(scene, position, particleSystem, difficulty);
 

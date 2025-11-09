@@ -1,3 +1,8 @@
+import PulseCannon from "./types/PulseCannon.js";
+import LaserRifle from "./types/LaserRifle.js";
+import ShockwaveEmitter from "./types/ShockwaveEmitter.js";
+import PlasmaLauncher from "./types/PlasmaLauncher.js";
+
 class WeaponManager {
   constructor(scene, player, particleSystem, environment) {
     this.scene = scene;
@@ -300,3 +305,5 @@ class WeaponManager {
     return this.weapons.length;
   }
 }
+
+export default WeaponManager;

@@ -1,4 +1,7 @@
-class RetroTerminalEnvironment extends BaseEnvironmentMap {
+import * as THREE from "three";
+import BaseEnvironmentMap from "./BaseEnvironmentMap.js";
+
+export default class RetroTerminalEnvironment extends BaseEnvironmentMap {
   constructor(environment) {
     super(environment);
     this.displayName = "RETRO TERMINAL INTERFACE";

@@ -1,4 +1,6 @@
-class PlayerGeometry {
+import * as THREE from "three";
+
+export default class PlayerGeometry {
   static createAdvancedPlayer() {
     // Create a complex crystalline structure for the player
 

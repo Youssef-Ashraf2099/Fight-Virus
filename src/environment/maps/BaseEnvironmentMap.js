@@ -1,4 +1,6 @@
-class BaseEnvironmentMap {
+import * as THREE from "three";
+
+export default class BaseEnvironmentMap {
   constructor(environment) {
     this.environment = environment;
     this.scene = environment.scene;

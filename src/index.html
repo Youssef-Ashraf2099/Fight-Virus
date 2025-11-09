@@ -2550,51 +2550,6 @@
       </div>
     </div>
 
-    <!-- Load Three.js first (non-module version) -->
-    <script src="./lib/three.min.js"></script>
-
-    <!-- Load GLTFLoader from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-
-    <script>
-      window.addEventListener("DOMContentLoaded", () => {
-        const tutorialToggle = document.getElementById("tutorialToggle");
-        const tutorialPanel = document.getElementById("tutorialPanel");
-        const tutorialClose = document.getElementById("tutorialClose");
-        const tutorialContent =
-          tutorialPanel?.querySelector(".tutorial-content");
-
-        const setTutorialVisibility = (open) => {
-          if (!tutorialPanel) return;
-          tutorialPanel.classList.toggle("open", open);
-        };
-
-        tutorialToggle?.addEventListener("click", () =>
-          setTutorialVisibility(true)
-        );
-        tutorialClose?.addEventListener("click", () =>
-          setTutorialVisibility(false)
-        );
-
-        tutorialPanel?.addEventListener("click", (event) => {
-          if (!tutorialContent) return;
-          if (!tutorialContent.contains(event.target)) {
-            setTutorialVisibility(false);
-          }
-        });
-
-        window.addEventListener("keydown", (event) => {
-          if (
-            event.key === "Escape" &&
-            tutorialPanel?.classList.contains("open")
-          ) {
-            setTutorialVisibility(false);
-          }
-        });
-      });
-    </script>
-
-    <!-- Then load our game -->
-    <script src="./game/game-bundle.js"></script>
+    <script type="module" src="./renderer/main.js"></script>
   </body>
 </html>
