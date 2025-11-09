@@ -5,7 +5,7 @@ class SpywareVirus extends BaseEnemy {
     // Spyware stats - Stealthy, teleports, ranged attacks
     this.maxHealth = 90 * difficulty;
     this.health = this.maxHealth;
-    this.speed = 8;
+    this.speed = 6;
     this.damage = 18 * difficulty; // Higher ranged damage
     this.contactDamage = 7 * difficulty; // Reduced from 10 for balance
     this.collisionRadius = 1.2;

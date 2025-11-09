@@ -30,6 +30,7 @@ class KernelEnvironment extends BaseEnvironmentMap {
     this.buildDataLinks();
     this.buildAssemblyTablets();
     this.buildBinaryParticles();
+    this.buildSystemCallBoundaries();
   }
 
   buildFoundation() {
@@ -452,6 +453,206 @@ class KernelEnvironment extends BaseEnvironmentMap {
           Math.sin(time * sprite.userData.bobSpeed + index) *
             sprite.userData.bobHeight;
         sprite.material.opacity = 0.65 + Math.sin(time * 4 + index) * 0.25;
+      });
+    });
+  }
+
+  buildSystemCallBoundaries() {
+    // Create system call interrupt gates as boundaries
+    const boundaryDistance = 55;
+    const collisionDistance = 57; // Collision slightly beyond visual
+    const gateHeight = 22;
+    const gateSpacing = 12;
+
+    // Create hexagonal gates
+    const gateGeometry = new THREE.CylinderGeometry(2, 2, gateHeight, 6);
+    const gateMaterial = new THREE.MeshPhongMaterial({
+      color: 0x00fff2,
+      emissive: 0x00fff2,
+      emissiveIntensity: 0.7,
+      transparent: true,
+      opacity: 0.6,
+      wireframe: true,
+    });
+
+    const gates = [];
+
+    // North wall gates
+    for (let i = -boundaryDistance; i <= boundaryDistance; i += gateSpacing) {
+      const gate = new THREE.Mesh(gateGeometry, gateMaterial.clone());
+      gate.position.set(i, gateHeight / 2, boundaryDistance - 1);
+      gate.userData = { phase: i * 0.1 };
+      gates.push(gate);
+      this.group.add(gate);
+    }
+
+    // South wall gates
+    for (let i = -boundaryDistance; i <= boundaryDistance; i += gateSpacing) {
+      const gate = new THREE.Mesh(gateGeometry, gateMaterial.clone());
+      gate.position.set(i, gateHeight / 2, -boundaryDistance + 1);
+      gate.userData = { phase: i * 0.1 };
+      gates.push(gate);
+      this.group.add(gate);
+    }
+
+    // East wall gates
+    for (let i = -boundaryDistance; i <= boundaryDistance; i += gateSpacing) {
+      const gate = new THREE.Mesh(gateGeometry, gateMaterial.clone());
+      gate.position.set(boundaryDistance - 1, gateHeight / 2, i);
+      gate.userData = { phase: i * 0.1 };
+      gates.push(gate);
+      this.group.add(gate);
+    }
+
+    // West wall gates
+    for (let i = -boundaryDistance; i <= boundaryDistance; i += gateSpacing) {
+      const gate = new THREE.Mesh(gateGeometry, gateMaterial.clone());
+      gate.position.set(-boundaryDistance + 1, gateHeight / 2, i);
+      gate.userData = { phase: i * 0.1 };
+      gates.push(gate);
+      this.group.add(gate);
+    }
+
+    // Add energy field planes
+    const fieldMaterial = new THREE.MeshBasicMaterial({
+      color: 0x37e0ff,
+      transparent: true,
+      opacity: 0.08,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
+
+    // North field
+    const northField = new THREE.Mesh(
+      new THREE.PlaneGeometry(110, gateHeight),
+      fieldMaterial.clone()
+    );
+    northField.position.set(0, gateHeight / 2, boundaryDistance - 0.5);
+    this.group.add(northField);
+
+    // South field
+    const southField = new THREE.Mesh(
+      new THREE.PlaneGeometry(110, gateHeight),
+      fieldMaterial.clone()
+    );
+    southField.position.set(0, gateHeight / 2, -boundaryDistance + 0.5);
+    this.group.add(southField);
+
+    // East field
+    const eastField = new THREE.Mesh(
+      new THREE.PlaneGeometry(110, gateHeight),
+      fieldMaterial.clone()
+    );
+    eastField.rotation.y = Math.PI / 2;
+    eastField.position.set(boundaryDistance - 0.5, gateHeight / 2, 0);
+    this.group.add(eastField);
+
+    // West field
+    const westField = new THREE.Mesh(
+      new THREE.PlaneGeometry(110, gateHeight),
+      fieldMaterial.clone()
+    );
+    westField.rotation.y = Math.PI / 2;
+    westField.position.set(-boundaryDistance + 0.5, gateHeight / 2, 0);
+    this.group.add(westField);
+
+    // Add interrupt signals (floating symbols)
+    const interruptSymbols = [];
+    const symbolCount = 40;
+
+    for (let i = 0; i < symbolCount; i++) {
+      const side = Math.floor(Math.random() * 4);
+      let x, z;
+
+      if (side === 0) {
+        x = (Math.random() - 0.5) * 110;
+        z = boundaryDistance - 2;
+      } else if (side === 1) {
+        x = (Math.random() - 0.5) * 110;
+        z = -boundaryDistance + 2;
+      } else if (side === 2) {
+        x = boundaryDistance - 2;
+        z = (Math.random() - 0.5) * 110;
+      } else {
+        x = -boundaryDistance + 2;
+        z = (Math.random() - 0.5) * 110;
+      }
+
+      const symbol = new THREE.Mesh(
+        new THREE.TetrahedronGeometry(0.8),
+        new THREE.MeshPhongMaterial({
+          color: 0xff7b4a,
+          emissive: 0xff7b4a,
+          emissiveIntensity: 1,
+        })
+      );
+
+      symbol.position.set(x, Math.random() * gateHeight, z);
+      symbol.userData = {
+        baseY: symbol.position.y,
+        speed: 1 + Math.random() * 2,
+      };
+
+      interruptSymbols.push(symbol);
+      this.group.add(symbol);
+    }
+
+    // Add colliders
+    this.addCollider({
+      minX: -collisionDistance,
+      maxX: collisionDistance,
+      minZ: collisionDistance - 1,
+      maxZ: collisionDistance + 1,
+      height: gateHeight,
+    });
+
+    this.addCollider({
+      minX: -collisionDistance,
+      maxX: collisionDistance,
+      minZ: -collisionDistance - 1,
+      maxZ: -collisionDistance + 1,
+      height: gateHeight,
+    });
+
+    this.addCollider({
+      minX: collisionDistance - 1,
+      maxX: collisionDistance + 1,
+      minZ: -collisionDistance,
+      maxZ: collisionDistance,
+      height: gateHeight,
+    });
+
+    this.addCollider({
+      minX: -collisionDistance - 1,
+      maxX: -collisionDistance + 1,
+      minZ: -collisionDistance,
+      maxZ: collisionDistance,
+      height: gateHeight,
+    });
+
+    // Animation
+    this.addAnimator((delta, time) => {
+      // Rotate gates
+      gates.forEach((gate) => {
+        gate.rotation.y = time * 0.8 + gate.userData.phase;
+        gate.material.emissiveIntensity =
+          0.5 + Math.sin(time * 3 + gate.userData.phase) * 0.3;
+      });
+
+      // Pulse fields
+      const pulse = 0.06 + Math.sin(time * 4) * 0.04;
+      northField.material.opacity = pulse;
+      southField.material.opacity = pulse;
+      eastField.material.opacity = pulse;
+      westField.material.opacity = pulse;
+
+      // Animate interrupt symbols
+      interruptSymbols.forEach((symbol) => {
+        symbol.rotation.x = time * symbol.userData.speed;
+        symbol.rotation.y = time * symbol.userData.speed * 0.7;
+        symbol.position.y =
+          symbol.userData.baseY +
+          Math.sin(time * 2 + symbol.userData.speed) * 2;
       });
     });
   }

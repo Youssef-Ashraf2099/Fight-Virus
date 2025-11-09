@@ -39,6 +39,15 @@ class BaseEnemy {
     this.spawnElevation = null; // Allows specific enemies to control spawn height
     this.environment = null;
 
+    // Stun/Freeze system
+    this.stunned = false;
+    this.stunTimer = 0;
+    this.stunEffect = null;
+
+    // Knockback physics
+    this.knockbackVelocity = new THREE.Vector3();
+    this.knockbackDamping = 1.2; // Lower = longer knockback effect
+
     // Reusable vectors for projectile movement checks
     this._tempProjectilePrev = new THREE.Vector3();
     this._tempProjectileStep = new THREE.Vector3();
@@ -54,8 +63,31 @@ class BaseEnemy {
       this.attackCooldown -= deltaTime;
     }
 
+    if (this._updateStunState(deltaTime)) {
+      return;
+    }
+
+    // Apply knockback velocity with damping so pushes feel impactful
+    if (this.knockbackVelocity.lengthSq() > 0.0001) {
+      const framePush = this.knockbackVelocity
+        .clone()
+        .multiplyScalar(deltaTime);
+      this.position.add(framePush);
+
+      const dampingFactor = Math.exp(-this.knockbackDamping * deltaTime);
+      this.knockbackVelocity.multiplyScalar(dampingFactor);
+
+      if (this.knockbackVelocity.lengthSq() < 0.0001) {
+        this.knockbackVelocity.set(0, 0, 0);
+      }
+    }
+
+    const skipAI = this.knockbackVelocity.lengthSq() > 16; // When being blasted back, skip pursuit logic this frame
+
     // AI behavior update
-    this.updateBehavior(deltaTime, playerPosition);
+    if (!skipAI) {
+      this.updateBehavior(deltaTime, playerPosition);
+    }
 
     // Update projectiles if enemy has ranged attacks
     this.updateProjectiles(deltaTime);
@@ -396,6 +428,17 @@ class BaseEnemy {
   }
 
   destroy() {
+    if (this.stunEffect) {
+      this.scene.remove(this.stunEffect);
+      if (this.stunEffect.geometry) {
+        this.stunEffect.geometry.dispose();
+      }
+      if (this.stunEffect.material) {
+        this.stunEffect.material.dispose();
+      }
+      this.stunEffect = null;
+    }
+
     if (this.projectiles && this.projectiles.length) {
       this.projectiles.forEach((proj) => this._disposeProjectile(proj));
       this.projectiles = [];
@@ -427,5 +470,166 @@ class BaseEnemy {
       transparent: true,
       opacity: 0.9,
     });
+  }
+
+  applyKnockback(directionOrVector, strength = 15) {
+    if (!directionOrVector) {
+      return;
+    }
+
+    const impulse = directionOrVector.clone();
+    if (impulse.lengthSq() === 0) {
+      return;
+    }
+
+    const horizontal = new THREE.Vector3(impulse.x, 0, impulse.z);
+    if (horizontal.lengthSq() === 0) {
+      return;
+    }
+
+    horizontal.normalize();
+    const pushStrength = strength ?? impulse.length();
+    const pushVector = horizontal.multiplyScalar(pushStrength);
+
+    // MASSIVE immediate displacement for dramatic visible shove
+    const immediatePush = pushVector.clone().multiplyScalar(1.2);
+    this.position.add(immediatePush);
+    if (this.group) {
+      this.group.position.copy(this.position);
+    }
+
+    // Add strong velocity so momentum continues (enemies keep sliding back)
+    this.knockbackVelocity.add(pushVector.multiplyScalar(1.8));
+  }
+
+  onKnockback(pushVector, strength) {
+    if (!pushVector) {
+      return;
+    }
+
+    const impulse = pushVector.clone();
+    if (strength !== null && strength !== undefined) {
+      if (impulse.lengthSq() > 0) {
+        impulse.normalize().multiplyScalar(strength);
+      }
+    }
+
+    impulse.y = 0;
+
+    // MASSIVE immediate shove
+    const immediatePush = impulse.clone().multiplyScalar(1.2);
+    this.position.add(immediatePush);
+    if (this.group) {
+      this.group.position.copy(this.position);
+    }
+
+    // Add strong velocity for continued momentum
+    this.knockbackVelocity.add(impulse.multiplyScalar(1.8));
+  }
+
+  applyStun(duration) {
+    if (duration > 0) {
+      this.stunned = true;
+      this.stunTimer = Math.max(this.stunTimer, duration); // Use longest stun duration
+
+      this.behaviorState = "stunned";
+      this.stateTimer = 0;
+      if (this.attackCooldown < duration) {
+        this.attackCooldown = duration;
+      }
+      if (typeof this.isCharging !== "undefined") {
+        this.isCharging = false;
+      }
+
+      // Clear any knockback velocity when stunned
+      this.knockbackVelocity.set(0, 0, 0);
+
+      this._spawnStunEffect();
+    }
+  }
+
+  isStunned() {
+    return this.stunned;
+  }
+
+  _updateStunState(deltaTime) {
+    if (!this.stunned) {
+      return false;
+    }
+
+    this.stunTimer -= deltaTime;
+    if (this.stunTimer <= 0) {
+      this._clearStunState();
+      return false;
+    }
+
+    if (this.group) {
+      this.group.position.copy(this.position);
+    }
+
+    // Slow any idle animation so enemies appear frozen but still react subtly
+    this.animate(deltaTime * 0.15);
+
+    if (this.stunEffect) {
+      this.stunEffect.rotation.y += deltaTime * 2.5;
+      const pulse = 0.6 + Math.sin(this.time * 6) * 0.15;
+      this.stunEffect.scale.set(pulse, 1, pulse);
+      this.stunEffect.position.copy(this.position);
+      this.stunEffect.position.y += 0.3;
+    }
+
+    return true;
+  }
+
+  _spawnStunEffect() {
+    if (!this.scene || this.stunEffect) {
+      return;
+    }
+
+    const ringGeometry = new THREE.RingGeometry(0.5, 1.6, 32);
+    const ringMaterial = new THREE.MeshBasicMaterial({
+      color: 0x00ffff,
+      transparent: true,
+      opacity: 0.55,
+      side: THREE.DoubleSide,
+    });
+
+    this.stunEffect = new THREE.Mesh(ringGeometry, ringMaterial);
+    this.stunEffect.rotation.x = Math.PI / 2;
+    this.scene.add(this.stunEffect);
+
+    if (this.mesh && this.mesh.material) {
+      this._stunOriginalColor = this.mesh.material.color.getHex();
+      this.mesh.material.color.setHex(0x8ffcff);
+    }
+  }
+
+  _clearStunState() {
+    this.stunned = false;
+    this.stunTimer = 0;
+
+    if (this.behaviorState === "stunned") {
+      this.behaviorState = "idle";
+    }
+
+    if (this.stunEffect) {
+      this.scene.remove(this.stunEffect);
+      if (this.stunEffect.geometry) {
+        this.stunEffect.geometry.dispose();
+      }
+      if (this.stunEffect.material) {
+        this.stunEffect.material.dispose();
+      }
+      this.stunEffect = null;
+    }
+
+    if (
+      this.mesh &&
+      this.mesh.material &&
+      this._stunOriginalColor !== undefined
+    ) {
+      this.mesh.material.color.setHex(this._stunOriginalColor);
+      this._stunOriginalColor = undefined;
+    }
   }
 }

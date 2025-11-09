@@ -262,6 +262,10 @@ class BaseBoss extends BaseEnemy {
       return; // Don't update AI during spawn
     }
 
+    if (this._updateStunState(deltaTime)) {
+      return;
+    }
+
     // Normal boss update
     this.stateTimer += deltaTime;
     if (this.attackCooldown > 0) {

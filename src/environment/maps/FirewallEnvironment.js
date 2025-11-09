@@ -19,6 +19,7 @@ class FirewallEnvironment extends BaseEnvironmentMap {
     this.buildPortShields();
     this.buildThreatAnalysisCenter();
     this.buildEncryptionVault();
+    this.buildFirewallBoundaries();
   }
 
   getPalette() {
@@ -699,6 +700,190 @@ class FirewallEnvironment extends BaseEnvironmentMap {
       minZ: -40,
       maxZ: -20,
       height: 12,
+    });
+  }
+
+  buildFirewallBoundaries() {
+    // Create animated flame/fire barriers as boundaries
+    const boundaryDistance = 55;
+    const collisionDistance = 57; // Collision slightly beyond visual
+    const flameHeight = 25;
+
+    // Create flame texture
+    const createFlameTexture = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 64;
+      canvas.height = 128;
+      const ctx = canvas.getContext("2d");
+
+      // Gradient from red to orange to yellow
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, "rgba(255, 200, 0, 0)");
+      gradient.addColorStop(0.3, "rgba(255, 100, 0, 0.9)");
+      gradient.addColorStop(0.6, "rgba(255, 50, 0, 0.95)");
+      gradient.addColorStop(1, "rgba(200, 0, 0, 1)");
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+      return texture;
+    };
+
+    const flameTexture = createFlameTexture();
+
+    // Create flame pillars at regular intervals
+    const pillarSpacing = 8;
+    const flamePillars = [];
+
+    const createFlamePillar = (x, z) => {
+      const pillarGeometry = new THREE.PlaneGeometry(3, flameHeight);
+      const pillarMaterial = new THREE.MeshBasicMaterial({
+        map: flameTexture,
+        transparent: true,
+        opacity: 0.9,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+
+      const pillar = new THREE.Mesh(pillarGeometry, pillarMaterial);
+      pillar.position.set(x, flameHeight / 2, z);
+
+      // Create second rotated plane for volumetric effect
+      const pillar2 = pillar.clone();
+      pillar2.rotation.y = Math.PI / 2;
+
+      const group = new THREE.Group();
+      group.add(pillar);
+      group.add(pillar2);
+      group.position.y = 0;
+
+      group.userData = {
+        baseY: 0,
+        phase: Math.random() * Math.PI * 2,
+      };
+
+      this.group.add(group);
+      return group;
+    };
+
+    // North wall pillars
+    for (let i = -boundaryDistance; i <= boundaryDistance; i += pillarSpacing) {
+      flamePillars.push(createFlamePillar(i, boundaryDistance - 2));
+    }
+
+    // South wall pillars
+    for (let i = -boundaryDistance; i <= boundaryDistance; i += pillarSpacing) {
+      flamePillars.push(createFlamePillar(i, -boundaryDistance + 2));
+    }
+
+    // East wall pillars
+    for (let i = -boundaryDistance; i <= boundaryDistance; i += pillarSpacing) {
+      flamePillars.push(createFlamePillar(boundaryDistance - 2, i));
+    }
+
+    // West wall pillars
+    for (let i = -boundaryDistance; i <= boundaryDistance; i += pillarSpacing) {
+      flamePillars.push(createFlamePillar(-boundaryDistance + 2, i));
+    }
+
+    // Add warning barrier planes with red glow
+    const barrierMaterial = new THREE.MeshBasicMaterial({
+      color: 0xff0000,
+      transparent: true,
+      opacity: 0.1,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
+
+    const wallWidth = boundaryDistance * 2;
+
+    // North barrier
+    const northBarrier = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallWidth, flameHeight),
+      barrierMaterial.clone()
+    );
+    northBarrier.position.set(0, flameHeight / 2, boundaryDistance - 1);
+    this.group.add(northBarrier);
+
+    // South barrier
+    const southBarrier = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallWidth, flameHeight),
+      barrierMaterial.clone()
+    );
+    southBarrier.position.set(0, flameHeight / 2, -boundaryDistance + 1);
+    this.group.add(southBarrier);
+
+    // East barrier
+    const eastBarrier = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallWidth, flameHeight),
+      barrierMaterial.clone()
+    );
+    eastBarrier.rotation.y = Math.PI / 2;
+    eastBarrier.position.set(boundaryDistance - 1, flameHeight / 2, 0);
+    this.group.add(eastBarrier);
+
+    // West barrier
+    const westBarrier = new THREE.Mesh(
+      new THREE.PlaneGeometry(wallWidth, flameHeight),
+      barrierMaterial.clone()
+    );
+    westBarrier.rotation.y = Math.PI / 2;
+    westBarrier.position.set(-boundaryDistance + 1, flameHeight / 2, 0);
+    this.group.add(westBarrier);
+
+    // Add colliders
+    this.addCollider({
+      minX: -collisionDistance,
+      maxX: collisionDistance,
+      minZ: collisionDistance - 1,
+      maxZ: collisionDistance + 1,
+      height: flameHeight,
+    });
+
+    this.addCollider({
+      minX: -collisionDistance,
+      maxX: collisionDistance,
+      minZ: -collisionDistance - 1,
+      maxZ: -collisionDistance + 1,
+      height: flameHeight,
+    });
+
+    this.addCollider({
+      minX: collisionDistance - 1,
+      maxX: collisionDistance + 1,
+      minZ: -collisionDistance,
+      maxZ: collisionDistance,
+      height: flameHeight,
+    });
+
+    this.addCollider({
+      minX: -collisionDistance - 1,
+      maxX: -collisionDistance + 1,
+      minZ: -collisionDistance,
+      maxZ: collisionDistance,
+      height: flameHeight,
+    });
+
+    // Animate flames
+    this.addAnimator((delta, time) => {
+      flamePillars.forEach((pillar, i) => {
+        // Flickering height
+        const flicker = Math.sin(time * 8 + pillar.userData.phase) * 0.15;
+        pillar.scale.y = 1 + flicker;
+
+        // Slight rotation
+        pillar.rotation.y = Math.sin(time * 2 + i * 0.5) * 0.1;
+      });
+
+      // Pulse barriers
+      const pulse = 0.08 + Math.sin(time * 5) * 0.05;
+      northBarrier.material.opacity = pulse;
+      southBarrier.material.opacity = pulse;
+      eastBarrier.material.opacity = pulse;
+      westBarrier.material.opacity = pulse;
     });
   }
 }

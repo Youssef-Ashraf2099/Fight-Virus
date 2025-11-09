@@ -1192,6 +1192,54 @@
       .bar-fill.energy {
         background: linear-gradient(90deg, #00f, #008);
       }
+      .bar-fill.jetpack {
+        background: linear-gradient(90deg, #ffd452, #ff9248, #ff4d6d);
+        background-size: 160% 100%;
+        box-shadow: 0 0 12px rgba(255, 150, 60, 0.85);
+      }
+      .bar-fill.jetpack.active {
+        animation: jetpackPulse 0.7s ease-in-out infinite alternate;
+      }
+
+      @keyframes jetpackPulse {
+        from {
+          background-position: 0% 50%;
+          filter: drop-shadow(0 0 6px rgba(255, 190, 70, 0.7));
+        }
+        to {
+          background-position: 100% 50%;
+          filter: drop-shadow(0 0 14px rgba(255, 120, 50, 0.9));
+        }
+      }
+
+      .jetpack-status {
+        font-size: 12px;
+        letter-spacing: 1.5px;
+        color: rgba(255, 220, 120, 0.9);
+        text-shadow: 0 0 6px rgba(255, 160, 60, 0.7);
+        min-width: 90px;
+        text-align: right;
+      }
+      .jetpack-status.ready {
+        color: rgba(0, 255, 195, 0.9);
+        text-shadow: 0 0 10px rgba(0, 255, 195, 0.8);
+      }
+      .jetpack-status.recharging {
+        color: rgba(255, 180, 70, 0.85);
+        text-shadow: 0 0 8px rgba(255, 140, 40, 0.7);
+      }
+      .jetpack-status.depleted {
+        color: rgba(255, 90, 90, 0.9);
+        text-shadow: 0 0 12px rgba(255, 70, 70, 0.85);
+      }
+      .jetpack-status.online {
+        color: rgba(255, 230, 150, 0.95);
+        text-shadow: 0 0 10px rgba(255, 210, 120, 0.9);
+      }
+      .jetpack-status.offline {
+        color: rgba(155, 155, 155, 0.8);
+        text-shadow: 0 0 6px rgba(110, 110, 110, 0.5);
+      }
 
       #score {
         position: absolute;
@@ -1216,6 +1264,337 @@
         display: none;
       }
 
+      /* Intro Overlay Styles */
+      #introOverlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(
+          circle at center,
+          rgba(2, 32, 20, 0.92),
+          rgba(0, 0, 0, 0.98)
+        );
+        z-index: 300000;
+        opacity: 1;
+        transition: opacity 0.8s ease;
+      }
+
+      #introOverlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .intro-container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: min(1400px, 98vw);
+        text-align: center;
+        padding: 0 20px;
+      }
+
+      .intro-logo {
+        position: relative;
+        display: inline-block;
+        margin-bottom: clamp(40px, 6vw, 70px);
+      }
+
+      .intro-logo-text {
+        font-family: var(--heading-font);
+        font-size: clamp(48px, 10vw, 96px);
+        font-weight: 700;
+        letter-spacing: clamp(8px, 1.8vw, 16px);
+        text-transform: uppercase;
+        color: transparent;
+        background: linear-gradient(
+          135deg,
+          rgba(0, 255, 136, 0.3),
+          rgba(0, 255, 136, 1),
+          rgba(34, 209, 255, 1),
+          rgba(0, 255, 136, 1),
+          rgba(0, 255, 136, 0.3)
+        );
+        background-size: 200% 100%;
+        background-position: 0% 50%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        text-shadow: 0 0 20px rgba(0, 255, 136, 0),
+          0 0 40px rgba(0, 255, 136, 0), 0 0 60px rgba(34, 209, 255, 0);
+        opacity: 0;
+        transform: translateY(30px) scale(0.9);
+        animation: introLogoReveal 2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards
+            0.3s,
+          introLogoGlow 2.5s ease-in-out forwards 0.6s,
+          introLogoShimmer 3.5s linear infinite 2s;
+        white-space: nowrap;
+      }
+
+      @keyframes introLogoReveal {
+        0% {
+          opacity: 0;
+          transform: translateY(30px) scale(0.9);
+          filter: blur(12px);
+        }
+        50% {
+          opacity: 0.85;
+          transform: translateY(-3px) scale(1.05);
+          filter: blur(3px);
+        }
+        70% {
+          transform: translateY(2px) scale(0.98);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+          filter: blur(0);
+        }
+      }
+
+      @keyframes introLogoGlow {
+        0% {
+          text-shadow: 0 0 20px rgba(0, 255, 136, 0),
+            0 0 40px rgba(0, 255, 136, 0), 0 0 60px rgba(34, 209, 255, 0);
+        }
+        100% {
+          text-shadow: 0 0 30px rgba(0, 255, 136, 0.8),
+            0 0 60px rgba(0, 255, 136, 0.6), 0 0 90px rgba(34, 209, 255, 0.5),
+            0 0 120px rgba(34, 209, 255, 0.3);
+        }
+      }
+
+      @keyframes introLogoShimmer {
+        0% {
+          background-position: 0% 50%;
+        }
+        100% {
+          background-position: 200% 50%;
+        }
+      }
+
+      .intro-subtitle {
+        font-family: var(--heading-font);
+        font-size: clamp(13px, 2.2vw, 20px);
+        letter-spacing: clamp(3px, 0.8vw, 8px);
+        text-transform: uppercase;
+        color: rgba(173, 255, 214, 0.75);
+        margin-bottom: clamp(45px, 7vw, 80px);
+        opacity: 0;
+        animation: introSubtitleReveal 1.8s ease forwards 1.5s;
+      }
+
+      @keyframes introSubtitleReveal {
+        0% {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .intro-divider {
+        width: clamp(200px, 60%, 600px);
+        height: 2px;
+        margin: 0 auto clamp(40px, 6vw, 60px);
+        background: linear-gradient(
+          to right,
+          transparent,
+          rgba(0, 255, 136, 0.6),
+          rgba(34, 209, 255, 0.8),
+          rgba(0, 255, 136, 0.6),
+          transparent
+        );
+        opacity: 0;
+        transform: scaleX(0);
+        animation: introDividerReveal 1.5s ease forwards 1.8s;
+      }
+
+      @keyframes introDividerReveal {
+        0% {
+          opacity: 0;
+          transform: scaleX(0);
+        }
+        100% {
+          opacity: 1;
+          transform: scaleX(1);
+        }
+      }
+
+      .intro-status {
+        font-family: var(--body-font);
+        font-size: clamp(12px, 2vw, 16px);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: rgba(173, 255, 214, 0.7);
+        margin-bottom: clamp(15px, 2vw, 20px);
+        opacity: 0;
+        animation: introStatusReveal 1.2s ease forwards 2.2s;
+      }
+
+      @keyframes introStatusReveal {
+        0% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .intro-status-value {
+        display: block;
+        font-family: var(--heading-font);
+        font-size: clamp(18px, 3vw, 32px);
+        letter-spacing: 3px;
+        color: rgba(176, 255, 216, 0.9);
+        margin-top: 8px;
+        text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+      }
+
+      .intro-progress {
+        position: relative;
+        width: clamp(250px, 70%, 500px);
+        height: 8px;
+        margin: 0 auto clamp(30px, 5vw, 50px);
+        border-radius: 999px;
+        background: rgba(0, 255, 136, 0.15);
+        overflow: hidden;
+        opacity: 0;
+        animation: introProgressReveal 1s ease forwards 2.5s;
+      }
+
+      @keyframes introProgressReveal {
+        0% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .intro-progress-fill {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          90deg,
+          rgba(0, 255, 136, 0.8),
+          rgba(34, 209, 255, 0.9),
+          rgba(0, 255, 136, 0.8)
+        );
+        background-size: 200% 100%;
+        transform: scaleX(0);
+        transform-origin: left;
+        animation: introProgressFill 3.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)
+            forwards 2.8s,
+          introProgressShimmer 2s linear infinite 3s;
+        box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+      }
+
+      @keyframes introProgressFill {
+        0% {
+          transform: scaleX(0);
+        }
+        100% {
+          transform: scaleX(1);
+        }
+      }
+
+      @keyframes introProgressShimmer {
+        0% {
+          background-position: 0% 50%;
+        }
+        100% {
+          background-position: 200% 50%;
+        }
+      }
+
+      .intro-hint {
+        font-family: var(--body-font);
+        font-size: clamp(11px, 1.5vw, 14px);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: rgba(173, 255, 214, 0.6);
+        opacity: 0;
+        animation: introHintReveal 1.5s ease forwards 3.5s;
+      }
+
+      @keyframes introHintReveal {
+        0% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 0.8;
+        }
+      }
+
+      .intro-skip-button {
+        position: absolute;
+        top: 30px;
+        right: 30px;
+        padding: 12px 24px;
+        font-family: var(--heading-font);
+        font-size: 13px;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        background: rgba(255, 77, 109, 0.15);
+        border: 2px solid rgba(255, 77, 109, 0.6);
+        color: rgba(255, 235, 235, 0.9);
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        opacity: 0;
+        animation: introSkipReveal 1s ease forwards 1s;
+      }
+
+      @keyframes introSkipReveal {
+        0% {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .intro-skip-button:hover {
+        background: rgba(255, 77, 109, 0.25);
+        border-color: rgba(255, 140, 150, 0.8);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(255, 77, 109, 0.3);
+      }
+
+      .intro-scanline {
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+          to bottom,
+          rgba(0, 255, 136, 0.03),
+          rgba(0, 255, 136, 0.03) 2px,
+          transparent 2px,
+          transparent 4px
+        );
+        opacity: 0.4;
+        pointer-events: none;
+        animation: introScanline 8s linear infinite;
+      }
+
+      @keyframes introScanline {
+        0% {
+          transform: translateY(0);
+        }
+        100% {
+          transform: translateY(20px);
+        }
+      }
+
+      body.intro-active #startScreen {
+        display: none !important;
+      }
+
       #startScreen {
         position: absolute;
         top: 0;
@@ -1223,8 +1602,8 @@
         width: 100%;
         height: 100%;
         padding: 60px 40px;
-        background: rgba(0, 0, 0, 0.86);
-        display: flex;
+        background: rgba(0, 0, 0, 1);
+        display: none;
         justify-content: center;
         align-items: center;
         overflow: hidden;
@@ -1344,6 +1723,22 @@
         );
         border-color: rgba(34, 209, 255, 0.7);
         color: #afffff;
+      }
+
+      .menu-actions .danger {
+        background: linear-gradient(
+          135deg,
+          rgba(255, 77, 109, 0.22),
+          rgba(120, 0, 12, 0.55)
+        );
+        border-color: rgba(255, 77, 109, 0.7);
+        color: rgba(255, 235, 235, 0.92);
+        box-shadow: 0 15px 40px rgba(255, 77, 109, 0.22);
+      }
+
+      .menu-actions .danger:hover {
+        border-color: rgba(255, 140, 150, 0.85);
+        box-shadow: 0 22px 48px rgba(255, 110, 120, 0.28);
       }
 
       .menu-sections {
@@ -1731,6 +2126,34 @@
     </style>
   </head>
   <body>
+    <!-- Intro Overlay -->
+    <div id="introOverlay">
+      <div class="intro-scanline"></div>
+      <!-- <button id="introSkipButton" class="intro-skip-button">
+        Skip Intro ✕
+      </button> -->
+      <div class="intro-container">
+        <div class="intro-logo">
+          <div class="intro-logo-text">EdgeRunners</div>
+        </div>
+        <div class="intro-subtitle">Studio</div>
+        <div class="intro-subtitle">Presents</div>
+        <div class="intro-divider"></div>
+        <div class="intro-status">
+          <span>Boot Sequence</span>
+          <span class="intro-status-value" id="introStatusValue"
+            >Initializing Systems...</span
+          >
+        </div>
+        <div class="intro-progress">
+          <div class="intro-progress-fill"></div>
+        </div>
+        <div class="intro-hint">
+          Press ESC to skip • Auto-continues in moments
+        </div>
+      </div>
+    </div>
+
     <div id="loadingOverlay">
       <div class="loading-content">
         <div class="loading-title" id="loadingTitle">INITIALIZING SYSTEM</div>
@@ -1777,6 +2200,7 @@
             <button id="tutorialToggle" class="secondary">
               📘 GUIDED CONTROLS
             </button>
+            <button id="exitButton" class="danger">⛔ EXIT</button>
           </div>
 
           <div id="menuFooter">
@@ -2035,6 +2459,17 @@
               style="width: 100%"
             ></div>
           </div>
+        </div>
+        <div class="stat" id="jetpackStat" style="display: none">
+          <span>JETPACK:</span>
+          <div class="bar">
+            <div
+              class="bar-fill jetpack"
+              id="jetpackBar"
+              style="width: 0%"
+            ></div>
+          </div>
+          <span class="jetpack-status" id="jetpackStatus">OFFLINE</span>
         </div>
         <div class="stat">
           <span>WAVE: <span id="waveNumber">1</span></span>

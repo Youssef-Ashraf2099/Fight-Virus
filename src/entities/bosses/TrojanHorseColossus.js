@@ -47,47 +47,13 @@ class TrojanHorseColossus extends BaseBoss {
   }
 
   createMesh() {
-    const chassisMaterial = new THREE.MeshPhongMaterial({
+    // Material definitions
+    const bodyMaterial = new THREE.MeshPhongMaterial({
       color: 0x2f1a05,
       emissive: 0x804016,
       emissiveIntensity: 0.3,
       shininess: 45,
     });
-
-    const bodyGeometry = new THREE.BoxGeometry(10, 5.4, 16);
-    this.body = new THREE.Mesh(bodyGeometry, chassisMaterial);
-    this.body.castShadow = true;
-    this.body.receiveShadow = true;
-    this.group.add(this.body);
-
-    const neckGeometry = new THREE.BoxGeometry(3.5, 4.5, 6);
-    const neck = new THREE.Mesh(neckGeometry, chassisMaterial.clone());
-    neck.position.set(0, 2.2, 9);
-    this.group.add(neck);
-
-    const headMaterial = new THREE.MeshPhongMaterial({
-      color: 0x3b2310,
-      emissive: this.secondaryColor,
-      emissiveIntensity: 0.6,
-    });
-    const headGeometry = new THREE.BoxGeometry(4, 3, 5);
-    this.head = new THREE.Mesh(headGeometry, headMaterial);
-    this.head.position.set(0, 3.3, 12.1);
-    this.group.add(this.head);
-
-    const hornGeometry = new THREE.CylinderGeometry(0.4, 0, 3, 8);
-    const hornMaterial = new THREE.MeshPhongMaterial({
-      color: this.secondaryColor,
-      emissive: this.secondaryColor,
-      emissiveIntensity: 0.8,
-    });
-    const hornLeft = new THREE.Mesh(hornGeometry, hornMaterial);
-    hornLeft.position.set(-0.7, 4.6, 12.8);
-    hornLeft.rotation.x = -Math.PI / 2.4;
-    const hornRight = hornLeft.clone();
-    hornRight.position.x = 0.7;
-    this.group.add(hornLeft);
-    this.group.add(hornRight);
 
     const armorMaterial = new THREE.MeshPhongMaterial({
       color: 0x4a2b12,
@@ -95,42 +61,176 @@ class TrojanHorseColossus extends BaseBoss {
       emissiveIntensity: 0.5,
       shininess: 80,
     });
-    const armorGeometry = new THREE.BoxGeometry(11.5, 1.8, 18);
-    const armorPlate = new THREE.Mesh(armorGeometry, armorMaterial);
-    armorPlate.position.y = 3.4;
-    armorPlate.rotation.x = 0.08;
-    this.group.add(armorPlate);
 
+    const maneGlowMaterial = new THREE.MeshPhongMaterial({
+      color: this.secondaryColor,
+      emissive: this.secondaryColor,
+      emissiveIntensity: 1.2,
+      transparent: true,
+      opacity: 0.9,
+    });
+
+    // HORSE BODY - wider and more muscular
+    const bodyGeometry = new THREE.BoxGeometry(8, 5, 14);
+    this.body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    this.body.position.y = 0;
+    this.body.castShadow = true;
+    this.body.receiveShadow = true;
+    this.group.add(this.body);
+
+    // CHEST - muscular front
+    const chestGeometry = new THREE.BoxGeometry(7, 4.5, 6);
+    const chest = new THREE.Mesh(chestGeometry, bodyMaterial.clone());
+    chest.position.set(0, 0.5, 7);
+    this.group.add(chest);
+
+    // NECK - angled upward like a horse
+    const neckGeometry = new THREE.BoxGeometry(3, 7, 3);
+    const neck = new THREE.Mesh(neckGeometry, bodyMaterial.clone());
+    neck.position.set(0, 4, 10);
+    neck.rotation.x = -0.3; // Tilted forward
+    this.group.add(neck);
+
+    // HEAD - proper horse head with muzzle
+    const headMaterial = new THREE.MeshPhongMaterial({
+      color: 0x3b2310,
+      emissive: this.secondaryColor,
+      emissiveIntensity: 0.6,
+    });
+
+    // Main skull
+    const skullGeometry = new THREE.BoxGeometry(4, 3.5, 5);
+    this.head = new THREE.Mesh(skullGeometry, headMaterial);
+    this.head.position.set(0, 6.5, 12);
+    this.group.add(this.head);
+
+    // MUZZLE/SNOUT - extends forward
+    const muzzleGeometry = new THREE.BoxGeometry(3, 2.5, 3);
+    const muzzle = new THREE.Mesh(muzzleGeometry, headMaterial.clone());
+    muzzle.position.set(0, 5.5, 14);
+    this.group.add(muzzle);
+
+    // ANGRY EYES - glowing red eyes
+    const eyeGeometry = new THREE.SphereGeometry(0.6, 8, 8);
+    const eyeMaterial = new THREE.MeshPhongMaterial({
+      color: 0xff0000,
+      emissive: 0xff0000,
+      emissiveIntensity: 2.0,
+    });
+    const eyeLeft = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    eyeLeft.position.set(-1.2, 7, 13.5);
+    const eyeRight = eyeLeft.clone();
+    eyeRight.position.x = 1.2;
+    this.group.add(eyeLeft);
+    this.group.add(eyeRight);
+
+    // EARS - pointed horse ears
+    const earGeometry = new THREE.ConeGeometry(0.5, 1.5, 4);
+    const earMaterial = new THREE.MeshPhongMaterial({
+      color: 0x3b2310,
+      emissive: 0x804016,
+      emissiveIntensity: 0.3,
+    });
+    const earLeft = new THREE.Mesh(earGeometry, earMaterial);
+    earLeft.position.set(-1.5, 8, 11.5);
+    earLeft.rotation.z = -0.3;
+    const earRight = earLeft.clone();
+    earRight.position.x = 1.5;
+    earRight.rotation.z = 0.3;
+    this.group.add(earLeft);
+    this.group.add(earRight);
+
+    // MANE - flowing energy mane
+    const maneSegments = 8;
+    for (let i = 0; i < maneSegments; i++) {
+      const maneGeometry = new THREE.BoxGeometry(
+        3 - i * 0.2,
+        1.5 - i * 0.1,
+        0.5
+      );
+      const maneSegment = new THREE.Mesh(
+        maneGeometry,
+        maneGlowMaterial.clone()
+      );
+      maneSegment.position.set(0, 7 - i * 0.8, 11.5 - i * 1.2);
+      maneSegment.rotation.x = -0.2;
+      this.group.add(maneSegment);
+    }
+
+    // LEGS - four proper horse legs with joints
     const legMaterial = new THREE.MeshPhongMaterial({
       color: 0x1a0e04,
       emissive: 0x5f3514,
       emissiveIntensity: 0.4,
     });
-    const legGeometry = new THREE.BoxGeometry(2.2, 5.2, 2.2);
-    const legOffsets = [
-      [-3.8, -2.6],
-      [3.8, -2.6],
-      [-3.8, 2.6],
-      [3.8, 2.6],
+
+    const legPositions = [
+      { x: -3, z: 8 }, // Front left
+      { x: 3, z: 8 }, // Front right
+      { x: -3, z: -5 }, // Back left
+      { x: 3, z: -5 }, // Back right
     ];
-    legOffsets.forEach(([x, z]) => {
-      const leg = new THREE.Mesh(legGeometry, legMaterial.clone());
-      leg.position.set(x, -2.6, z);
-      this.group.add(leg);
+
+    legPositions.forEach((pos) => {
+      // Upper leg (thigh)
+      const upperLegGeometry = new THREE.BoxGeometry(2, 4, 2);
+      const upperLeg = new THREE.Mesh(upperLegGeometry, legMaterial.clone());
+      upperLeg.position.set(pos.x, -2, pos.z);
+      this.group.add(upperLeg);
+
+      // Lower leg (shin)
+      const lowerLegGeometry = new THREE.BoxGeometry(1.5, 3.5, 1.5);
+      const lowerLeg = new THREE.Mesh(lowerLegGeometry, legMaterial.clone());
+      lowerLeg.position.set(pos.x, -5.75, pos.z);
+      this.group.add(lowerLeg);
+
+      // Hoof
+      const hoofGeometry = new THREE.BoxGeometry(1.8, 1, 1.8);
+      const hoofMaterial = new THREE.MeshPhongMaterial({
+        color: 0x000000,
+        emissive: this.secondaryColor,
+        emissiveIntensity: 0.3,
+      });
+      const hoof = new THREE.Mesh(hoofGeometry, hoofMaterial);
+      hoof.position.set(pos.x, -7.5, pos.z);
+      this.group.add(hoof);
     });
 
-    const glowStripGeometry = new THREE.BoxGeometry(10.2, 0.3, 0.7);
-    const glowStripMaterial = new THREE.MeshPhongMaterial({
-      color: this.secondaryColor,
-      emissive: this.secondaryColor,
-      emissiveIntensity: 1.4,
-      transparent: true,
-      opacity: 0.85,
-    });
-    const glowStrip = new THREE.Mesh(glowStripGeometry, glowStripMaterial);
-    glowStrip.position.set(0, 2.8, 6);
-    this.group.add(glowStrip);
+    // ARMOR PLATES - war horse armor
+    const armorPlateGeometry = new THREE.BoxGeometry(9, 1.5, 15);
+    const topArmor = new THREE.Mesh(armorPlateGeometry, armorMaterial);
+    topArmor.position.set(0, 2.8, 0);
+    this.group.add(topArmor);
 
+    // Side armor plates
+    const sideArmorGeometry = new THREE.BoxGeometry(0.5, 4, 12);
+    const leftArmor = new THREE.Mesh(sideArmorGeometry, armorMaterial.clone());
+    leftArmor.position.set(-4.5, 0, 0);
+    const rightArmor = leftArmor.clone();
+    rightArmor.position.x = 4.5;
+    this.group.add(leftArmor);
+    this.group.add(rightArmor);
+
+    // HEAD ARMOR - battle helmet
+    const headArmorGeometry = new THREE.BoxGeometry(5, 2, 4);
+    const headArmor = new THREE.Mesh(headArmorGeometry, armorMaterial.clone());
+    headArmor.position.set(0, 7.5, 12);
+    this.group.add(headArmor);
+
+    // GLOWING ENERGY STRIPS - tech elements
+    const glowStripPositions = [
+      { x: 0, y: 2, z: 3 },
+      { x: 0, y: 2, z: -3 },
+    ];
+
+    glowStripPositions.forEach((pos) => {
+      const stripGeometry = new THREE.BoxGeometry(8, 0.4, 1);
+      const strip = new THREE.Mesh(stripGeometry, maneGlowMaterial.clone());
+      strip.position.copy(pos);
+      this.group.add(strip);
+    });
+
+    // SHIELD MESH
     const shieldGeometry = new THREE.SphereGeometry(10.5, 24, 18, 0, Math.PI);
     const shieldMaterial = new THREE.MeshPhongMaterial({
       color: this.secondaryColor,
@@ -145,9 +245,18 @@ class TrojanHorseColossus extends BaseBoss {
     this.shieldMesh.position.y = 1.2;
     this.group.add(this.shieldMesh);
 
+    // CORE LIGHT
     this.coreLight = new THREE.PointLight(this.secondaryColor, 3.8, 50);
     this.coreLight.position.set(0, 2.5, 0);
     this.group.add(this.coreLight);
+
+    // Add eye lights for dramatic effect
+    const eyeLightLeft = new THREE.PointLight(0xff0000, 2, 15);
+    eyeLightLeft.position.set(-1.2, 7, 13.5);
+    this.group.add(eyeLightLeft);
+    const eyeLightRight = eyeLightLeft.clone();
+    eyeLightRight.position.x = 1.2;
+    this.group.add(eyeLightRight);
 
     this.group.position.copy(this.position);
     this.scene.add(this.group);

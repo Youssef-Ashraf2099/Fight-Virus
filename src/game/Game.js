@@ -189,11 +189,12 @@ class Game {
   }
 
   handleSpecialAbility() {
-    // EMP blast that damages all nearby enemies
+    // EMP blast that damages AND stuns all nearby enemies
     const enemies = this.enemyManager.getEnemies();
     const playerPos = this.player.getPosition();
     const blastRadius = this.player.empRadius || 18;
     const empDamage = this.player.empDamage || 60;
+    const empStunDuration = this.player.empStunDuration || 1.5;
 
     let hitCount = 0;
     enemies.forEach((enemy) => {
@@ -201,11 +202,26 @@ class Game {
       const distance = playerPos.distanceTo(enemyPos);
 
       if (distance < blastRadius) {
-        // Damage scales with distance
+        // Calculate distance ratio (stronger when closer)
         const distanceRatio = 1 - distance / blastRadius;
-        const scaledDamage = empDamage * (0.5 + distanceRatio * 0.5);
 
+        // Apply DAMAGE (scales with distance)
+        const scaledDamage = empDamage * (0.5 + distanceRatio * 0.5);
         enemy.takeDamage(scaledDamage);
+
+        // Apply STUN/FREEZE effect
+        if (typeof enemy.applyStun === "function") {
+          enemy.applyStun(empStunDuration);
+        } else {
+          // Fallback: freeze enemy by setting a flag
+          enemy.stunned = true;
+          enemy.stunTimer = empStunDuration;
+          if (typeof enemy._spawnStunEffect === "function") {
+            enemy._spawnStunEffect();
+          }
+        }
+
+        // Create visual feedback
         this.particleSystem.createImpact(enemyPos, 0x00ffff, 15);
         hitCount++;
       }
@@ -215,7 +231,10 @@ class Game {
     this.particleSystem.createShockwave(playerPos, blastRadius, 0x00ffff);
 
     if (hitCount > 0) {
-      this.uiManager.showMessage(`EMP BLAST! ${hitCount} ENEMIES HIT!`, 1500);
+      this.uiManager.showMessage(
+        `EMP BLAST! ${hitCount} ENEMIES STUNNED!`,
+        1500
+      );
     } else {
       this.uiManager.showMessage("EMP BLAST!", 1000);
     }
@@ -267,6 +286,7 @@ class Game {
     // Update UI
     this.uiManager.updateHealth(this.player.health, this.player.maxHealth);
     this.uiManager.updateEnergy(this.player.energy, this.player.maxEnergy);
+    this.uiManager.updateJetpack(this.player.getJetpackTelemetry());
     this.uiManager.updateEnemyCount(this.enemyManager.getActiveEnemyCount());
     this.weaponManager.updateUI(this.uiManager);
 

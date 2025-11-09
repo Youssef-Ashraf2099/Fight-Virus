@@ -32,6 +32,7 @@ class MemoryEnvironment extends BaseEnvironmentMap {
     this.buildChannelIndicators();
     this.buildCapacitorBanks();
     this.buildAccessPlatforms();
+    this.buildDataStreamBoundaries();
   }
 
   buildBoardDeck() {
@@ -984,5 +985,240 @@ class MemoryEnvironment extends BaseEnvironmentMap {
         height: 1.2,
       });
     });
+  }
+
+  buildDataStreamBoundaries() {
+    // Create flowing data streams as boundaries (like RAM bandwidth visualization)
+    const boundaryDistance = 55;
+    const collisionDistance = 57; // Collision slightly beyond visual
+    const streamHeight = 20;
+
+    // Create stream particle system
+    const particleCount = 200;
+    const geometry = new THREE.BufferGeometry();
+    const positions = [];
+    const colors = [];
+    const sizes = [];
+    const velocities = [];
+
+    for (let i = 0; i < particleCount; i++) {
+      // Random position along boundaries
+      const side = Math.floor(Math.random() * 4);
+      let x, y, z;
+
+      if (side === 0) {
+        // North
+        x = (Math.random() - 0.5) * 110;
+        z = boundaryDistance;
+      } else if (side === 1) {
+        // South
+        x = (Math.random() - 0.5) * 110;
+        z = -boundaryDistance;
+      } else if (side === 2) {
+        // East
+        x = boundaryDistance;
+        z = (Math.random() - 0.5) * 110;
+      } else {
+        // West
+        x = -boundaryDistance;
+        z = (Math.random() - 0.5) * 110;
+      }
+
+      y = Math.random() * streamHeight;
+
+      positions.push(x, y, z);
+
+      // Blue/cyan colors for memory theme
+      const colorVal = Math.random();
+      if (colorVal < 0.5) {
+        colors.push(0.3, 0.7, 1); // Light blue
+      } else {
+        colors.push(0.5, 1, 1); // Cyan
+      }
+
+      sizes.push(1 + Math.random() * 1.5);
+      velocities.push({
+        side: side,
+        speed: 5 + Math.random() * 10,
+        progress: Math.random(),
+      });
+    }
+
+    geometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(positions, 3)
+    );
+    geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+    geometry.setAttribute("size", new THREE.Float32BufferAttribute(sizes, 1));
+
+    const material = new THREE.PointsMaterial({
+      size: 2,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending,
+      sizeAttenuation: true,
+      depthWrite: false,
+    });
+
+    const particleSystem = new THREE.Points(geometry, material);
+    this.group.add(particleSystem);
+
+    // Add data flow beams
+    const beamMaterial = new THREE.MeshBasicMaterial({
+      color: 0x3ac4ff,
+      transparent: true,
+      opacity: 0.12,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
+
+    // North beam
+    const northBeam = new THREE.Mesh(
+      new THREE.PlaneGeometry(110, streamHeight),
+      beamMaterial.clone()
+    );
+    northBeam.position.set(0, streamHeight / 2, boundaryDistance - 1);
+    this.group.add(northBeam);
+
+    // South beam
+    const southBeam = new THREE.Mesh(
+      new THREE.PlaneGeometry(110, streamHeight),
+      beamMaterial.clone()
+    );
+    southBeam.position.set(0, streamHeight / 2, -boundaryDistance + 1);
+    this.group.add(southBeam);
+
+    // East beam
+    const eastBeam = new THREE.Mesh(
+      new THREE.PlaneGeometry(110, streamHeight),
+      beamMaterial.clone()
+    );
+    eastBeam.rotation.y = Math.PI / 2;
+    eastBeam.position.set(boundaryDistance - 1, streamHeight / 2, 0);
+    this.group.add(eastBeam);
+
+    // West beam
+    const westBeam = new THREE.Mesh(
+      new THREE.PlaneGeometry(110, streamHeight),
+      beamMaterial.clone()
+    );
+    westBeam.rotation.y = Math.PI / 2;
+    westBeam.position.set(-boundaryDistance + 1, streamHeight / 2, 0);
+    this.group.add(westBeam);
+
+    // Add memory address markers
+    const markerSpacing = 10;
+    const markers = [];
+
+    for (let i = -boundaryDistance; i <= boundaryDistance; i += markerSpacing) {
+      // North markers
+      const northMarker = this.createAddressMarker();
+      northMarker.position.set(i, streamHeight - 2, boundaryDistance - 0.5);
+      this.group.add(northMarker);
+      markers.push(northMarker);
+
+      // South markers
+      const southMarker = this.createAddressMarker();
+      southMarker.position.set(i, streamHeight - 2, -boundaryDistance + 0.5);
+      this.group.add(southMarker);
+      markers.push(southMarker);
+
+      // East markers
+      const eastMarker = this.createAddressMarker();
+      eastMarker.position.set(boundaryDistance - 0.5, streamHeight - 2, i);
+      this.group.add(eastMarker);
+      markers.push(eastMarker);
+
+      // West markers
+      const westMarker = this.createAddressMarker();
+      westMarker.position.set(-boundaryDistance + 0.5, streamHeight - 2, i);
+      this.group.add(westMarker);
+      markers.push(westMarker);
+    }
+
+    // Add colliders
+    this.addCollider({
+      minX: -collisionDistance,
+      maxX: collisionDistance,
+      minZ: collisionDistance - 1,
+      maxZ: collisionDistance + 1,
+      height: streamHeight,
+    });
+
+    this.addCollider({
+      minX: -collisionDistance,
+      maxX: collisionDistance,
+      minZ: -collisionDistance - 1,
+      maxZ: -collisionDistance + 1,
+      height: streamHeight,
+    });
+
+    this.addCollider({
+      minX: collisionDistance - 1,
+      maxX: collisionDistance + 1,
+      minZ: -collisionDistance,
+      maxZ: collisionDistance,
+      height: streamHeight,
+    });
+
+    this.addCollider({
+      minX: -collisionDistance - 1,
+      maxX: -collisionDistance + 1,
+      minZ: -collisionDistance,
+      maxZ: collisionDistance,
+      height: streamHeight,
+    });
+
+    // Animation
+    this.addAnimator((delta, time) => {
+      const posArray = geometry.attributes.position.array;
+
+      for (let i = 0; i < velocities.length; i++) {
+        const vel = velocities[i];
+        const idx = i * 3;
+
+        // Move particles along their wall
+        vel.progress += delta * vel.speed * 0.1;
+
+        if (vel.side === 0 || vel.side === 1) {
+          // North/South walls - move horizontally
+          posArray[idx] = -55 + (vel.progress % 1) * 110;
+        } else {
+          // East/West walls - move along Z
+          posArray[idx + 2] = -55 + (vel.progress % 1) * 110;
+        }
+
+        // Vertical wave
+        posArray[idx + 1] = (vel.progress % 1) * streamHeight;
+      }
+
+      geometry.attributes.position.needsUpdate = true;
+
+      // Pulse beams
+      const pulse = 0.1 + Math.sin(time * 3) * 0.05;
+      northBeam.material.opacity = pulse;
+      southBeam.material.opacity = pulse;
+      eastBeam.material.opacity = pulse;
+      westBeam.material.opacity = pulse;
+
+      // Pulse markers
+      markers.forEach((marker, i) => {
+        marker.material.emissiveIntensity =
+          0.6 + Math.sin(time * 4 + i * 0.3) * 0.4;
+      });
+    });
+  }
+
+  createAddressMarker() {
+    const marker = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 1.5, 0.5),
+      new THREE.MeshPhongMaterial({
+        color: 0x00d4ff,
+        emissive: 0x00d4ff,
+        emissiveIntensity: 0.8,
+      })
+    );
+    return marker;
   }
 }

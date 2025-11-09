@@ -52,6 +52,15 @@ class PixelReaper extends BaseBoss {
     this.spawnElevation = this.hoverHeight;
 
     this.createPixelReaperModel();
+
+    if (this.group) {
+      this.group.position.copy(this.position);
+      this.group.visible = false; // BaseBoss spawn animation reveals the boss
+      this.group.name = "PixelReaper";
+      if (this.scene) {
+        this.scene.add(this.group);
+      }
+    }
   }
 
   createPixelReaperModel() {

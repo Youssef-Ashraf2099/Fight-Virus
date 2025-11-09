@@ -168,6 +168,7 @@ class MotherboardEnvironment extends BaseEnvironmentMap {
     this.buildNorthBridge();
     this.buildSouthBridge();
     this.buildPowerPhases();
+    this.buildCircuitTraceBoundaries();
   }
 
   buildMainBoard() {
@@ -1087,5 +1088,234 @@ class MotherboardEnvironment extends BaseEnvironmentMap {
         height: 4,
       });
     }
+  }
+
+  buildCircuitTraceBoundaries() {
+    // Create glowing circuit traces as boundaries
+    const boundaryDistance = 55;
+    const collisionDistance = 57;
+    const traceHeight = 18;
+
+    // Create circuit trace lines using tubes
+    const createCircuitTrace = (points, color) => {
+      const curve = new THREE.CatmullRomCurve3(points);
+      const tubeGeometry = new THREE.TubeGeometry(curve, 64, 0.3, 8, false);
+      const tubeMaterial = new THREE.MeshPhongMaterial({
+        color: color,
+        emissive: color,
+        emissiveIntensity: 0.9,
+        shininess: 100,
+      });
+
+      const trace = new THREE.Mesh(tubeGeometry, tubeMaterial);
+      return trace;
+    };
+
+    const traces = [];
+    const traceSpacing = 3;
+    const colors = [0x32ffc2, 0x6bc3ff, 0x66ffd6];
+
+    // North wall traces (zigzag pattern)
+    for (let i = -boundaryDistance; i <= boundaryDistance; i += traceSpacing) {
+      const points = [];
+      for (let h = 0; h <= traceHeight; h += 2) {
+        const offset = Math.sin(h * 0.5) * 1.5;
+        points.push(new THREE.Vector3(i + offset, h, boundaryDistance - 1));
+      }
+      const trace = createCircuitTrace(
+        points,
+        colors[Math.floor(Math.random() * colors.length)]
+      );
+      traces.push(trace);
+      this.group.add(trace);
+    }
+
+    // South wall traces
+    for (let i = -boundaryDistance; i <= boundaryDistance; i += traceSpacing) {
+      const points = [];
+      for (let h = 0; h <= traceHeight; h += 2) {
+        const offset = Math.sin(h * 0.5) * 1.5;
+        points.push(new THREE.Vector3(i + offset, h, -boundaryDistance + 1));
+      }
+      const trace = createCircuitTrace(
+        points,
+        colors[Math.floor(Math.random() * colors.length)]
+      );
+      traces.push(trace);
+      this.group.add(trace);
+    }
+
+    // East wall traces
+    for (let i = -boundaryDistance; i <= boundaryDistance; i += traceSpacing) {
+      const points = [];
+      for (let h = 0; h <= traceHeight; h += 2) {
+        const offset = Math.sin(h * 0.5) * 1.5;
+        points.push(new THREE.Vector3(boundaryDistance - 1, h, i + offset));
+      }
+      const trace = createCircuitTrace(
+        points,
+        colors[Math.floor(Math.random() * colors.length)]
+      );
+      traces.push(trace);
+      this.group.add(trace);
+    }
+
+    // West wall traces
+    for (let i = -boundaryDistance; i <= boundaryDistance; i += traceSpacing) {
+      const points = [];
+      for (let h = 0; h <= traceHeight; h += 2) {
+        const offset = Math.sin(h * 0.5) * 1.5;
+        points.push(new THREE.Vector3(-boundaryDistance + 1, h, i + offset));
+      }
+      const trace = createCircuitTrace(
+        points,
+        colors[Math.floor(Math.random() * colors.length)]
+      );
+      traces.push(trace);
+      this.group.add(trace);
+    }
+
+    // Add PCB edge planes
+    const edgeMaterial = new THREE.MeshBasicMaterial({
+      color: 0x044d64,
+      transparent: true,
+      opacity: 0.15,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
+
+    // North edge
+    const northEdge = new THREE.Mesh(
+      new THREE.PlaneGeometry(110, traceHeight),
+      edgeMaterial.clone()
+    );
+    northEdge.position.set(0, traceHeight / 2, boundaryDistance - 0.5);
+    this.group.add(northEdge);
+
+    // South edge
+    const southEdge = new THREE.Mesh(
+      new THREE.PlaneGeometry(110, traceHeight),
+      edgeMaterial.clone()
+    );
+    southEdge.position.set(0, traceHeight / 2, -boundaryDistance + 0.5);
+    this.group.add(southEdge);
+
+    // East edge
+    const eastEdge = new THREE.Mesh(
+      new THREE.PlaneGeometry(110, traceHeight),
+      edgeMaterial.clone()
+    );
+    eastEdge.rotation.y = Math.PI / 2;
+    eastEdge.position.set(boundaryDistance - 0.5, traceHeight / 2, 0);
+    this.group.add(eastEdge);
+
+    // West edge
+    const westEdge = new THREE.Mesh(
+      new THREE.PlaneGeometry(110, traceHeight),
+      edgeMaterial.clone()
+    );
+    westEdge.rotation.y = Math.PI / 2;
+    westEdge.position.set(-boundaryDistance + 0.5, traceHeight / 2, 0);
+    this.group.add(westEdge);
+
+    // Add solder mask indicators (floating orbs)
+    const solderOrbs = [];
+    const orbCount = 50;
+
+    for (let i = 0; i < orbCount; i++) {
+      const side = Math.floor(Math.random() * 4);
+      let x, z;
+
+      if (side === 0) {
+        x = (Math.random() - 0.5) * 110;
+        z = boundaryDistance - 2;
+      } else if (side === 1) {
+        x = (Math.random() - 0.5) * 110;
+        z = -boundaryDistance + 2;
+      } else if (side === 2) {
+        x = boundaryDistance - 2;
+        z = (Math.random() - 0.5) * 110;
+      } else {
+        x = -boundaryDistance + 2;
+        z = (Math.random() - 0.5) * 110;
+      }
+
+      const orb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.4, 16, 16),
+        new THREE.MeshPhongMaterial({
+          color: colors[Math.floor(Math.random() * colors.length)],
+          emissive: colors[Math.floor(Math.random() * colors.length)],
+          emissiveIntensity: 1,
+        })
+      );
+
+      orb.position.set(x, Math.random() * traceHeight, z);
+      orb.userData = {
+        baseY: orb.position.y,
+        speed: 1 + Math.random() * 2,
+        phase: Math.random() * Math.PI * 2,
+      };
+
+      solderOrbs.push(orb);
+      this.group.add(orb);
+    }
+
+    // Add colliders
+    this.addCollider({
+      minX: -collisionDistance,
+      maxX: collisionDistance,
+      minZ: collisionDistance - 1,
+      maxZ: collisionDistance + 1,
+      height: traceHeight,
+    });
+
+    this.addCollider({
+      minX: -collisionDistance,
+      maxX: collisionDistance,
+      minZ: -collisionDistance - 1,
+      maxZ: -collisionDistance + 1,
+      height: traceHeight,
+    });
+
+    this.addCollider({
+      minX: collisionDistance - 1,
+      maxX: collisionDistance + 1,
+      minZ: -collisionDistance,
+      maxZ: collisionDistance,
+      height: traceHeight,
+    });
+
+    this.addCollider({
+      minX: -collisionDistance - 1,
+      maxX: -collisionDistance + 1,
+      minZ: -collisionDistance,
+      maxZ: collisionDistance,
+      height: traceHeight,
+    });
+
+    // Animation
+    this.addAnimator((delta, time) => {
+      // Pulse circuit traces
+      traces.forEach((trace, i) => {
+        trace.material.emissiveIntensity =
+          0.7 + Math.sin(time * 5 + i * 0.2) * 0.3;
+      });
+
+      // Pulse edges
+      const pulse = 0.12 + Math.sin(time * 3) * 0.06;
+      northEdge.material.opacity = pulse;
+      southEdge.material.opacity = pulse;
+      eastEdge.material.opacity = pulse;
+      westEdge.material.opacity = pulse;
+
+      // Animate solder orbs
+      solderOrbs.forEach((orb) => {
+        orb.position.y =
+          orb.userData.baseY +
+          Math.sin(time * orb.userData.speed + orb.userData.phase) * 2;
+        orb.material.emissiveIntensity =
+          0.7 + Math.sin(time * 4 + orb.userData.phase) * 0.3;
+      });
+    });
   }
 }

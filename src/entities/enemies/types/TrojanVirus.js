@@ -5,7 +5,7 @@ class TrojanVirus extends BaseEnemy {
     // Trojan stats - Heavy, slow, high damage charger
     this.maxHealth = 180 * difficulty;
     this.health = this.maxHealth;
-    this.speed = 4;
+    this.speed = 3;
     this.damage = 25 * difficulty; // High melee damage
     this.contactDamage = 12 * difficulty; // Reduced from 18 for balance
     this.collisionRadius = 2;
