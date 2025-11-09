@@ -244,7 +244,6 @@ class GameMain {
       }
       document.body?.classList.remove("intro-active");
       this.enableBackgroundMusic(true);
-      this.startBackgroundMusic();
       return;
     }
 
@@ -296,7 +295,6 @@ class GameMain {
 
         // Start background music
         this.enableBackgroundMusic(true);
-        this.startBackgroundMusic();
       }, 800);
     };
 

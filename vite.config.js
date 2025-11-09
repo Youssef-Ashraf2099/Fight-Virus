@@ -6,7 +6,7 @@ const outDir = path.resolve(__dirname, "build/renderer");
 
 export default defineConfig({
   root: rootDir,
-  base: "",
+  base: "./",
   publicDir: path.resolve(__dirname, "Assets"),
   server: {
     port: 5173,
@@ -19,5 +19,8 @@ export default defineConfig({
     outDir,
     emptyOutDir: true,
     assetsDir: "assets",
+    rollupOptions: {
+      input: path.resolve(rootDir, "index.html"),
+    },
   },
 });

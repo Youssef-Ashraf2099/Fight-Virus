@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, protocol } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -33,7 +33,19 @@ function createWindow() {
 
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;
   const loadTestPage = process.argv.includes("--test");
-  const buildIndexPath = path.join(__dirname, "../build/renderer/index.html");
+  const isPreview = process.argv.includes("--preview");
+
+  // For packaged app, files are unpacked in app.asar.unpacked
+  // For dev, files are in project directory
+  let buildIndexPath;
+  if (app.isPackaged) {
+    buildIndexPath = path.join(
+      process.resourcesPath,
+      "app.asar.unpacked/build/renderer/index.html"
+    );
+  } else {
+    buildIndexPath = path.join(__dirname, "../build/renderer/index.html");
+  }
   const testPagePath = path.join(__dirname, "test.html");
 
   if (loadTestPage) {
@@ -45,12 +57,19 @@ function createWindow() {
       console.warn(
         "Renderer bundle not found. Run `npm run build:renderer` before launching Electron in production mode."
       );
+      console.warn(`Tried to load from: ${buildIndexPath}`);
+      console.warn(`isPackaged: ${app.isPackaged}`);
     }
     mainWindow.loadFile(buildIndexPath);
   }
 
-  // Open DevTools in development mode
-  if (devServerUrl || process.argv.includes("--dev") || loadTestPage) {
+  // Open DevTools in development mode or preview mode
+  if (
+    devServerUrl ||
+    process.argv.includes("--dev") ||
+    loadTestPage ||
+    isPreview
+  ) {
     mainWindow.webContents.openDevTools();
   }
 
@@ -58,6 +77,15 @@ function createWindow() {
   mainWindow.webContents.on("did-finish-load", () => {
     console.log("Page loaded successfully");
   });
+
+  // Log any failed resource loads
+  mainWindow.webContents.on(
+    "did-fail-load",
+    (event, errorCode, errorDescription, validatedURL) => {
+      console.error(`Failed to load: ${validatedURL}`, errorDescription);
+    }
+  );
+
   mainWindow.webContents.on(
     "console-message",
     (event, level, message, line, sourceId) => {
