@@ -5,41 +5,34 @@ class WeaponManager {
     this.particleSystem = particleSystem;
     this.environment = environment || null;
 
-    this.weapons = [
-      new PulseCannon(scene, particleSystem),
-      new LaserRifle(scene, particleSystem),
-      new PlasmaLauncher(scene, particleSystem),
-      new ShockwaveEmitter(scene, particleSystem),
-    ];
+    this.weaponDefinitions = {
+      pulseCannon: {
+        order: 0,
+        create: () => new PulseCannon(scene, particleSystem),
+      },
+      laserRifle: {
+        order: 1,
+        create: () => new LaserRifle(scene, particleSystem),
+      },
+      shockwaveEmitter: {
+        order: 2,
+        create: () => new ShockwaveEmitter(scene, particleSystem),
+      },
+      plasmaLauncher: {
+        order: 3,
+        create: () => new PlasmaLauncher(scene, particleSystem),
+      },
+    };
 
-    this.weapons.forEach((weapon) => {
-      weapon.onReloadStart = (duration) => {
-        this.player?.notifyWeaponReload?.(duration);
-        if (this.player?.playReloadAnimation) {
-          this.player.playReloadAnimation(
-            weapon.viewModelId || weapon.name,
-            duration,
-            weapon
-          );
-        }
-      };
-      weapon.onReloadEnd = () => {
-        this.player?.finishReloadAnimation?.(weapon);
-        this.player?.updateWeaponHUD?.(weapon);
-      };
-    });
-
+    this.weapons = [];
+    this.unlockedWeaponIds = new Set();
     this.currentWeaponIndex = 0;
     this.projectiles = [];
     this.time = 0;
     this.damageMultiplier = 1;
     this.projectileSpeedMultiplier = 1;
 
-    if (this.player?.setWeaponViewModel) {
-      const weapon = this.getCurrentWeapon();
-      this.player.setWeaponViewModel(weapon.viewModelId || weapon.name);
-      this.player.updateWeaponHUD?.(weapon);
-    }
+    this.unlockWeapon("pulseCannon", { autoEquip: true });
   }
 
   setEnvironment(environment) {
@@ -47,15 +40,31 @@ class WeaponManager {
   }
 
   switchWeapon(index) {
-    if (index >= 0 && index < this.weapons.length) {
-      this.currentWeaponIndex = index;
-      const weapon = this.getCurrentWeapon();
-      weapon.onEquip();
+    if (!this.weapons.length || index < 0 || index >= this.weapons.length) {
+      return;
+    }
 
-      if (this.player?.setWeaponViewModel) {
-        this.player.setWeaponViewModel(weapon.viewModelId || weapon.name);
-        this.player.updateWeaponHUD?.(weapon);
+    if (index === this.currentWeaponIndex) {
+      const current = this.getCurrentWeapon();
+      if (typeof current?.onEquip === "function") {
+        current.onEquip();
       }
+      if (this.player?.setWeaponViewModel && current) {
+        this.player.setWeaponViewModel(current.viewModelId || current.name);
+        this.player.updateWeaponHUD?.(current);
+      }
+      return;
+    }
+
+    this.currentWeaponIndex = index;
+    const weapon = this.getCurrentWeapon();
+    if (typeof weapon?.onEquip === "function") {
+      weapon.onEquip();
+    }
+
+    if (this.player?.setWeaponViewModel && weapon) {
+      this.player.setWeaponViewModel(weapon.viewModelId || weapon.name);
+      this.player.updateWeaponHUD?.(weapon);
     }
   }
 
@@ -67,70 +76,74 @@ class WeaponManager {
   }
 
   getCurrentWeapon() {
-    return this.weapons[this.currentWeaponIndex];
+    return this.weapons[this.currentWeaponIndex] || null;
   }
 
   fire(mousePos, camera, muzzlePos, direction) {
     const weapon = this.getCurrentWeapon();
+    if (!weapon) {
+      return;
+    }
 
-    // Use muzzle position if provided, otherwise fall back to player position
     const firePosition = muzzlePos || this.player.getPosition();
     const fireDirection = direction || this.player.getDirection();
 
-    if (weapon.canFire()) {
-      // In FPS mode, mousePos will be null - fire from camera direction
-      const projectile = weapon.fire(
-        firePosition,
-        mousePos,
-        camera,
-        fireDirection
-      );
-      if (projectile) {
-        const applyScaling = (proj) => {
-          if (!proj) return;
-          proj.damage *= this.damageMultiplier;
-          if (this.projectileSpeedMultiplier !== 1 && proj.velocity) {
-            proj.velocity.multiplyScalar(this.projectileSpeedMultiplier);
-          }
-        };
-
-        const register = (proj) => {
-          if (!proj) return;
-          proj.particleSystem = this.particleSystem;
-          this.projectiles.push(proj);
-        };
-
-        if (Array.isArray(projectile)) {
-          projectile.forEach((proj) => {
-            applyScaling(proj);
-            register(proj);
-          });
-        } else {
-          applyScaling(projectile);
-          register(projectile);
-        }
-      }
-
-      // Update player HUD when ammo changes
-      this.player.updateWeaponHUD?.(weapon);
+    if (!weapon.canFire()) {
+      return;
     }
+
+    const projectile = weapon.fire(
+      firePosition,
+      mousePos,
+      camera,
+      fireDirection
+    );
+
+    if (projectile) {
+      const applyScaling = (proj) => {
+        if (!proj) return;
+        proj.damage *= this.damageMultiplier;
+        if (this.projectileSpeedMultiplier !== 1 && proj.velocity) {
+          proj.velocity.multiplyScalar(this.projectileSpeedMultiplier);
+        }
+      };
+
+      const register = (proj) => {
+        if (!proj) return;
+        proj.particleSystem = this.particleSystem;
+        this.projectiles.push(proj);
+      };
+
+      if (Array.isArray(projectile)) {
+        projectile.forEach((proj) => {
+          applyScaling(proj);
+          register(proj);
+        });
+      } else {
+        applyScaling(projectile);
+        register(projectile);
+      }
+    }
+
+    this.player.updateWeaponHUD?.(weapon);
   }
 
   reload() {
     const weapon = this.getCurrentWeapon();
+    if (!weapon) {
+      return;
+    }
+
     if (weapon.ammoType === "limited" && !weapon.isReloading) {
       weapon.startReload();
-      this.player.notifyWeaponReload?.(weapon.reloadTime);
+      this.player?.notifyWeaponReload?.(weapon.reloadTime);
     }
   }
 
   update(deltaTime) {
     this.time += deltaTime;
-
-    // Update all weapons
     this.weapons.forEach((weapon) => weapon.update(deltaTime));
 
-    // Update projectiles
     this.projectiles = this.projectiles.filter((proj) => {
       if (!proj || (proj.isExpired && proj.isExpired())) {
         return false;
@@ -157,6 +170,7 @@ class WeaponManager {
 
       return true;
     });
+
     this.player.updateWeaponHUD?.(this.getCurrentWeapon());
   }
 
@@ -166,11 +180,14 @@ class WeaponManager {
 
   updateUI(uiManager) {
     const weapon = this.getCurrentWeapon();
+    if (!weapon) {
+      return;
+    }
     uiManager.updateWeapon(weapon.name, weapon.getAmmoDisplay());
   }
 
   clear() {
-    this.projectiles.forEach((proj) => proj.destroy());
+    this.projectiles.forEach((proj) => proj.destroy?.());
     this.projectiles = [];
   }
 
@@ -188,5 +205,98 @@ class WeaponManager {
 
   getProjectileSpeedMultiplier() {
     return this.projectileSpeedMultiplier;
+  }
+
+  hasWeapon(weaponId) {
+    return this.unlockedWeaponIds.has(weaponId);
+  }
+
+  unlockWeapon(weaponId, options = {}) {
+    if (this.hasWeapon(weaponId)) {
+      return null;
+    }
+
+    const definition = this.weaponDefinitions[weaponId];
+    if (!definition || typeof definition.create !== "function") {
+      return null;
+    }
+
+    const weapon = definition.create();
+    if (!weapon) {
+      return null;
+    }
+
+    weapon.__weaponId = weaponId;
+    this._bindWeaponEvents(weapon);
+
+    const currentWeapon = this.getCurrentWeapon();
+    const insertAt = this._findInsertionIndex(weaponId);
+
+    this.weapons.splice(insertAt, 0, weapon);
+    this.unlockedWeaponIds.add(weaponId);
+
+    const autoEquip =
+      options.autoEquip !== undefined ? options.autoEquip : true;
+
+    if (autoEquip || !currentWeapon) {
+      this.switchWeapon(insertAt);
+    } else if (currentWeapon) {
+      const retainedIndex = this.weapons.indexOf(currentWeapon);
+      if (retainedIndex >= 0) {
+        this.currentWeaponIndex = retainedIndex;
+      }
+      this.player?.updateWeaponHUD?.(currentWeapon);
+    }
+
+    return weapon;
+  }
+
+  resetLoadout() {
+    this.clear();
+    this.weapons = [];
+    this.unlockedWeaponIds.clear();
+    this.currentWeaponIndex = 0;
+    this.unlockWeapon("pulseCannon", { autoEquip: true });
+  }
+
+  _bindWeaponEvents(weapon) {
+    if (!weapon) {
+      return;
+    }
+
+    weapon.onReloadStart = (duration) => {
+      this.player?.notifyWeaponReload?.(duration);
+      if (this.player?.playReloadAnimation) {
+        this.player.playReloadAnimation(
+          weapon.viewModelId || weapon.name,
+          duration,
+          weapon
+        );
+      }
+    };
+
+    weapon.onReloadEnd = () => {
+      this.player?.finishReloadAnimation?.(weapon);
+      this.player?.updateWeaponHUD?.(weapon);
+    };
+  }
+
+  _findInsertionIndex(weaponId) {
+    const order =
+      this.weaponDefinitions[weaponId]?.order ?? Number.MAX_SAFE_INTEGER;
+    if (!this.weapons.length) {
+      return 0;
+    }
+
+    for (let i = 0; i < this.weapons.length; i += 1) {
+      const existingId = this.weapons[i]?.__weaponId;
+      const existingOrder =
+        this.weaponDefinitions[existingId]?.order ?? Number.MAX_SAFE_INTEGER;
+      if (order < existingOrder) {
+        return i;
+      }
+    }
+
+    return this.weapons.length;
   }
 }

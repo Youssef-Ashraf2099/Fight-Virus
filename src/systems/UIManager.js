@@ -27,6 +27,11 @@ class UIManager {
     this.puzzleSubmitHandler = null;
     this.puzzleSkipHandler = null;
 
+  this.pauseOverlay = document.getElementById("pauseOverlay");
+  this.pauseResumeButton = document.getElementById("pauseResumeButton");
+  this.pauseRestartButton = document.getElementById("pauseRestartButton");
+  this.pauseQuitButton = document.getElementById("pauseQuitButton");
+
     this.messageTimeout = null;
 
     // Minimap setup
@@ -134,9 +139,17 @@ class UIManager {
       const detailMarkup = option.detail
         ? `<div class="upgrade-card-detail">${option.detail}</div>`
         : "";
+      const rarityMarkup = option.rarityLabel
+        ? `<div class="upgrade-card-rarity ${option.rarityClass || ""}">${
+            option.rarityLabel
+          }</div>`
+        : "";
 
       card.innerHTML = `
-        <div class="upgrade-card-icon">${option.icon || ""}</div>
+        <div class="upgrade-card-icon ${option.iconClass || ""}">${
+        option.icon || ""
+      }</div>
+        ${rarityMarkup}
         <div class="upgrade-card-content">
           <div class="upgrade-card-title">${option.name}</div>
           <div class="upgrade-card-description">${option.description}</div>
@@ -213,6 +226,179 @@ class UIManager {
     }
     if (this.puzzleSkipButton) {
       this.puzzleSkipButton.onclick = null;
+    }
+  }
+
+  showPauseMenu(callbacks = {}) {
+    // Ensure the overlay exists - try to re-query or create dynamically
+    if (!this.pauseOverlay) {
+      // Try to find it again (in case DOM wasn't ready earlier)
+      this.pauseOverlay = document.getElementById("pauseOverlay");
+      this.pauseResumeButton = document.getElementById("pauseResumeButton");
+      this.pauseRestartButton = document.getElementById("pauseRestartButton");
+      this.pauseQuitButton = document.getElementById("pauseQuitButton");
+    }
+
+    if (!this.pauseOverlay) {
+      console.log("UIManager: pauseOverlay not found - creating dynamically");
+      this.createPauseOverlay();
+    }
+
+    console.log("UIManager: showing pause menu");
+    // Ensure visible state is applied (use inline style fallback)
+    this.pauseOverlay.classList.add("visible");
+    this.pauseOverlay.style.display = "flex";
+    this.pauseOverlay.style.opacity = "1";
+    this.pauseOverlay.style.pointerEvents = "all";
+    document.body?.classList.add("pause-open");
+
+    if (this.pauseResumeButton) {
+      this.pauseResumeButton.onclick = () => {
+        console.log("UIManager: Resume clicked");
+        callbacks.onResume?.();
+      };
+    }
+
+    if (this.pauseRestartButton) {
+      this.pauseRestartButton.onclick = () => {
+        console.log("UIManager: Restart clicked");
+        callbacks.onRestart?.();
+      };
+    }
+
+    if (this.pauseQuitButton) {
+      this.pauseQuitButton.onclick = () => {
+        console.log("UIManager: Quit clicked");
+        callbacks.onQuit?.();
+      };
+    }
+  }
+
+  hidePauseMenu() {
+    if (!this.pauseOverlay) return;
+
+    console.log("UIManager: hiding pause menu");
+    this.pauseOverlay.classList.remove("visible");
+    this.pauseOverlay.style.display = "none";
+    this.pauseOverlay.style.opacity = "0";
+    this.pauseOverlay.style.pointerEvents = "none";
+    document.body?.classList.remove("pause-open");
+
+    if (this.pauseResumeButton) {
+      this.pauseResumeButton.onclick = null;
+    }
+
+    if (this.pauseRestartButton) {
+      this.pauseRestartButton.onclick = null;
+    }
+
+    if (this.pauseQuitButton) {
+      this.pauseQuitButton.onclick = null;
+    }
+  }
+
+  isPauseMenuVisible() {
+    return this.pauseOverlay?.classList.contains("visible") || false;
+  }
+
+  createPauseOverlay() {
+    try {
+      const overlay = document.createElement("div");
+      overlay.id = "pauseOverlay";
+      overlay.style.position = "fixed";
+      overlay.style.inset = "0";
+      overlay.style.display = "flex";
+      overlay.style.alignItems = "center";
+      overlay.style.justifyContent = "center";
+      overlay.style.background = "rgba(0,0,0,0.86)";
+      overlay.style.zIndex = "999999";
+      overlay.style.pointerEvents = "all";
+
+      const panel = document.createElement("div");
+      panel.className = "pause-panel";
+      panel.style.width = "min(420px, calc(100% - 120px))";
+      panel.style.background = "rgba(2,18,12,0.94)";
+      panel.style.border = "2px solid rgba(0,255,136,0.45)";
+      panel.style.borderRadius = "18px";
+      panel.style.padding = "32px 36px";
+      panel.style.textAlign = "center";
+      panel.style.boxShadow = "0 0 36px rgba(0,255,136,0.32)";
+      panel.style.display = "flex";
+      panel.style.flexDirection = "column";
+      panel.style.gap = "24px";
+
+      const title = document.createElement("div");
+      title.className = "pause-title";
+      title.textContent = "Simulation Paused";
+      title.style.fontFamily = "'Courier New', monospace";
+      title.style.fontSize = "28px";
+      title.style.letterSpacing = "3px";
+      title.style.color = "#00ff88";
+
+      const subtitle = document.createElement("div");
+      subtitle.className = "pause-subtitle";
+      subtitle.textContent = "Take a moment to recalibrate the defense systems.";
+      subtitle.style.color = "rgba(173,255,214,0.78)";
+      subtitle.style.fontSize = "15px";
+
+      const actions = document.createElement("div");
+      actions.className = "pause-actions";
+      actions.style.display = "flex";
+      actions.style.flexDirection = "column";
+      actions.style.gap = "14px";
+
+      const resumeBtn = document.createElement("button");
+      resumeBtn.id = "pauseResumeButton";
+      resumeBtn.type = "button";
+      resumeBtn.textContent = "Resume Operation";
+
+      const restartBtn = document.createElement("button");
+      restartBtn.id = "pauseRestartButton";
+      restartBtn.type = "button";
+      restartBtn.textContent = "Restart Encounter";
+
+      const quitBtn = document.createElement("button");
+      quitBtn.id = "pauseQuitButton";
+      quitBtn.type = "button";
+      quitBtn.textContent = "Quit to Main Menu";
+      quitBtn.className = "quit";
+
+      // Basic styles for buttons
+      [resumeBtn, restartBtn, quitBtn].forEach((b) => {
+        b.style.fontFamily = "'Courier New', monospace";
+        b.style.fontSize = "16px";
+        b.style.letterSpacing = "2px";
+        b.style.padding = "12px 18px";
+        b.style.borderRadius = "10px";
+        b.style.border = "2px solid rgba(0,255,136,0.55)";
+        b.style.background = "linear-gradient(135deg, rgba(0,255,136,0.18), rgba(0,255,136,0.05))";
+        b.style.color = "rgba(176,255,216,0.9)";
+        b.style.cursor = "pointer";
+      });
+      // quit button accent
+      quitBtn.style.background = "linear-gradient(135deg, rgba(255,77,109,0.18), rgba(120,0,12,0.5))";
+      quitBtn.style.borderColor = "rgba(255,77,109,0.6)";
+
+      actions.appendChild(resumeBtn);
+      actions.appendChild(restartBtn);
+      actions.appendChild(quitBtn);
+
+      panel.appendChild(title);
+      panel.appendChild(subtitle);
+      panel.appendChild(actions);
+
+      overlay.appendChild(panel);
+
+      document.body.appendChild(overlay);
+
+      this.pauseOverlay = overlay;
+      this.pauseResumeButton = resumeBtn;
+      this.pauseRestartButton = restartBtn;
+      this.pauseQuitButton = quitBtn;
+
+      console.log("UIManager: dynamically created pause overlay");
+    } catch (err) {
+      console.error("UIManager: failed to create pause overlay:", err);
     }
   }
 

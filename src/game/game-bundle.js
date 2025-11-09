@@ -56,6 +56,10 @@ window.addEventListener("DOMContentLoaded", async () => {
     "./entities/bosses/DataWyrm.js",
     "./entities/bosses/LadyBugSentinel.js",
     "./entities/bosses/TrojanHorseColossus.js",
+    "./entities/bosses/Noise.js",
+    "./entities/bosses/FirewallArchon.js",
+    "./entities/bosses/NeuralOvermind.js",
+    "./entities/bosses/PacketHydra.js",
     "./entities/enemies/EnemyManager.js",
 
     // Weapons
@@ -70,6 +74,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     // Game & Spectator
     "./game/SpectatorCamera.js",
+    "./game/PixelCompanion.js",
     "./game/SpectatorMode.js",
     "./game/PuzzleManager.js",
     "./game/UpgradeManager.js",

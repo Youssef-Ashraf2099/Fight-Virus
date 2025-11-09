@@ -225,6 +225,94 @@ class UpgradeManager {
           return "Data siphons rerouted into the reward pool.";
         },
       },
+      {
+        id: "unlock-laser-rifle",
+        name: "Integrate Laser Rifle",
+        icon: "🔷",
+        iconClass: "rarity-common",
+        rarity: "common",
+        weight: 3,
+        baseCost: 3200,
+        waveScaling: 260,
+        levelScaling: 0,
+        maxStacks: 1,
+        description: "Unlocks the Laser Rifle for rapid, precise beam fire.",
+        detail: (ctx) =>
+          ctx.weaponManager?.hasWeapon?.("laserRifle")
+            ? "Status: Already integrated."
+            : "Status: Not yet acquired.",
+        availability: (ctx) => !ctx.weaponManager?.hasWeapon?.("laserRifle"),
+        apply: (ctx) => {
+          const unlocked = ctx.weaponManager?.unlockWeapon?.("laserRifle", {
+            autoEquip: true,
+          });
+          if (!unlocked) {
+            return "Laser Rifle already integrated into the arsenal.";
+          }
+          return "Laser Rifle integrated into the arsenal.";
+        },
+      },
+      {
+        id: "unlock-shockwave-emitter",
+        name: "Deploy Shockwave Emitter",
+        icon: "🌀",
+        iconClass: "rarity-uncommon",
+        rarity: "uncommon",
+        weight: 1.6,
+        baseCost: 3600,
+        waveScaling: 310,
+        levelScaling: 0,
+        maxStacks: 1,
+        description:
+          "Unlocks the Shockwave Emitter for area disruption blasts.",
+        detail: (ctx) =>
+          ctx.weaponManager?.hasWeapon?.("shockwaveEmitter")
+            ? "Status: Already integrated."
+            : "Status: Not yet acquired.",
+        availability: (ctx) =>
+          !ctx.weaponManager?.hasWeapon?.("shockwaveEmitter"),
+        apply: (ctx) => {
+          const unlocked = ctx.weaponManager?.unlockWeapon?.(
+            "shockwaveEmitter",
+            {
+              autoEquip: true,
+            }
+          );
+          if (!unlocked) {
+            return "Shockwave Emitter already integrated into the arsenal.";
+          }
+          return "Shockwave Emitter added for area control.";
+        },
+      },
+      {
+        id: "unlock-plasma-launcher",
+        name: "Authorize Plasma Launcher",
+        icon: "💠",
+        iconClass: "rarity-rare",
+        rarity: "rare",
+        weight: 0.7,
+        baseCost: 4200,
+        waveScaling: 360,
+        levelScaling: 0,
+        maxStacks: 1,
+        description:
+          "Unlocks the Plasma Launcher for high-impact volatile projectiles.",
+        detail: (ctx) =>
+          ctx.weaponManager?.hasWeapon?.("plasmaLauncher")
+            ? "Status: Already integrated."
+            : "Status: Not yet acquired.",
+        availability: (ctx) =>
+          !ctx.weaponManager?.hasWeapon?.("plasmaLauncher"),
+        apply: (ctx) => {
+          const unlocked = ctx.weaponManager?.unlockWeapon?.("plasmaLauncher", {
+            autoEquip: true,
+          });
+          if (!unlocked) {
+            return "Plasma Launcher already integrated into the arsenal.";
+          }
+          return "Plasma Launcher protocol unlocked.";
+        },
+      },
     ];
   }
 
@@ -238,41 +326,100 @@ class UpgradeManager {
     };
   }
 
-  getUpgradeOptions(waveNumber = 1) {
-    const options = [];
-    const available = this.upgrades.filter((upgrade) => {
-      const taken = this.history[upgrade.id] || 0;
-      return upgrade.maxStacks ? taken < upgrade.maxStacks : true;
-    });
+  _isUpgradeAvailable(upgrade, context) {
+    const taken = this.history[upgrade.id] || 0;
+    if (upgrade.maxStacks && taken >= upgrade.maxStacks) {
+      return false;
+    }
 
-    const randomPool = available.length ? [...available] : [...this.upgrades];
-    while (options.length < 3 && randomPool.length) {
-      const index = Math.floor(Math.random() * randomPool.length);
-      const upgrade = randomPool.splice(index, 1)[0];
-      options.push(this._buildOption(upgrade, waveNumber));
+    if (typeof upgrade.availability === "function") {
+      try {
+        if (!upgrade.availability(context)) {
+          return false;
+        }
+      } catch (error) {
+        console.warn("Upgrade availability check failed:", upgrade.id, error);
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  _drawWeightedUpgrade(pool) {
+    if (!pool.length) {
+      return null;
+    }
+
+    const totalWeight = pool.reduce(
+      (sum, upgrade) =>
+        sum + (typeof upgrade.weight === "number" ? upgrade.weight : 1),
+      0
+    );
+
+    if (totalWeight <= 0) {
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    let roll = Math.random() * totalWeight;
+    for (const upgrade of pool) {
+      roll -= typeof upgrade.weight === "number" ? upgrade.weight : 1;
+      if (roll <= 0) {
+        return upgrade;
+      }
+    }
+
+    return pool[pool.length - 1];
+  }
+
+  getUpgradeOptions(waveNumber = 1) {
+    const context = this._getContext();
+    const options = [];
+    const available = this.upgrades.filter((upgrade) =>
+      this._isUpgradeAvailable(upgrade, context)
+    );
+
+    const pool = available.length ? [...available] : [...this.upgrades];
+    const workingPool = [...pool];
+
+    while (options.length < 3 && workingPool.length) {
+      const upgrade = this._drawWeightedUpgrade(workingPool);
+      if (!upgrade) {
+        break;
+      }
+      options.push(this._buildOption(upgrade, waveNumber, context));
+      const removalIndex = workingPool.indexOf(upgrade);
+      if (removalIndex >= 0) {
+        workingPool.splice(removalIndex, 1);
+      }
     }
 
     while (options.length < 3) {
-      const upgrade =
+      const fallback =
         this.upgrades[Math.floor(Math.random() * this.upgrades.length)];
-      options.push(this._buildOption(upgrade, waveNumber));
+      options.push(this._buildOption(fallback, waveNumber, context));
     }
 
     return options;
   }
 
-  _buildOption(upgrade, waveNumber) {
+  _buildOption(upgrade, waveNumber, context = this._getContext()) {
     const level = this.history[upgrade.id] || 0;
     const cost = this._calculateCost(upgrade, waveNumber, level);
     const detail =
-      typeof upgrade.detail === "function"
-        ? upgrade.detail(this._getContext())
-        : "";
+      typeof upgrade.detail === "function" ? upgrade.detail(context) : "";
+    const rarity = upgrade.rarity || null;
+    const rarityLabel = rarity ? rarity.toUpperCase() : "";
+    const iconClass = upgrade.iconClass || (rarity ? `rarity-${rarity}` : "");
+    const rarityClass = rarity ? `rarity-${rarity}` : "";
 
     return {
       id: upgrade.id,
       name: upgrade.name,
       icon: upgrade.icon,
+      iconClass,
+      rarityLabel,
+      rarityClass,
       description: upgrade.description,
       detail,
       cost,
@@ -301,6 +448,11 @@ class UpgradeManager {
     }
 
     const context = this._getContext();
+
+    if (!this._isUpgradeAvailable(upgrade, context)) {
+      return { success: false, message: "Upgrade not currently available." };
+    }
+
     const resultMessage = upgrade.apply(context);
 
     this.history[upgrade.id] = taken + 1;
@@ -320,6 +472,9 @@ class UpgradeManager {
     this.state = this._createDefaultState();
 
     if (this.weaponManager) {
+      if (typeof this.weaponManager.resetLoadout === "function") {
+        this.weaponManager.resetLoadout();
+      }
       this.weaponManager.setDamageMultiplier(1);
       this.weaponManager.setProjectileSpeedMultiplier(1);
     }

@@ -27,6 +27,10 @@ class EnemyManager {
       "data-wyrm": DataWyrm, // Dragon boss - Wave 8+ (Motherboard)
       "lady-bug-sentinel": LadyBugSentinel,
       "trojan-horse-colossus": TrojanHorseColossus,
+      noise: Noise,
+      "firewall-archon": FirewallArchon,
+      "neural-overmind": NeuralOvermind,
+      "packet-hydra": PacketHydra,
     };
   }
 

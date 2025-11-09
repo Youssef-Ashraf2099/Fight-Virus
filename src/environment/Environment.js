@@ -42,7 +42,6 @@ class Environment {
       { key: "terminal", factory: () => new RetroTerminalEnvironment(this) },
       { key: "network", factory: () => new NetworkHubEnvironment(this) },
       { key: "ai-core", factory: () => new AINeuralNetworkEnvironment(this) },
-      { key: "overview", factory: () => new SystemOverviewEnvironment(this) },
     ];
 
     this.setPhase(0);
