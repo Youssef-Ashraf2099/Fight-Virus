@@ -54,6 +54,10 @@ class GameMain {
       this.isRunning = false;
       this.gameStarted = false;
       this.spectatorMode = null;
+  this.isPaused = false;
+  this.wasRunningBeforePause = false;
+  this.pausedAudioShouldResume = false;
+  this.onPointerLockChange = this.handlePointerLockChange.bind(this);
 
       this.score = 0;
       this.difficulty = 1;
@@ -88,6 +92,24 @@ class GameMain {
       console.error("Error in GameMain constructor:", error);
       throw error;
     }
+
+    document.addEventListener("pointerlockchange", this.onPointerLockChange);
+    this.onUnhandledRejection = (ev) => {
+      try {
+        const reason = ev && ev.reason;
+        const msg = reason && (reason.message || reason.toString());
+        if (msg && msg.indexOf("exited the lock") !== -1) {
+          // benign race caused by pointer lock cancelation - swallow
+          console.debug("Ignored pointer-lock race unhandled rejection:", msg);
+          ev.preventDefault?.();
+        } else {
+          console.error("Unhandled rejection:", ev);
+        }
+      } catch (e) {
+        console.error("Error handling unhandledrejection", e);
+      }
+    };
+    window.addEventListener("unhandledrejection", this.onUnhandledRejection);
   }
 
   async init() {
@@ -236,6 +258,226 @@ class GameMain {
         this.restartGame();
       }
     });
+
+    this.inputManager.on("pause", () => this.handlePauseToggle());
+  }
+
+  handlePauseToggle() {
+    console.log("GameMain: handlePauseToggle called. isPaused=", this.isPaused);
+    if (this.isPaused || this.uiManager?.isPauseMenuVisible?.()) {
+      console.log("GameMain: resuming game via toggle");
+      this.resumeGame();
+    } else {
+      console.log("GameMain: pausing game via toggle");
+      this.pauseGame();
+    }
+  }
+
+  handlePointerLockChange() {
+    const hasLock = Boolean(document.pointerLockElement);
+
+    if (this.isPaused) {
+      return;
+    }
+
+    if (!hasLock) {
+      const shouldPause =
+        this.gameStarted &&
+        this.isRunning &&
+        !this.awaitingUpgradeSelection &&
+        !this.awaitingPuzzleResolution;
+
+      if (shouldPause) {
+        this.pauseGame();
+      }
+    }
+  }
+
+  pauseGame() {
+    console.log("GameMain: pauseGame called");
+
+    if (
+      this.isPaused ||
+      !this.gameStarted ||
+      this.awaitingUpgradeSelection ||
+      this.awaitingPuzzleResolution
+    ) {
+      console.log("GameMain: cannot pause due to state", {
+        isPaused: this.isPaused,
+        gameStarted: this.gameStarted,
+        awaitingUpgradeSelection: this.awaitingUpgradeSelection,
+        awaitingPuzzleResolution: this.awaitingPuzzleResolution,
+      });
+      return;
+    }
+
+    if (!this.isRunning) {
+      console.log("GameMain: not running, skipping pause");
+      return;
+    }
+
+    this.isPaused = true;
+    this.wasRunningBeforePause = this.isRunning;
+    this.isRunning = false;
+
+    try {
+      if (document.pointerLockElement) {
+        document.exitPointerLock();
+      }
+    } catch (err) {}
+
+    const audioActive = this.activeBackgroundAudio;
+    this.pausedAudioShouldResume = Boolean(
+      audioActive && audioActive.paused === false
+    );
+    if (this.pausedAudioShouldResume && audioActive) {
+      try {
+        audioActive.pause();
+      } catch (err) {}
+    }
+
+    console.log("GameMain: requesting UI to show pause menu");
+    this.uiManager?.showPauseMenu?.({
+      onResume: () => this.resumeGame(),
+      onRestart: () => this.handlePauseRestart(),
+      onQuit: () => this.quitToMainMenu(),
+    });
+  }
+
+  resumeGame() {
+    if (!this.isPaused && !this.uiManager?.isPauseMenuVisible?.()) {
+      return;
+    }
+
+    this.isPaused = false;
+    this.uiManager?.hidePauseMenu?.();
+
+    if (this.pausedAudioShouldResume && this.activeBackgroundAudio) {
+      const playResult = this.activeBackgroundAudio.play?.();
+      if (playResult && typeof playResult.catch === "function") {
+        playResult.catch(() => {});
+      }
+    }
+
+    this.pausedAudioShouldResume = false;
+
+    if (
+      this.gameStarted &&
+      this.wasRunningBeforePause &&
+      !this.awaitingUpgradeSelection &&
+      !this.awaitingPuzzleResolution
+    ) {
+      this.isRunning = true;
+    }
+
+    this.wasRunningBeforePause = false;
+
+    setTimeout(() => this.requestPointerLock(), 0);
+  }
+
+  handlePauseRestart() {
+    if (!this.isPaused && !this.uiManager?.isPauseMenuVisible?.()) {
+      return;
+    }
+
+    this.uiManager?.hidePauseMenu?.();
+    this.isPaused = false;
+    this.pausedAudioShouldResume = false;
+    this.wasRunningBeforePause = false;
+    this.isRunning = false;
+
+    this.restartGame();
+    setTimeout(() => this.requestPointerLock(), 0);
+  }
+
+  quitToMainMenu() {
+    this.uiManager?.hidePauseMenu?.();
+    this.isPaused = false;
+    this.pausedAudioShouldResume = false;
+    this.wasRunningBeforePause = false;
+
+    if (document.pointerLockElement) {
+      document.exitPointerLock();
+    }
+
+    this.enableBackgroundMusic(false);
+    this.stopBackgroundMusic();
+
+    this.isRunning = false;
+    this.gameStarted = false;
+    this.awaitingUpgradeSelection = false;
+    this.awaitingPuzzleResolution = false;
+    this.clearPendingWaveTimeout();
+
+    this.uiManager?.hideUpgradeSelection?.();
+    this.uiManager?.hidePuzzleOverlay?.();
+    this.uiManager?.hideMessage?.();
+
+    if (
+      this.puzzleManager &&
+      typeof this.puzzleManager.abortActivePuzzle === "function"
+    ) {
+      this.puzzleManager.abortActivePuzzle();
+    }
+
+    this.enemyManager?.clear?.();
+    this.weaponManager?.clear?.();
+    this.waveManager?.reset?.();
+    this.environment?.setPhase?.(0);
+
+    this.score = 0;
+    this.difficulty = 1;
+    this.uiManager?.updateScore?.(this.score);
+
+    this.player?.reset?.();
+
+    this.spectatorMode?.stop?.();
+
+    const startScreen = document.getElementById("startScreen");
+    if (startScreen) {
+      startScreen.style.display = "flex";
+    }
+
+    const hud = document.getElementById("hud");
+    if (hud) {
+      hud.style.display = "none";
+    }
+
+    const scoreEl = document.getElementById("score");
+    if (scoreEl) {
+      scoreEl.style.display = "none";
+    }
+
+    const weaponInfo = document.getElementById("weaponInfo");
+    if (weaponInfo) {
+      weaponInfo.style.display = "none";
+    }
+
+    const minimap = document.getElementById("minimap");
+    if (minimap) {
+      minimap.style.display = "none";
+    }
+
+    const crosshair = document.getElementById("crosshair");
+    if (crosshair) {
+      crosshair.style.display = "none";
+    }
+  }
+
+  requestPointerLock() {
+    const canvas = document.getElementById("gameCanvas");
+    if (!canvas || typeof canvas.requestPointerLock !== "function") {
+      return;
+    }
+    // Delay the request slightly to avoid racing with exitPointerLock
+    setTimeout(() => {
+      try {
+        canvas.requestPointerLock();
+      } catch (error) {
+        // Ignore pointer lock DOMExceptions related to rapid exit/entry
+        console.warn("requestPointerLock failed:", error && error.message);
+      }
+    }, 120);
   }
 
   setupBackgroundMusic() {
@@ -1021,6 +1263,11 @@ class GameMain {
     );
 
     try {
+      this.uiManager?.hidePauseMenu?.();
+      this.isPaused = false;
+      this.pausedAudioShouldResume = false;
+      this.wasRunningBeforePause = false;
+
       // Clear existing game state
       this.enemyManager.clear();
       this.weaponManager.clear();
@@ -1076,6 +1323,8 @@ class GameMain {
       );
 
       this.enableBackgroundMusic(true);
+
+      setTimeout(() => this.requestPointerLock(), 0);
 
       console.log("✅ Game restarted successfully!");
     } catch (error) {

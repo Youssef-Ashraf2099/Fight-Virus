@@ -11,7 +11,19 @@ class InputManager {
 
   setupEventListeners() {
     window.addEventListener("keydown", (e) => {
+      // Debug log for key events
+      // console.debug("Keydown:", e.key, "code:", e.code);
       this.keys[e.key.toLowerCase()] = true;
+
+      // Accept different possible key representations for Escape
+      if (e.key === "Escape" || e.key === "Esc" || e.code === "Escape") {
+        // Debug print so we can verify key is captured
+        console.log("InputManager: Escape pressed - emitting pause (key,code)", e.key, e.code);
+        try {
+          e.preventDefault();
+        } catch (err) {}
+        this.emit("pause");
+      }
 
       // Weapon hotkeys
       if (e.key === "1") this.emit("weapon1");
