@@ -51,6 +51,13 @@ export default class PixelReaper extends BaseBoss {
     this.canShaderBeam = true;
     this.canFrameBufferOverflow = true;
 
+    // Phase 4 glitch system
+    this.isGlitching = false;
+    this.glitchTimer = 0;
+    this.glitchChance = 0; // Increases in phase 4
+    this.lastGlitchTime = 0;
+    this.aimAccuracy = 1.0; // 1.0 = perfect aim, decreases in phase 4
+
     // Spawn elevation for hovering boss
     this.spawnElevation = this.hoverHeight;
 
@@ -311,15 +318,26 @@ export default class PixelReaper extends BaseBoss {
       this.position.add(direction.multiplyScalar(this.speed * deltaTime));
       this.position.y = this.hoverHeight + Math.sin(this.time * 1.5) * 2;
 
-      // Face player
+      // Face player (with glitch chance in phase 4)
       const angleToPlayer = Math.atan2(
         playerPosition.z - this.position.z,
         playerPosition.x - this.position.x
       );
-      this.group.rotation.y = angleToPlayer + Math.PI / 2;
+
+      if (this.isGlitching) {
+        // Erratic rotation during glitch
+        this.group.rotation.y += (Math.random() - 0.5) * deltaTime * 10;
+      } else {
+        this.group.rotation.y = angleToPlayer + Math.PI / 2;
+      }
+
+      // Phase 4 glitch system
+      if (this.currentPhaseIndex >= 3) {
+        this.updateGlitchSystem(deltaTime);
+      }
 
       // Attack patterns based on phase
-      if (this.attackCooldown <= 0) {
+      if (this.attackCooldown <= 0 && !this.isGlitching) {
         this.performAttacks(playerPosition);
       }
     }
@@ -403,6 +421,131 @@ export default class PixelReaper extends BaseBoss {
     }
   }
 
+  updateGlitchSystem(deltaTime) {
+    // Phase 4: 25% chance of glitch every 2 seconds
+    this.glitchTimer += deltaTime;
+
+    if (this.glitchTimer >= 2.0 && !this.isGlitching) {
+      if (Math.random() < 0.25) {
+        // 25% chance
+        this.triggerGlitch();
+      }
+      this.glitchTimer = 0;
+    }
+
+    // Handle active glitch
+    if (this.isGlitching) {
+      this.lastGlitchTime += deltaTime;
+
+      // Glitch lasts 0.5 seconds
+      if (this.lastGlitchTime >= 0.5) {
+        this.endGlitch();
+      } else {
+        // Apply glitch effects
+        this.applyGlitchEffects(deltaTime);
+      }
+    }
+  }
+
+  triggerGlitch() {
+    this.isGlitching = true;
+    this.lastGlitchTime = 0;
+
+    console.log("⚠️ PIXEL REAPER GLITCHING - GPU ERROR!");
+
+    // Visual glitch effect
+    if (this.energySphere) {
+      this.energySphere.material.color.setHex(0x00ff00); // Green error color
+      this.energySphere.material.emissiveIntensity = 5;
+    }
+
+    if (this.core) {
+      this.core.material.color.setHex(0x00ff00);
+      this.core.material.emissiveIntensity = 3;
+    }
+
+    // Glitch particle burst
+    if (this.particleSystem) {
+      this.particleSystem.createExplosion(this.position, 0x00ff00, 80);
+    }
+
+    // Random position offset (GPU artifact)
+    this.glitchOffset = new THREE.Vector3(
+      (Math.random() - 0.5) * 5,
+      (Math.random() - 0.5) * 3,
+      (Math.random() - 0.5) * 5
+    );
+  }
+
+  applyGlitchEffects(deltaTime) {
+    // Jitter position
+    if (this.glitchOffset) {
+      const jitter = new THREE.Vector3(
+        Math.sin(this.lastGlitchTime * 50) * 0.5,
+        Math.cos(this.lastGlitchTime * 60) * 0.3,
+        Math.sin(this.lastGlitchTime * 40) * 0.5
+      );
+      this.position.add(jitter);
+    }
+
+    // Rapidly flash colors
+    const glitchColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff];
+    const colorIndex =
+      Math.floor(this.lastGlitchTime * 20) % glitchColors.length;
+
+    if (this.energySphere) {
+      this.energySphere.material.emissive.setHex(glitchColors[colorIndex]);
+    }
+
+    // Erratic pixel cluster movement
+    this.pixelClusters.forEach((cluster, i) => {
+      cluster.position.x += (Math.random() - 0.5) * 2;
+      cluster.position.y += (Math.random() - 0.5) * 2;
+      cluster.position.z += (Math.random() - 0.5) * 2;
+    });
+
+    // Random projectile spam during glitch (corrupted data)
+    if (Math.random() < 0.3) {
+      const randomDir = new THREE.Vector3(
+        Math.random() - 0.5,
+        Math.random() - 0.5,
+        Math.random() - 0.5
+      ).normalize();
+
+      this.createProjectile(
+        randomDir,
+        this.damage * 0.5,
+        glitchColors[Math.floor(Math.random() * glitchColors.length)],
+        Math.random() > 0.5 ? "cube" : "pixel",
+        this.projectileSpeed * 0.7,
+        false
+      );
+    }
+  }
+
+  endGlitch() {
+    this.isGlitching = false;
+    this.glitchOffset = null;
+
+    // Restore normal colors
+    if (this.energySphere) {
+      this.energySphere.material.color.setHex(0xff0000); // Critical phase red
+      this.energySphere.material.emissive.setHex(0xff0000);
+      this.energySphere.material.emissiveIntensity = 3;
+    }
+
+    if (this.core) {
+      this.core.material.color.setHex(this.color);
+      this.core.material.emissive.setHex(this.color);
+      this.core.material.emissiveIntensity = 0.8;
+    }
+
+    // Recovery burst
+    if (this.particleSystem) {
+      this.particleSystem.createShockwave(this.position, 15, this.accentColor);
+    }
+  }
+
   performAttacks(playerPosition) {
     const phase = this.currentPhaseIndex;
 
@@ -440,12 +583,17 @@ export default class PixelReaper extends BaseBoss {
         .subVectors(playerPosition, this.position)
         .normalize();
 
+      // PHASE 4: Add aim inaccuracy (GPU errors causing missed shots)
+      const inaccuracy = this.currentPhaseIndex >= 3 ? 1 - this.aimAccuracy : 0;
+      const errorAngleX = (Math.random() - 0.5) * inaccuracy * 2; // Up to ±1 radian
+      const errorAngleZ = (Math.random() - 0.5) * inaccuracy * 2;
+
       const direction = new THREE.Vector3(
-        baseDirection.x * Math.cos(spreadAngle) -
-          baseDirection.z * Math.sin(spreadAngle),
-        -0.2,
-        baseDirection.x * Math.sin(spreadAngle) +
-          baseDirection.z * Math.cos(spreadAngle)
+        baseDirection.x * Math.cos(spreadAngle + errorAngleX) -
+          baseDirection.z * Math.sin(spreadAngle + errorAngleZ),
+        -0.2 + (Math.random() - 0.5) * inaccuracy * 0.5,
+        baseDirection.x * Math.sin(spreadAngle + errorAngleZ) +
+          baseDirection.z * Math.cos(spreadAngle + errorAngleX)
       );
 
       this.createProjectile(
@@ -501,9 +649,13 @@ export default class PixelReaper extends BaseBoss {
         .subVectors(playerPosition, this.position)
         .normalize();
 
-      // Add slight random offset
-      direction.x += (Math.random() - 0.5) * 0.2;
-      direction.z += (Math.random() - 0.5) * 0.2;
+      // PHASE 4: Add significant aim error for shader beams
+      const inaccuracy = this.currentPhaseIndex >= 3 ? 1 - this.aimAccuracy : 0;
+      const aimError = inaccuracy * 1.5; // Even more inaccurate for beams
+
+      direction.x += (Math.random() - 0.5) * (0.2 + aimError);
+      direction.z += (Math.random() - 0.5) * (0.2 + aimError);
+      direction.y += (Math.random() - 0.5) * aimError * 0.3;
       direction.normalize();
 
       this.createProjectile(
@@ -521,10 +673,14 @@ export default class PixelReaper extends BaseBoss {
     // Massive area attack - data corruption
     const overflowCount = 20;
     for (let i = 0; i < overflowCount; i++) {
+      // PHASE 4: Wildly inaccurate area attack due to GPU errors
+      const inaccuracy = this.currentPhaseIndex >= 3 ? 1 - this.aimAccuracy : 0;
+      const scatterRange = 20 + inaccuracy * 15; // More scatter in phase 4
+
       const offset = new THREE.Vector3(
-        (Math.random() - 0.5) * 20,
+        (Math.random() - 0.5) * scatterRange,
         5,
-        (Math.random() - 0.5) * 20
+        (Math.random() - 0.5) * scatterRange
       );
       const targetPos = playerPosition.clone().add(offset);
 
@@ -622,13 +778,21 @@ export default class PixelReaper extends BaseBoss {
       this.orbitRadius = 25; // Get closer
     }
 
-    // Overheat effect
+    // Overheat effect + Enable glitch system
     if (newPhase >= 3) {
       if (this.energySphere) {
         this.energySphere.material.emissiveIntensity = 3;
         this.energySphere.material.color.setHex(0xff0000);
         this.energySphere.material.emissive.setHex(0xff0000);
       }
+
+      // CRITICAL: GPU errors in phase 4 - reduced accuracy
+      console.warn(
+        "⚠️ PIXEL REAPER CRITICAL - GPU ERRORS CAUSING AIM MALFUNCTION"
+      );
+      this.glitchChance = 0.25; // 25% chance every 2 seconds
+      this.glitchTimer = 0;
+      this.aimAccuracy = 0.5; // 50% accuracy - misses half the time
     }
 
     // Flash effect
