@@ -43,11 +43,13 @@ class ModelViewer {
       0.1,
       1000
     );
-    
+
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setClearColor(0x0a0e27, 1);
-    document.getElementById("viewer-canvas").appendChild(this.renderer.domElement);
+    document
+      .getElementById("viewer-canvas")
+      .appendChild(this.renderer.domElement);
 
     // Setup camera
     this.camera.position.set(5, 5, 10);
@@ -66,12 +68,12 @@ class ModelViewer {
     // Add a ground plane for reference
     this.setupGround();
 
-  // Current model tracking
-  this.currentModel = null;
-  this.currentInstance = null;
-  this.currentSceneAdditions = [];
-  this.currentWeaponData = null;
-  this.autoRotate = false;
+    // Current model tracking
+    this.currentModel = null;
+    this.currentInstance = null;
+    this.currentSceneAdditions = [];
+    this.currentWeaponData = null;
+    this.autoRotate = false;
 
     // Mock particle system (for enemies/bosses that need it)
     this.particleSystem = {
@@ -151,38 +153,140 @@ class ModelViewer {
   setupModelLists() {
     // Weapons
     const weapons = [
-      { name: "Pulse Cannon", id: "pulseCannon", class: PulseCannon, stats: { damage: 25, fireRate: 0.12, ammo: 40 } },
-      { name: "Revolver", id: "revolver", class: Revolver, stats: { damage: 45, fireRate: 0.35, ammo: 6 } },
-      { name: "Laser Rifle", id: "laserRifle", class: LaserRifle, stats: { damage: 18, fireRate: 0.08, ammo: 60 } },
-      { name: "Plasma Blade", id: "sciFiSword", class: SciFiSword, stats: { damage: 60, fireRate: 0.45, range: 3.5 } },
-      { name: "Shockwave Emitter", id: "shockwaveEmitter", class: ShockwaveEmitter, stats: { damage: 35, fireRate: 0.6, radius: 8 } },
-      { name: "Plasma Launcher", id: "plasmaLauncher", class: PlasmaLauncher, stats: { damage: 70, fireRate: 0.8, splash: "AoE" } },
+      {
+        name: "Pulse Cannon",
+        id: "pulseCannon",
+        class: PulseCannon,
+        stats: { damage: 25, fireRate: 0.12, ammo: 40 },
+      },
+      {
+        name: "Revolver",
+        id: "revolver",
+        class: Revolver,
+        stats: { damage: 45, fireRate: 0.35, ammo: 6 },
+      },
+      {
+        name: "Laser Rifle",
+        id: "laserRifle",
+        class: LaserRifle,
+        stats: { damage: 18, fireRate: 0.08, ammo: 60 },
+      },
+      {
+        name: "Plasma Blade",
+        id: "sciFiSword",
+        class: SciFiSword,
+        stats: { damage: 60, fireRate: 0.45, range: 3.5 },
+      },
+      {
+        name: "Shockwave Emitter",
+        id: "shockwaveEmitter",
+        class: ShockwaveEmitter,
+        stats: { damage: 35, fireRate: 0.6, radius: 8 },
+      },
+      {
+        name: "Plasma Launcher",
+        id: "plasmaLauncher",
+        class: PlasmaLauncher,
+        stats: { damage: 70, fireRate: 0.8, splash: "AoE" },
+      },
     ];
 
     // Enemies
     const enemies = [
-      { name: "Adware Virus", class: AdwareVirus, stats: { health: 90, speed: 5, damage: 18 } },
-      { name: "Blaster Virus", class: BlasterVirus, stats: { health: 140, speed: 5, damage: 28 } },
-      { name: "Drone Virus", class: DroneVirus, stats: { health: 120, speed: 8, damage: 22 } },
-      { name: "Ransomware Virus", class: RansomwareVirus, stats: { health: 150, speed: 4, damage: 30 } },
-      { name: "Rootkit Virus", class: RootkitVirus, stats: { health: 100, speed: 6, damage: 20 } },
-      { name: "Shield Virus", class: ShieldVirus, stats: { health: 200, shield: 150, damage: 25 } },
-      { name: "Spyware Virus", class: SpywareVirus, stats: { health: 80, speed: 10, damage: 15 } },
-      { name: "Trojan Virus", class: TrojanVirus, stats: { health: 180, speed: 3, damage: 35 } },
-      { name: "Worm Virus", class: WormVirus, stats: { health: 110, speed: 7, damage: 20 } },
+      {
+        name: "Adware Virus",
+        class: AdwareVirus,
+        stats: { health: 90, speed: 5, damage: 18 },
+      },
+      {
+        name: "Blaster Virus",
+        class: BlasterVirus,
+        stats: { health: 140, speed: 5, damage: 28 },
+      },
+      {
+        name: "Drone Virus",
+        class: DroneVirus,
+        stats: { health: 120, speed: 8, damage: 22 },
+      },
+      {
+        name: "Ransomware Virus",
+        class: RansomwareVirus,
+        stats: { health: 150, speed: 4, damage: 30 },
+      },
+      {
+        name: "Rootkit Virus",
+        class: RootkitVirus,
+        stats: { health: 100, speed: 6, damage: 20 },
+      },
+      {
+        name: "Shield Virus",
+        class: ShieldVirus,
+        stats: { health: 200, shield: 150, damage: 25 },
+      },
+      {
+        name: "Spyware Virus",
+        class: SpywareVirus,
+        stats: { health: 80, speed: 10, damage: 15 },
+      },
+      {
+        name: "Trojan Virus",
+        class: TrojanVirus,
+        stats: { health: 180, speed: 3, damage: 35 },
+      },
+      {
+        name: "Worm Virus",
+        class: WormVirus,
+        stats: { health: 110, speed: 7, damage: 20 },
+      },
     ];
 
     // Bosses
     const bosses = [
-      { name: "Pixel Reaper", class: PixelReaper, stats: { health: 2000, phase: 3, difficulty: "Medium" } },
-      { name: "Packet Hydra", class: PacketHydra, stats: { health: 2500, heads: 3, difficulty: "Hard" } },
-      { name: "Circuit Overlord", class: CircuitOverlord, stats: { health: 3000, attacks: "Multi", difficulty: "Hard" } },
-      { name: "Data Wyrm", class: DataWyrm, stats: { health: 3500, segments: 8, difficulty: "Very Hard" } },
-      { name: "Firewall Archon", class: FirewallArchon, stats: { health: 4000, shields: "Rotating", difficulty: "Very Hard" } },
-      { name: "Neural Overmind", class: NeuralOvermind, stats: { health: 4500, minions: "Spawns", difficulty: "Extreme" } },
-      { name: "Corruption Core", class: CorruptionCore, stats: { health: 5000, corruption: "Reality", difficulty: "Extreme" } },
-      { name: "LadyBug Sentinel", class: LadyBugSentinel, stats: { health: 3200, armor: "Heavy", difficulty: "Hard" } },
-      { name: "Trojan Horse Colossus", class: TrojanHorseColossus, stats: { health: 4800, spawns: "Trojans", difficulty: "Extreme" } },
+      {
+        name: "Pixel Reaper",
+        class: PixelReaper,
+        stats: { health: 2000, phase: 3, difficulty: "Medium" },
+      },
+      {
+        name: "Packet Hydra",
+        class: PacketHydra,
+        stats: { health: 2500, heads: 3, difficulty: "Hard" },
+      },
+      {
+        name: "Circuit Overlord",
+        class: CircuitOverlord,
+        stats: { health: 3000, attacks: "Multi", difficulty: "Hard" },
+      },
+      {
+        name: "Data Wyrm",
+        class: DataWyrm,
+        stats: { health: 3500, segments: 8, difficulty: "Very Hard" },
+      },
+      {
+        name: "Firewall Archon",
+        class: FirewallArchon,
+        stats: { health: 4000, shields: "Rotating", difficulty: "Very Hard" },
+      },
+      {
+        name: "Neural Overmind",
+        class: NeuralOvermind,
+        stats: { health: 4500, minions: "Spawns", difficulty: "Extreme" },
+      },
+      {
+        name: "Corruption Core",
+        class: CorruptionCore,
+        stats: { health: 5000, corruption: "Reality", difficulty: "Extreme" },
+      },
+      {
+        name: "LadyBug Sentinel",
+        class: LadyBugSentinel,
+        stats: { health: 3200, armor: "Heavy", difficulty: "Hard" },
+      },
+      {
+        name: "Trojan Horse Colossus",
+        class: TrojanHorseColossus,
+        stats: { health: 4800, spawns: "Trojans", difficulty: "Extreme" },
+      },
     ];
 
     this.populateList("weapons-list", weapons, "weapon");
@@ -192,18 +296,22 @@ class ModelViewer {
 
   populateList(containerId, items, type) {
     const container = document.getElementById(containerId);
-    
+
     items.forEach((item) => {
       const button = document.createElement("button");
       button.className = "model-button";
       button.textContent = item.name;
-  button.onclick = (event) => this.loadModel(item, type, event.currentTarget);
+      button.onclick = (event) =>
+        this.loadModel(item, type, event.currentTarget);
       container.appendChild(button);
     });
   }
 
   clearCurrentModel() {
-    if (this.currentInstance && typeof this.currentInstance.destroy === "function") {
+    if (
+      this.currentInstance &&
+      typeof this.currentInstance.destroy === "function"
+    ) {
       this.currentInstance.destroy();
     } else if (this.currentModel) {
       if (this.currentModel.parent) {
@@ -256,7 +364,10 @@ class ModelViewer {
     if (material.map && typeof material.map.dispose === "function") {
       material.map.dispose();
     }
-    if (material.emissiveMap && typeof material.emissiveMap.dispose === "function") {
+    if (
+      material.emissiveMap &&
+      typeof material.emissiveMap.dispose === "function"
+    ) {
       material.emissiveMap.dispose();
     }
     if (material.alphaMap && typeof material.alphaMap.dispose === "function") {
@@ -315,7 +426,9 @@ class ModelViewer {
         } else if (weaponData instanceof THREE.Object3D) {
           model = weaponData;
         } else {
-          throw new Error(`Weapon model for '${item.id}' is not a THREE.Object3D.`);
+          throw new Error(
+            `Weapon model for '${item.id}' is not a THREE.Object3D.`
+          );
         }
 
         if (model.parent && model.parent !== this.scene) {
@@ -325,12 +438,18 @@ class ModelViewer {
           this.scene.add(model);
         }
       } else if (type === "enemy" || type === "boss") {
-        const instance = new item.class(this.scene, position.clone(), this.particleSystem);
+        const instance = new item.class(
+          this.scene,
+          position.clone(),
+          this.particleSystem
+        );
         this.currentInstance = instance;
 
         model = instance.group || instance.mesh;
         if (!(model instanceof THREE.Object3D)) {
-          throw new Error("Loaded instance does not expose a THREE.Object3D group or mesh.");
+          throw new Error(
+            "Loaded instance does not expose a THREE.Object3D group or mesh."
+          );
         }
 
         model.visible = true;
@@ -347,7 +466,9 @@ class ModelViewer {
         throw new Error("Model creation returned null or undefined.");
       }
 
-      const additions = this.scene.children.filter((child) => !existingChildren.has(child));
+      const additions = this.scene.children.filter(
+        (child) => !existingChildren.has(child)
+      );
       this.currentSceneAdditions = additions.length ? additions : [model];
 
       this.currentModel = model;
@@ -371,22 +492,22 @@ class ModelViewer {
     // Position camera based on model size
     const maxDim = Math.max(size.x, size.y, size.z);
     const distance = maxDim * 3;
-    
+
     this.camera.position.set(
       center.x + distance,
       center.y + distance * 0.5,
       center.z + distance
     );
-    
+
     this.controls.update();
   }
 
   updateInfoPanel(item, type) {
     document.getElementById("model-name").textContent = item.name || "Unknown";
-    
+
     let typeText = "";
     let description = "";
-    
+
     if (type === "weapon") {
       typeText = "Type: WEAPON";
       description = "Combat armament for eliminating viral threats";
@@ -400,25 +521,29 @@ class ModelViewer {
       typeText = "Type: ERROR";
       description = "Failed to load model";
     }
-    
+
     document.getElementById("model-type").textContent = typeText;
     document.getElementById("model-description").textContent = description;
 
     // Update stats
     const statsContainer = document.getElementById("model-stats");
     statsContainer.innerHTML = "";
-    
+
     if (item.stats) {
       Object.entries(item.stats).forEach(([key, value]) => {
         const stat = document.createElement("p");
-        stat.innerHTML = `<span class="stat-label">${this.formatStatName(key)}:</span> ${value}`;
+        stat.innerHTML = `<span class="stat-label">${this.formatStatName(
+          key
+        )}:</span> ${value}`;
         statsContainer.appendChild(stat);
       });
     }
   }
 
   formatStatName(name) {
-    return name.charAt(0).toUpperCase() + name.slice(1).replace(/([A-Z])/g, ' $1');
+    return (
+      name.charAt(0).toUpperCase() + name.slice(1).replace(/([A-Z])/g, " $1")
+    );
   }
 
   setupKeyboardControls() {

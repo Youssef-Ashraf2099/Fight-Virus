@@ -1126,7 +1126,9 @@ export default class DetailedWeaponModels {
       new THREE.BoxGeometry(0.18, 0.42, 0.11),
       accentMaterial.clone()
     );
-    gripInset.position.copy(backstrap.position).add(new THREE.Vector3(0.02, 0.02, 0));
+    gripInset.position
+      .copy(backstrap.position)
+      .add(new THREE.Vector3(0.02, 0.02, 0));
     gripInset.rotation.copy(backstrap.rotation);
     weaponHolder.add(gripInset);
 

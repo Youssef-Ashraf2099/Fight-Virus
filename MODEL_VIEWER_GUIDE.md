@@ -1,9 +1,11 @@
 # Model Viewer - Quick Guide
 
 ## Overview
+
 A comprehensive model viewer has been added to the game that allows you to view all weapons, enemies, and bosses without grinding through levels.
 
 ## How to Access
+
 1. Launch the game
 2. From the main menu, click the **🎨 MODEL VIEWER** button
 3. The model viewer will open in a new page
@@ -11,11 +13,13 @@ A comprehensive model viewer has been added to the game that allows you to view 
 ## Features
 
 ### Model Categories
+
 - **🔫 WEAPONS** - All 6 weapons in the game
 - **👾 ENEMIES** - All 9 enemy types
 - **💀 BOSSES** - All 7 boss models
 
 ### Controls
+
 - **Left Mouse Button** - Rotate model
 - **Right Mouse Button** - Pan camera
 - **Mouse Wheel** - Zoom in/out
@@ -23,7 +27,9 @@ A comprehensive model viewer has been added to the game that allows you to view 
 - **Space Bar** - Toggle auto-rotation
 
 ### Information Panel
+
 Each model displays:
+
 - Name and type
 - Description
 - Statistics (damage, health, speed, etc.)
@@ -31,6 +37,7 @@ Each model displays:
 ## Models Included
 
 ### Weapons
+
 1. Pulse Cannon - Starting weapon
 2. Revolver - High-damage pistol (6 shots)
 3. Laser Rifle - Rapid fire beam weapon
@@ -39,6 +46,7 @@ Each model displays:
 6. Plasma Launcher - Heavy explosive weapon
 
 ### Enemies
+
 1. Basic Virus - Standard enemy
 2. Fast Virus - Quick moving threat
 3. Tank Virus - Heavy armor
@@ -50,6 +58,7 @@ Each model displays:
 9. Blaster Virus - Burst fire specialist
 
 ### Bosses
+
 1. Pixel Reaper - First boss
 2. Packet Hydra - Multi-headed threat
 3. Circuit Overlord - Electric boss
@@ -61,6 +70,7 @@ Each model displays:
 ## Technical Details
 
 ### Files Created
+
 - `src/modelViewer.html` - Viewer interface
 - `src/modelViewer.js` - Viewer logic and controls
 - Updated `vite.config.js` - Multi-page build config
@@ -68,10 +78,12 @@ Each model displays:
 - Updated `src/game/GameMain.js` - Button event handler
 
 ### Navigation
+
 - Click **← BACK TO GAME** button to return to main menu
 - Or navigate to `index.html` directly
 
 ## Tips
+
 - Use auto-rotate (Space) to see models from all angles
 - Each model is lit with professional 3-point lighting
 - Stats are displayed for reference during gameplay planning
