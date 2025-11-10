@@ -215,6 +215,9 @@ class GameMain {
       this.enemyManager.setMaxActiveEnemies(15);
     }
 
+    // Connect enemy manager to weapon manager for melee weapons
+    this.weaponManager.setEnemyManager(this.enemyManager);
+
     // Create wave manager
     this.waveManager = new WaveManager(this.enemyManager, this.uiManager);
     if (typeof this.waveManager.setEnvironment === "function") {

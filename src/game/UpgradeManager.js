@@ -334,6 +334,60 @@ class UpgradeManager {
         },
       },
       {
+        id: "unlock-revolver",
+        name: "Deploy Revolver",
+        icon: "🔫",
+        iconClass: "rarity-common",
+        rarity: "common",
+        weight: 3,
+        baseCost: 2800,
+        waveScaling: 240,
+        levelScaling: 0,
+        maxStacks: 1,
+        description: "Unlocks the Revolver - high-damage precision pistol with 6 shots.",
+        detail: (ctx) =>
+          ctx.weaponManager?.hasWeapon?.("revolver")
+            ? "Status: Already integrated."
+            : "Status: Not yet acquired.",
+        availability: (ctx) => !ctx.weaponManager?.hasWeapon?.("revolver"),
+        apply: (ctx) => {
+          const unlocked = ctx.weaponManager?.unlockWeapon?.("revolver", {
+            autoEquip: true,
+          });
+          if (!unlocked) {
+            return "Revolver already integrated into the arsenal.";
+          }
+          return "Revolver integrated - 6 rounds of high-impact firepower.";
+        },
+      },
+      {
+        id: "unlock-scifi-sword",
+        name: "Deploy Plasma Blade",
+        icon: "⚔️",
+        iconClass: "rarity-uncommon",
+        rarity: "uncommon",
+        weight: 2,
+        baseCost: 3400,
+        waveScaling: 280,
+        levelScaling: 0,
+        maxStacks: 1,
+        description: "Unlocks the Plasma Blade - devastating melee weapon with combo attacks.",
+        detail: (ctx) =>
+          ctx.weaponManager?.hasWeapon?.("sciFiSword")
+            ? "Status: Already integrated."
+            : "Status: Not yet acquired.",
+        availability: (ctx) => !ctx.weaponManager?.hasWeapon?.("sciFiSword"),
+        apply: (ctx) => {
+          const unlocked = ctx.weaponManager?.unlockWeapon?.("sciFiSword", {
+            autoEquip: true,
+          });
+          if (!unlocked) {
+            return "Plasma Blade already integrated into the arsenal.";
+          }
+          return "Plasma Blade activated - slice through enemies with energy.";
+        },
+      },
+      {
         id: "unlock-shockwave-emitter",
         name: "Deploy Shockwave Emitter",
         icon: "🌀",

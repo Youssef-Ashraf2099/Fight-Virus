@@ -2,6 +2,8 @@ import PulseCannon from "./types/PulseCannon.js";
 import LaserRifle from "./types/LaserRifle.js";
 import ShockwaveEmitter from "./types/ShockwaveEmitter.js";
 import PlasmaLauncher from "./types/PlasmaLauncher.js";
+import Revolver from "./types/Revolver.js";
+import SciFiSword from "./types/SciFiSword.js";
 
 class WeaponManager {
   constructor(scene, player, particleSystem, environment) {
@@ -9,22 +11,31 @@ class WeaponManager {
     this.player = player;
     this.particleSystem = particleSystem;
     this.environment = environment || null;
+    this.enemyManager = null; // Will be set later for melee weapons
 
     this.weaponDefinitions = {
       pulseCannon: {
         order: 0,
         create: () => new PulseCannon(scene, particleSystem),
       },
-      laserRifle: {
+      revolver: {
         order: 1,
+        create: () => new Revolver(scene, particleSystem),
+      },
+      laserRifle: {
+        order: 2,
         create: () => new LaserRifle(scene, particleSystem),
       },
+      sciFiSword: {
+        order: 3,
+        create: () => new SciFiSword(scene, particleSystem),
+      },
       shockwaveEmitter: {
-        order: 2,
+        order: 4,
         create: () => new ShockwaveEmitter(scene, particleSystem),
       },
       plasmaLauncher: {
-        order: 3,
+        order: 5,
         create: () => new PlasmaLauncher(scene, particleSystem),
       },
     };
@@ -42,6 +53,10 @@ class WeaponManager {
 
   setEnvironment(environment) {
     this.environment = environment || null;
+  }
+
+  setEnemyManager(enemyManager) {
+    this.enemyManager = enemyManager || null;
   }
 
   switchWeapon(index) {
@@ -101,7 +116,8 @@ class WeaponManager {
       firePosition,
       mousePos,
       camera,
-      fireDirection
+      fireDirection,
+      this.enemyManager
     );
 
     if (projectile) {
