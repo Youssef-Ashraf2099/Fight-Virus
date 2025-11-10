@@ -22,7 +22,7 @@ class Revolver extends BaseWeapon {
 
     this.fireSound = this.createSound("../Assets/sounds/cannon.mp3", 0.7);
     this.reloadSound = this.createSound("../Assets/sounds/reload 3.mp3", 0.65);
-    
+
     // Revolver-specific properties
     this.recoilAmount = 1.5; // High recoil for revolver
   }
@@ -37,7 +37,7 @@ class Revolver extends BaseWeapon {
     // FPS mode: use camera direction directly
     if (cameraDirection) {
       direction = cameraDirection.clone().normalize();
-      
+
       // Add slight random spread for revolver (less accurate than rifle)
       const spreadAmount = 0.008;
       direction.x += (Math.random() - 0.5) * spreadAmount;
@@ -72,7 +72,7 @@ class Revolver extends BaseWeapon {
 
     // Enhanced muzzle flash for revolver
     this.particleSystem.createMuzzleFlash(origin, this.projectileColor, 12);
-    
+
     // Create smoke ring effect
     if (Math.random() < 0.7) {
       this.particleSystem.createImpact(origin, 0x888888, 4);

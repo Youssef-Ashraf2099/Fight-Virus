@@ -344,7 +344,8 @@ class UpgradeManager {
         waveScaling: 240,
         levelScaling: 0,
         maxStacks: 1,
-        description: "Unlocks the Revolver - high-damage precision pistol with 6 shots.",
+        description:
+          "Unlocks the Revolver - high-damage precision pistol with 6 shots.",
         detail: (ctx) =>
           ctx.weaponManager?.hasWeapon?.("revolver")
             ? "Status: Already integrated."
@@ -371,7 +372,8 @@ class UpgradeManager {
         waveScaling: 280,
         levelScaling: 0,
         maxStacks: 1,
-        description: "Unlocks the Plasma Blade - devastating melee weapon with combo attacks.",
+        description:
+          "Unlocks the Plasma Blade - devastating melee weapon with combo attacks.",
         detail: (ctx) =>
           ctx.weaponManager?.hasWeapon?.("sciFiSword")
             ? "Status: Already integrated."

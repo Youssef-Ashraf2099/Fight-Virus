@@ -18,7 +18,7 @@ class SciFiSword extends BaseWeapon {
     this.maxAmmo = Infinity;
 
     this.fireSound = this.createSound("../Assets/sounds/cannon.mp3", 0.45);
-    
+
     // Sword-specific properties
     this.slashArc = Math.PI / 3; // 60-degree slash arc
     this.comboCounter = 0;
@@ -31,14 +31,14 @@ class SciFiSword extends BaseWeapon {
     if (!this.canFire()) return null;
 
     const currentTime = Date.now() / 1000;
-    
+
     // Check if combo continues or resets
     if (currentTime - this.lastSwingTime > this.comboWindowTime) {
       this.comboCounter = 0;
     }
-    
+
     super.fire(origin, target, camera);
-    
+
     this.lastSwingTime = currentTime;
     this.comboCounter = (this.comboCounter + 1) % this.maxCombo;
 
@@ -88,7 +88,7 @@ class SciFiSword extends BaseWeapon {
     const hitEnemies = [];
 
     // Calculate combo damage multiplier
-    const comboMultiplier = 1 + (this.comboCounter * 0.15); // 15% more damage per combo hit
+    const comboMultiplier = 1 + this.comboCounter * 0.15; // 15% more damage per combo hit
     const totalDamage = this.damage * comboMultiplier;
 
     enemies.forEach((enemy) => {
@@ -105,7 +105,7 @@ class SciFiSword extends BaseWeapon {
 
       // Hit the enemy
       hitEnemies.push(enemy);
-      
+
       // Apply damage with knockback
       const knockbackDir = toEnemy.clone().normalize();
       if (enemy.takeDamage) {
@@ -116,7 +116,7 @@ class SciFiSword extends BaseWeapon {
       this.particleSystem.createImpact(
         enemyPos,
         this.projectileColor,
-        15 + (this.comboCounter * 5)
+        15 + this.comboCounter * 5
       );
     });
 
@@ -132,29 +132,29 @@ class SciFiSword extends BaseWeapon {
     slashOrigin.add(direction.clone().multiplyScalar(0.5));
 
     // Create arc of particles for slash effect
-    const particleCount = 8 + (this.comboCounter * 4);
+    const particleCount = 8 + this.comboCounter * 4;
     const halfArc = this.slashArc / 2;
 
     for (let i = 0; i < particleCount; i++) {
       const angle = -halfArc + (i / particleCount) * this.slashArc;
-      
+
       // Rotate direction vector by angle
       const rotatedDir = direction.clone();
       const rotationAxis = new THREE.Vector3(0, 1, 0);
       rotatedDir.applyAxisAngle(rotationAxis, angle);
-      
+
       const particlePos = slashOrigin.clone();
       particlePos.add(rotatedDir.multiplyScalar(1 + Math.random() * 1.5));
-      
-      this.particleSystem.createImpact(
-        particlePos,
-        this.projectileColor,
-        3
-      );
+
+      this.particleSystem.createImpact(particlePos, this.projectileColor, 3);
     }
 
     // Energy wave at slash origin
-    this.particleSystem.createMuzzleFlash(slashOrigin, this.projectileColor, 10);
+    this.particleSystem.createMuzzleFlash(
+      slashOrigin,
+      this.projectileColor,
+      10
+    );
   }
 
   canFire() {
@@ -167,7 +167,7 @@ class SciFiSword extends BaseWeapon {
     return {
       current: this.comboCounter + 1,
       max: this.maxCombo,
-      damageBonus: (this.comboCounter * 15) + "%"
+      damageBonus: this.comboCounter * 15 + "%",
     };
   }
 }
