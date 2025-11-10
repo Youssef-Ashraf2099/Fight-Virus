@@ -20,7 +20,10 @@ export default defineConfig({
     emptyOutDir: true,
     assetsDir: "assets",
     rollupOptions: {
-      input: path.resolve(rootDir, "index.html"),
+      input: {
+        main: path.resolve(rootDir, "index.html"),
+        modelViewer: path.resolve(rootDir, "modelViewer.html"),
+      },
     },
   },
 });

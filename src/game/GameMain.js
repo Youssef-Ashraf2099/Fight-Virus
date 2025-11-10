@@ -348,10 +348,12 @@ class GameMain {
     const startButton = document.getElementById("startButton");
     const continueButton = document.getElementById("continueButton");
     const learnButton = document.getElementById("learnButton");
+    const modelViewerButton = document.getElementById("modelViewerButton");
     const exitButton = document.getElementById("exitButton");
     console.log("Start button element:", startButton);
     console.log("Continue button element:", continueButton);
     console.log("Learn button element:", learnButton);
+    console.log("Model Viewer button element:", modelViewerButton);
     console.log("Exit button element:", exitButton);
 
     if (!startButton) {
@@ -398,6 +400,13 @@ class GameMain {
       learnButton.addEventListener("click", () => {
         // console.log("🧠 LEARN MODE BUTTON CLICKED!");
         this.startLearnMode();
+      });
+    }
+
+    if (modelViewerButton) {
+      modelViewerButton.addEventListener("click", () => {
+        console.log("🎨 MODEL VIEWER BUTTON CLICKED!");
+        window.location.href = "modelViewer.html";
       });
     }
 

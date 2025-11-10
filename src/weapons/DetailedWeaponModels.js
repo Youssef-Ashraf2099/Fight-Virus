@@ -18,6 +18,12 @@ export default class DetailedWeaponModels {
         return this.#buildPlasmaLauncher();
       case "shockwaveemitter":
         return this.#buildShockwaveEmitter();
+      case "revolver":
+        return this.#buildRevolver();
+      case "scifisword":
+      case "plasmasword":
+      case "plasmablade":
+        return this.#buildSciFiSword();
       default:
         console.warn(`Unknown weapon model '${type}', returning null.`);
         return null;
@@ -1067,6 +1073,376 @@ export default class DetailedWeaponModels {
       handData: null,
       hud,
       accentColor: accent,
+    };
+  }
+
+  static #buildRevolver() {
+    const accent = 0xffa500;
+    const group = new THREE.Group();
+    group.name = "RevolverViewModel";
+
+    const weaponHolder = new THREE.Group();
+    weaponHolder.name = "weaponHolder";
+    group.add(weaponHolder);
+    group.userData.weaponHolder = weaponHolder;
+
+    const frameMaterial = new THREE.MeshStandardMaterial({
+      color: 0x1a1a1a,
+      metalness: 0.9,
+      roughness: 0.32,
+    });
+
+    const steelMaterial = new THREE.MeshStandardMaterial({
+      color: 0x45484d,
+      metalness: 0.92,
+      roughness: 0.24,
+    });
+
+    const gripMaterial = new THREE.MeshStandardMaterial({
+      color: 0x2a1610,
+      metalness: 0.18,
+      roughness: 0.72,
+    });
+
+    const accentMaterial = new THREE.MeshStandardMaterial({
+      color: accent,
+      emissive: accent,
+      emissiveIntensity: 0.75,
+      metalness: 0.4,
+      roughness: 0.38,
+      transparent: true,
+      opacity: 0.82,
+    });
+
+    const backstrap = new THREE.Mesh(
+      new THREE.BoxGeometry(0.32, 0.48, 0.12),
+      gripMaterial
+    );
+    backstrap.position.set(-0.26, -0.18, 0);
+    backstrap.rotation.z = Math.PI / 8;
+    weaponHolder.add(backstrap);
+
+    const gripInset = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.42, 0.11),
+      accentMaterial.clone()
+    );
+    gripInset.position.copy(backstrap.position).add(new THREE.Vector3(0.02, 0.02, 0));
+    gripInset.rotation.copy(backstrap.rotation);
+    weaponHolder.add(gripInset);
+
+    const triggerGuard = new THREE.Mesh(
+      new THREE.TorusGeometry(0.14, 0.028, 16, 32),
+      steelMaterial
+    );
+    triggerGuard.rotation.x = Math.PI / 2;
+    triggerGuard.position.set(-0.05, -0.02, 0);
+    weaponHolder.add(triggerGuard);
+
+    const trigger = new THREE.Mesh(
+      new THREE.BoxGeometry(0.05, 0.16, 0.04),
+      steelMaterial
+    );
+    trigger.position.set(0.02, -0.02, 0);
+    trigger.rotation.z = -Math.PI / 18;
+    weaponHolder.add(trigger);
+
+    const topStrap = new THREE.Mesh(
+      new THREE.BoxGeometry(0.82, 0.08, 0.18),
+      frameMaterial
+    );
+    topStrap.position.set(0.24, 0.12, 0);
+    weaponHolder.add(topStrap);
+
+    const barrel = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.07, 0.07, 0.78, 24),
+      steelMaterial
+    );
+    barrel.rotation.z = Math.PI / 2;
+    barrel.position.set(0.58, 0.12, 0);
+    weaponHolder.add(barrel);
+
+    const barrelVent = new THREE.Mesh(
+      new THREE.BoxGeometry(0.4, 0.05, 0.12),
+      accentMaterial.clone()
+    );
+    barrelVent.position.set(0.42, 0.2, 0);
+    weaponHolder.add(barrelVent);
+
+    const frontSight = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.05, 0.08),
+      accentMaterial.clone()
+    );
+    frontSight.position.set(0.94, 0.19, 0);
+    weaponHolder.add(frontSight);
+
+    const ejectorHousing = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035, 0.035, 0.66, 16),
+      steelMaterial
+    );
+    ejectorHousing.rotation.z = Math.PI / 2;
+    ejectorHousing.position.set(0.58, 0.04, -0.09);
+    weaponHolder.add(ejectorHousing);
+
+    const cylinderMaterial = steelMaterial.clone();
+    cylinderMaterial.metalness = 0.95;
+    cylinderMaterial.roughness = 0.18;
+    const cylinder = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.17, 0.17, 0.28, 40, 1, true),
+      cylinderMaterial
+    );
+    cylinder.rotation.z = Math.PI / 2;
+    cylinder.position.set(0.05, 0.1, 0);
+    weaponHolder.add(cylinder);
+
+    const chamberLights = [];
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      const light = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.025, 0.025, 0.04, 12),
+        accentMaterial.clone()
+      );
+      light.rotation.z = Math.PI / 2;
+      light.position.set(
+        cylinder.position.x,
+        cylinder.position.y + Math.cos(angle) * 0.12,
+        Math.sin(angle) * 0.12
+      );
+      weaponHolder.add(light);
+      chamberLights.push(light.material);
+    }
+
+    const hammer = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.18, 0.06),
+      steelMaterial
+    );
+    hammer.position.set(-0.26, 0.2, -0.01);
+    hammer.rotation.z = -Math.PI / 9;
+    weaponHolder.add(hammer);
+
+    const hammerAccent = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.06, 0.05),
+      accentMaterial.clone()
+    );
+    hammerAccent.position.set(-0.28, 0.26, -0.01);
+    weaponHolder.add(hammerAccent);
+
+    const muzzle = new THREE.Object3D();
+    muzzle.position.set(0.98, 0.12, 0);
+    weaponHolder.add(muzzle);
+
+    const hud = this.#createWeaponHUD("REVOLVER", accent, {
+      position: new THREE.Vector3(-0.18, 0.16, -0.26),
+      rotation: new THREE.Vector3(-Math.PI / 12, Math.PI / 5, 0.06),
+    });
+    group.add(hud.mesh);
+
+    const animate = (time, delta = 0, context = {}) => {
+      this.#applyIdleMotion(weaponHolder, time, context);
+
+      cylinder.rotation.x += delta * 3;
+      chamberLights.forEach((mat, idx) => {
+        mat.emissiveIntensity = 0.6 + Math.sin(time * 6 + idx) * 0.18;
+        mat.opacity = 0.68 + Math.sin(time * 4 + idx * 0.8) * 0.1;
+      });
+
+      hammer.rotation.z = -Math.PI / 9 + Math.sin(time * 2.2) * 0.05;
+      hammer.position.y = 0.2 + Math.sin(time * 2.2) * 0.015;
+      trigger.rotation.z = -Math.PI / 18 + Math.sin(time * 2.8) * 0.02;
+    };
+
+    return {
+      group,
+      muzzle,
+      flashColor: accent,
+      flashRadius: 0.08,
+      lightColor: accent,
+      lightIntensity: 1.18,
+      animate,
+      handData: null,
+      hud,
+      accentColor: accent,
+      viewTransform: {
+        hip: {
+          position: new THREE.Vector3(0.16, -0.18, -0.72),
+          rotation: new THREE.Euler(-0.06, -0.12, 0.08),
+        },
+        aim: {
+          position: new THREE.Vector3(-0.02, -0.12, -0.42),
+          rotation: new THREE.Euler(-0.015, 0.03, 0.02),
+        },
+      },
+    };
+  }
+
+  static #buildSciFiSword() {
+    const accent = 0x00ffff;
+    const group = new THREE.Group();
+    group.name = "SciFiSwordViewModel";
+
+    const weaponHolder = new THREE.Group();
+    weaponHolder.name = "weaponHolder";
+    group.add(weaponHolder);
+    group.userData.weaponHolder = weaponHolder;
+
+    const hiltMaterial = new THREE.MeshStandardMaterial({
+      color: 0x101822,
+      metalness: 0.7,
+      roughness: 0.28,
+    });
+
+    const gripMaterial = new THREE.MeshStandardMaterial({
+      color: 0x090d15,
+      metalness: 0.25,
+      roughness: 0.6,
+    });
+
+    const bladeCoreMaterial = new THREE.MeshStandardMaterial({
+      color: accent,
+      emissive: accent,
+      emissiveIntensity: 1.2,
+      transparent: true,
+      opacity: 0.85,
+      side: THREE.DoubleSide,
+    });
+
+    const bladeEdgeMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: accent,
+      emissiveIntensity: 0.95,
+      transparent: true,
+      opacity: 0.55,
+      side: THREE.DoubleSide,
+    });
+
+    const guardMaterial = new THREE.MeshStandardMaterial({
+      color: accent,
+      emissive: accent,
+      emissiveIntensity: 1.1,
+      transparent: true,
+      opacity: 0.7,
+    });
+
+    const grip = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.09, 0.09, 0.6, 20),
+      gripMaterial
+    );
+    grip.position.set(0, -0.3, 0);
+    weaponHolder.add(grip);
+
+    const gripSegments = [];
+    for (let i = 0; i < 4; i++) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.1, 0.015, 12, 32),
+        guardMaterial.clone()
+      );
+      ring.rotation.x = Math.PI / 2;
+      ring.position.set(0, -0.45 + i * 0.18, 0);
+      weaponHolder.add(ring);
+      gripSegments.push(ring);
+    }
+
+    const pommel = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1, 18, 12),
+      hiltMaterial
+    );
+    pommel.position.set(0, -0.6, 0);
+    weaponHolder.add(pommel);
+
+    const emitter = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.14, 0.14, 0.16, 24),
+      hiltMaterial
+    );
+    emitter.position.set(0, -0.02, 0);
+    weaponHolder.add(emitter);
+
+    const crossGuard = new THREE.Mesh(
+      new THREE.TorusGeometry(0.22, 0.05, 20, 64),
+      guardMaterial
+    );
+    crossGuard.rotation.x = Math.PI / 2;
+    crossGuard.position.set(0, 0.06, 0);
+    weaponHolder.add(crossGuard);
+
+    const bladeCore = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 1.8, 0.06),
+      bladeCoreMaterial
+    );
+    bladeCore.position.set(0, 0.94, 0);
+    weaponHolder.add(bladeCore);
+
+    const bladeEdge = new THREE.Mesh(
+      new THREE.BoxGeometry(0.04, 1.82, 0.12),
+      bladeEdgeMaterial
+    );
+    bladeEdge.position.set(0, 0.94, 0);
+    weaponHolder.add(bladeEdge);
+
+    const bladeGlowMaterial = guardMaterial.clone();
+    bladeGlowMaterial.opacity = 0.5;
+    bladeGlowMaterial.depthWrite = false;
+    const bladeGlow = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.32, 1.92),
+      bladeGlowMaterial
+    );
+    bladeGlow.rotation.y = Math.PI / 2;
+    bladeGlow.position.set(0, 0.94, 0);
+    weaponHolder.add(bladeGlow);
+
+    const bladeHalo = new THREE.Mesh(
+      new THREE.RingGeometry(0.18, 0.26, 32),
+      guardMaterial.clone()
+    );
+    bladeHalo.rotation.x = Math.PI / 2;
+    bladeHalo.position.set(0, 0.12, 0);
+    weaponHolder.add(bladeHalo);
+
+    const muzzle = new THREE.Object3D();
+    muzzle.position.set(0, 1.86, 0);
+    weaponHolder.add(muzzle);
+
+    const hud = this.#createWeaponHUD("PLASMA BLADE", accent, {
+      position: new THREE.Vector3(-0.24, 0.38, -0.28),
+      rotation: new THREE.Vector3(-Math.PI / 7, Math.PI / 4, 0.1),
+    });
+    group.add(hud.mesh);
+
+    const animate = (time, delta = 0, context = {}) => {
+      this.#applyIdleMotion(weaponHolder, time, context);
+
+      const pulse = 1.15 + Math.sin(time * 6) * 0.3;
+      bladeCoreMaterial.emissiveIntensity = pulse;
+      bladeEdgeMaterial.emissiveIntensity = 0.9 + Math.sin(time * 5.2) * 0.25;
+      bladeGlowMaterial.opacity = 0.45 + Math.sin(time * 4.4) * 0.15;
+
+      crossGuard.rotation.z += delta * 1.4;
+      bladeHalo.rotation.z -= delta * 1.1;
+      gripSegments.forEach((segment, idx) => {
+        segment.material.emissiveIntensity =
+          0.7 + Math.sin(time * 3.6 + idx) * 0.2;
+      });
+    };
+
+    return {
+      group,
+      muzzle,
+      flashColor: accent,
+      flashRadius: 0.06,
+      lightColor: accent,
+      lightIntensity: 1.08,
+      animate,
+      handData: null,
+      hud,
+      accentColor: accent,
+      viewTransform: {
+        hip: {
+          position: new THREE.Vector3(0.22, -0.24, -0.8),
+          rotation: new THREE.Euler(-0.12, 0.18, 0.18),
+        },
+        aim: {
+          position: new THREE.Vector3(0.04, -0.18, -0.5),
+          rotation: new THREE.Euler(-0.06, 0.04, 0.08),
+        },
+      },
     };
   }
 

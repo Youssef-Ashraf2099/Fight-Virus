@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fight Virus - Model Viewer</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Courier New", monospace;
+        background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 100%);
+        color: #00ff00;
+        overflow: hidden;
+      }
+
+      #viewer-container {
+        width: 100%;
+        height: 100vh;
+        display: flex;
+      }
+
+      #sidebar {
+        width: 1000px;
+        background: rgba(10, 14, 39, 0.95);
+        border-right: 2px solid #00ff00;
+        overflow-y: auto;
+        padding: 78px;
+        z-index: 10;
+      }
+
+      #sidebar h2 {
+        color: #00ffff;
+        margin-bottom: 15px;
+        font-size: 18px;
+        border-bottom: 2px solid #00ffff;
+        padding-bottom: 5px;
+      }
+
+      .category {
+        margin-bottom: 25px;
+      }
+
+      .model-button {
+        width: 100%;
+        padding: 10px;
+        margin: 5px 0;
+        background: rgba(0, 255, 0, 0.1);
+        border: 1px solid #00ff00;
+        color: #00ff00;
+        cursor: pointer;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        transition: all 0.3s;
+        text-align: left;
+        position: relative;
+        z-index: 1;
+      }
+
+      .model-button:hover {
+        background: rgba(0, 255, 0, 0.3);
+        border-color: #00ffff;
+        color: #00ffff;
+        transform: translateX(5px);
+      }
+
+      .model-button.active {
+        background: rgba(0, 255, 255, 0.3);
+        border-color: #00ffff;
+        color: #00ffff;
+        font-weight: bold;
+      }
+
+      #viewer-canvas {
+        flex: 1;
+        position: relative;
+        background: #0a0e27;
+      }
+
+      #info-panel {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(10, 14, 39, 0.9);
+        border: 2px solid #00ffff;
+        padding: 15px;
+        min-width: 250px;
+        font-size: 12px;
+      }
+
+      #info-panel h3 {
+        color: #00ffff;
+        margin-bottom: 10px;
+        font-size: 16px;
+      }
+
+      #info-panel p {
+        margin: 5px 0;
+        color: #00ff00;
+      }
+
+      #controls-panel {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        background: rgba(10, 14, 39, 0.9);
+        border: 2px solid #ffa500;
+        padding: 15px;
+        font-size: 11px;
+      }
+
+      #controls-panel h4 {
+        color: #ffa500;
+        margin-bottom: 8px;
+      }
+
+      #controls-panel p {
+        color: #00ff00;
+        margin: 3px 0;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        padding: 12px 24px;
+        background: rgba(255, 0, 0, 0.3);
+        border: 2px solid #ff0000;
+        color: #ff0000;
+        cursor: pointer;
+        font-family: "Courier New", monospace;
+        font-size: 14px;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-block;
+      }
+
+      .back-button:hover {
+        background: rgba(255, 0, 0, 0.5);
+        transform: scale(1.05);
+      }
+
+      ::-webkit-scrollbar {
+        width: 10px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.3);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: rgba(0, 255, 0, 0.5);
+        border-radius: 5px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 255, 255, 0.7);
+      }
+
+      .stat-label {
+        color: #ffa500;
+        display: inline-block;
+        width: 100px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="viewer-container">
+      <div id="sidebar">
+        <h2>🔫 WEAPONS</h2>
+        <div class="category" id="weapons-list"></div>
+
+        <h2>👾 ENEMIES</h2>
+        <div class="category" id="enemies-list"></div>
+
+        <h2>💀 BOSSES</h2>
+        <div class="category" id="bosses-list"></div>
+      </div>
+
+      <div id="viewer-canvas">
+        <a href="index.html" class="back-button">← BACK TO GAME</a>
+
+        <div id="info-panel">
+          <h3 id="model-name">Select a Model</h3>
+          <p id="model-type"></p>
+          <p id="model-description"></p>
+          <div id="model-stats"></div>
+        </div>
+
+        <div id="controls-panel">
+          <h4>CONTROLS</h4>
+          <p>• Left Mouse: Rotate</p>
+          <p>• Right Mouse: Pan</p>
+          <p>• Mouse Wheel: Zoom</p>
+          <p>• R: Reset View</p>
+          <p>• Space: Auto-Rotate</p>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./modelViewer.js"></script>
+  </body>
+</html>
