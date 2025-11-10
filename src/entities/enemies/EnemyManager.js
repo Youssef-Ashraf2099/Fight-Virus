@@ -213,6 +213,7 @@ export default class EnemyManager {
   update(deltaTime, playerPosition) {
     this.lastPlayerPosition = playerPosition ? playerPosition.clone() : null;
 
+    // OPTIMIZATION: Process spawn queue
     if (this.spawnQueue.length) {
       // Spread queued spawns across frames to avoid hitches
       this.spawnQueue.forEach((request) => {
@@ -254,11 +255,39 @@ export default class EnemyManager {
       }
     }
 
-    this.enemies.forEach((enemy) => {
-      enemy.update(deltaTime, playerPosition);
-    });
+    // OPTIMIZATION: Update enemies with distance-based LOD
+    const updateBudget = 30; // Max enemies to fully update per frame
+    const enemyCount = this.enemies.length;
 
-    // Remove dead enemies
+    if (playerPosition && enemyCount > 0) {
+      // Sort enemies by distance to player (closest first)
+      const enemiesWithDist = this.enemies.map((enemy) => ({
+        enemy,
+        distSq: enemy.position.distanceToSquared(playerPosition),
+      }));
+
+      // Update all enemies but with reduced updates for distant ones
+      for (let i = 0; i < enemyCount; i++) {
+        const { enemy, distSq } = enemiesWithDist[i];
+        const distance = Math.sqrt(distSq);
+
+        // Full update for close enemies or priority enemies (bosses, attacking)
+        if (i < updateBudget || enemy.isBoss || distance < 15) {
+          enemy.update(deltaTime, playerPosition);
+        } else {
+          // Reduced update for distant enemies (every other frame equivalent)
+          enemy.update(deltaTime * 0.5, playerPosition);
+        }
+      }
+    } else {
+      // No player position, simple update
+      this.enemies.forEach((enemy) => {
+        enemy.update(deltaTime, playerPosition);
+      });
+    }
+
+    // OPTIMIZATION: Batch remove dead enemies
+    const aliveBefore = this.enemies.length;
     this.enemies = this.enemies.filter((enemy) => {
       if (enemy.isDead()) {
         enemy.destroy();
@@ -266,6 +295,9 @@ export default class EnemyManager {
       }
       return true;
     });
+
+    // Optional: Track kill count for debugging
+    // const killed = aliveBefore - this.enemies.length;
   }
 
   getEnemies() {

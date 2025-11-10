@@ -1078,6 +1078,314 @@
         box-shadow: 0 10px 18px rgba(255, 82, 82, 0.25);
       }
 
+      /* ========== ENHANCED MAZE STYLES ========== */
+      .maze-grid-enhanced {
+        grid-template-columns: repeat(var(--maze-cols, 5), minmax(36px, 1fr));
+        max-width: min(85vw, 680px);
+        max-height: min(60vh, 680px);
+        overflow: auto;
+        padding: 8px;
+        gap: 6px;
+      }
+
+      .maze-status-enhanced {
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 16px;
+        background: rgba(0, 40, 30, 0.5);
+        border-radius: 12px;
+        border: 1px solid rgba(34, 209, 255, 0.25);
+      }
+
+      .maze-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: center;
+      }
+
+      .maze-stat-label {
+        font-size: 11px;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: rgba(173, 255, 214, 0.65);
+      }
+
+      .maze-stat-value {
+        font-family: var(--heading-font);
+        font-size: 24px;
+        color: #b7f9ff;
+        text-shadow: 0 0 15px rgba(34, 209, 255, 0.6);
+      }
+
+      .maze-stat-value.warning {
+        color: #ff6b6b;
+        text-shadow: 0 0 15px rgba(255, 107, 107, 0.7);
+        animation: pulse-warning 1s ease-in-out infinite;
+      }
+
+      .maze-stat-value.optimal {
+        color: #4dffaa;
+        text-shadow: 0 0 15px rgba(77, 255, 170, 0.8);
+      }
+
+      @keyframes pulse-warning {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.6;
+        }
+      }
+
+      .maze-cell.visited {
+        background: rgba(34, 209, 255, 0.12);
+        border-color: rgba(34, 209, 255, 0.35);
+      }
+
+      /* ========== CHECKSUM BALANCER PUZZLE STYLES ========== */
+      .puzzle-body.puzzle-checksum {
+        gap: 24px;
+        padding: 28px;
+      }
+
+      .checksum-header {
+        display: flex;
+        gap: 32px;
+        justify-content: center;
+        flex-wrap: wrap;
+        padding: 20px;
+        background: rgba(0, 36, 24, 0.45);
+        border-radius: 14px;
+        border: 1px solid rgba(34, 209, 255, 0.25);
+      }
+
+      .checksum-info {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .checksum-label {
+        font-size: 12px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: rgba(173, 255, 214, 0.7);
+      }
+
+      .checksum-current,
+      .checksum-target {
+        font-family: var(--heading-font);
+        font-size: 42px;
+        font-weight: bold;
+        transition: color 0.3s ease, text-shadow 0.3s ease;
+      }
+
+      .checksum-target {
+        color: #4dffaa;
+        text-shadow: 0 0 20px rgba(77, 255, 170, 0.7);
+      }
+
+      .checksum-slots {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .checksum-slot {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+        background: rgba(0, 40, 30, 0.4);
+        border: 1px solid rgba(34, 209, 255, 0.2);
+        border-radius: 10px;
+        min-width: 140px;
+      }
+
+      .checksum-slot-label {
+        text-align: center;
+        font-size: 14px;
+        letter-spacing: 1.5px;
+        color: rgba(173, 255, 214, 0.8);
+      }
+
+      .checksum-slot-controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .checksum-button {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: 1px solid rgba(34, 209, 255, 0.35);
+        background: rgba(0, 36, 30, 0.6);
+        color: #b7f9ff;
+        font-size: 20px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .checksum-button:hover {
+        background: rgba(34, 209, 255, 0.2);
+        transform: scale(1.1);
+      }
+
+      .checksum-input {
+        width: 60px;
+        height: 36px;
+        text-align: center;
+        font-family: var(--heading-font);
+        font-size: 18px;
+        background: rgba(0, 20, 16, 0.7);
+        border: 1px solid rgba(34, 209, 255, 0.3);
+        border-radius: 6px;
+        color: #b7f9ff;
+        padding: 4px;
+      }
+
+      .checksum-input:focus {
+        outline: none;
+        border-color: rgba(34, 209, 255, 0.6);
+        box-shadow: 0 0 12px rgba(34, 209, 255, 0.3);
+      }
+
+      /* ========== MEMORY PATTERN PUZZLE STYLES ========== */
+      .puzzle-body.puzzle-memory {
+        gap: 24px;
+        align-items: center;
+        padding: 28px;
+      }
+
+      .memory-display {
+        width: 280px;
+        height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--heading-font);
+        font-size: 24px;
+        border-radius: 14px;
+        border: 2px solid rgba(34, 209, 255, 0.4);
+        background: rgba(0, 20, 16, 0.7);
+        transition: all 0.3s ease;
+        text-shadow: 0 0 15px rgba(34, 209, 255, 0.6);
+      }
+
+      .memory-buttons {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        width: 100%;
+        max-width: 320px;
+      }
+
+      .memory-button {
+        height: 80px;
+        font-family: var(--heading-font);
+        font-size: 18px;
+        border-radius: 12px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: white;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      .memory-button:hover {
+        transform: scale(1.05);
+        border-color: rgba(255, 255, 255, 0.6);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .memory-button:active {
+        transform: scale(0.98);
+      }
+
+      .memory-progress {
+        font-size: 16px;
+        letter-spacing: 2px;
+        color: rgba(173, 255, 214, 0.85);
+      }
+
+      .memory-repeat {
+        font-size: 15px;
+        padding: 12px 24px;
+        border-radius: 10px;
+        border: 1px solid rgba(34, 209, 255, 0.4);
+        background: rgba(0, 36, 30, 0.6);
+        color: #b7f9ff;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .memory-repeat:hover {
+        background: rgba(34, 209, 255, 0.2);
+        transform: translateY(-2px);
+      }
+
+      /* ========== SEQUENCE DECODER PUZZLE STYLES ========== */
+      .puzzle-body.puzzle-sequence {
+        gap: 28px;
+        align-items: center;
+        padding: 32px;
+      }
+
+      .sequence-display {
+        font-family: var(--heading-font);
+        font-size: 32px;
+        letter-spacing: 4px;
+        padding: 24px;
+        background: rgba(0, 36, 24, 0.5);
+        border-radius: 14px;
+        border: 1px solid rgba(34, 209, 255, 0.3);
+        color: #b7f9ff;
+        text-shadow: 0 0 15px rgba(34, 209, 255, 0.5);
+      }
+
+      .sequence-input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+        width: 100%;
+        max-width: 320px;
+      }
+
+      .sequence-label {
+        font-size: 15px;
+        letter-spacing: 2px;
+        color: rgba(173, 255, 214, 0.8);
+      }
+
+      .sequence-input {
+        width: 180px;
+        height: 50px;
+        text-align: center;
+        font-family: var(--heading-font);
+        font-size: 24px;
+        background: rgba(0, 20, 16, 0.7);
+        border: 2px solid rgba(34, 209, 255, 0.4);
+        border-radius: 10px;
+        color: #b7f9ff;
+        padding: 8px;
+        text-shadow: 0 0 10px rgba(34, 209, 255, 0.5);
+      }
+
+      .sequence-input:focus {
+        outline: none;
+        border-color: rgba(34, 209, 255, 0.7);
+        box-shadow: 0 0 20px rgba(34, 209, 255, 0.4);
+      }
+
       .puzzle-body.puzzle-register {
         gap: 18px;
       }

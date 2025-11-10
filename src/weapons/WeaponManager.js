@@ -149,9 +149,15 @@ class WeaponManager {
     this.time += deltaTime;
     this.weapons.forEach((weapon) => weapon.update(deltaTime));
 
-    this.projectiles = this.projectiles.filter((proj) => {
+    // OPTIMIZATION: Batch projectile updates with early removal
+    const projCount = this.projectiles.length;
+    const aliveProjectiles = [];
+
+    for (let i = 0; i < projCount; i++) {
+      const proj = this.projectiles[i];
+
       if (!proj || (proj.isExpired && proj.isExpired())) {
-        return false;
+        continue; // Skip destroyed projectiles
       }
 
       const updateResult =
@@ -163,18 +169,20 @@ class WeaponManager {
         if (typeof proj.destroy === "function") {
           proj.destroy();
         }
-        return false;
+        continue;
       }
 
       if (typeof proj.isExpired === "function" && proj.isExpired()) {
         if (typeof proj.destroy === "function") {
           proj.destroy();
         }
-        return false;
+        continue;
       }
 
-      return true;
-    });
+      aliveProjectiles.push(proj);
+    }
+
+    this.projectiles = aliveProjectiles;
 
     this.player.updateWeaponHUD?.(this.getCurrentWeapon());
   }

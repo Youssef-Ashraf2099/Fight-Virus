@@ -4,20 +4,47 @@ export default class ParticleSystem {
   constructor(scene) {
     this.scene = scene;
     this.particles = [];
+
+    // OPTIMIZATION: Object pooling for geometries and materials
+    this.geometryPool = {
+      sphere: new THREE.SphereGeometry(0.2, 8, 8),
+      box: new THREE.BoxGeometry(0.15, 0.15, 0.15),
+      ring: new THREE.RingGeometry(0.5, 1, 32),
+    };
+
+    this.materialPool = new Map(); // Store materials by color
+    this.maxParticles = 500; // Limit total particles to prevent memory issues
+  }
+
+  // OPTIMIZATION: Get or create material from pool
+  getMaterial(color, transparent = true) {
+    const key = `${color}_${transparent}`;
+    if (!this.materialPool.has(key)) {
+      this.materialPool.set(
+        key,
+        new THREE.MeshPhongMaterial({
+          color: color,
+          emissive: color,
+          emissiveIntensity: 1,
+          transparent: transparent,
+          opacity: 1,
+        })
+      );
+    }
+    return this.materialPool.get(key);
   }
 
   createExplosion(position, color, count = 30) {
-    for (let i = 0; i < count; i++) {
-      const geometry = new THREE.SphereGeometry(0.2, 8, 8);
-      const material = new THREE.MeshPhongMaterial({
-        color: color,
-        emissive: color,
-        emissiveIntensity: 1,
-        transparent: true,
-        opacity: 1,
-      });
+    // OPTIMIZATION: Limit particle count if approaching max
+    if (this.particles.length > this.maxParticles - 50) {
+      count = Math.min(count, 15); // Reduce particles when near limit
+    }
 
-      const particle = new THREE.Mesh(geometry, material);
+    const material = this.getMaterial(color);
+
+    for (let i = 0; i < count; i++) {
+      // OPTIMIZATION: Reuse geometry from pool
+      const particle = new THREE.Mesh(this.geometryPool.sphere, material);
       particle.position.copy(position);
 
       const velocity = new THREE.Vector3(
@@ -39,17 +66,16 @@ export default class ParticleSystem {
   }
 
   createImpact(position, color, count = 10) {
-    for (let i = 0; i < count; i++) {
-      const geometry = new THREE.BoxGeometry(0.15, 0.15, 0.15);
-      const material = new THREE.MeshPhongMaterial({
-        color: color,
-        emissive: color,
-        emissiveIntensity: 1,
-        transparent: true,
-        opacity: 1,
-      });
+    // OPTIMIZATION: Limit particle count if approaching max
+    if (this.particles.length > this.maxParticles - 30) {
+      count = Math.min(count, 5);
+    }
 
-      const particle = new THREE.Mesh(geometry, material);
+    const material = this.getMaterial(color);
+
+    for (let i = 0; i < count; i++) {
+      // OPTIMIZATION: Reuse geometry from pool
+      const particle = new THREE.Mesh(this.geometryPool.box, material);
       particle.position.copy(position);
 
       const velocity = new THREE.Vector3(
@@ -71,14 +97,14 @@ export default class ParticleSystem {
   }
 
   createMuzzleFlash(position, color) {
-    const geometry = new THREE.SphereGeometry(0.5, 16, 16);
-    const material = new THREE.MeshBasicMaterial({
-      color: color,
-      transparent: true,
-      opacity: 1,
-    });
+    const material = this.getMaterial(color, true);
 
-    const flash = new THREE.Mesh(geometry, material);
+    // OPTIMIZATION: Reuse geometry from pool (create specific muzzle flash geometry)
+    if (!this.geometryPool.muzzleFlash) {
+      this.geometryPool.muzzleFlash = new THREE.SphereGeometry(0.5, 16, 16);
+    }
+
+    const flash = new THREE.Mesh(this.geometryPool.muzzleFlash, material);
     flash.position.copy(position);
     this.scene.add(flash);
 
@@ -93,21 +119,15 @@ export default class ParticleSystem {
   }
 
   createShockwave(position, radius, color) {
-    const geometry = new THREE.RingGeometry(0.5, 1, 32);
-    const material = new THREE.MeshBasicMaterial({
-      color: color,
-      transparent: true,
-      opacity: 1,
-      side: THREE.DoubleSide,
-    });
-
-    const shockwave = new THREE.Mesh(geometry, material);
-    shockwave.position.copy(position);
-    shockwave.rotation.x = -Math.PI / 2;
-    this.scene.add(shockwave);
+    // OPTIMIZATION: Reuse geometry and material
+    const material = this.getMaterial(color, true);
+    const wave = new THREE.Mesh(this.geometryPool.ring, material);
+    wave.position.copy(position);
+    wave.rotation.x = -Math.PI / 2;
+    this.scene.add(wave);
 
     this.particles.push({
-      mesh: shockwave,
+      mesh: wave,
       velocity: new THREE.Vector3(0, 0, 0),
       lifetime: 1,
       maxLifetime: 1,
@@ -118,13 +138,24 @@ export default class ParticleSystem {
   }
 
   update(deltaTime) {
-    this.particles = this.particles.filter((particle) => {
+    // OPTIMIZATION: Limit update iterations and clean old particles
+    const maxUpdates = Math.min(this.particles.length, 300);
+
+    this.particles = this.particles.filter((particle, index) => {
+      // OPTIMIZATION: Skip updating distant old particles
+      if (index >= maxUpdates && particle.lifetime < 0.1) {
+        this.scene.remove(particle.mesh);
+        // Don't dispose shared geometries/materials from pool
+        return false;
+      }
+
       particle.lifetime -= deltaTime;
 
       if (particle.lifetime <= 0) {
         this.scene.remove(particle.mesh);
-        particle.mesh.geometry.dispose();
-        particle.mesh.material.dispose();
+        // OPTIMIZATION: Don't dispose pooled resources
+        // particle.mesh.geometry.dispose(); // Shared from pool
+        // particle.mesh.material.dispose(); // Shared from pool
         return false;
       }
 

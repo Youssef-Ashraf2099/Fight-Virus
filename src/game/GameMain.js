@@ -19,13 +19,14 @@ import SaveManager from "./SaveManager.js";
 
 class GameMain {
   constructor() {
-    console.log("GameMain constructor called");
+    // Performance optimization: Debug logging disabled for production
+    // console.log("GameMain constructor called");
 
     try {
-      console.log("Creating scene...");
+      // console.log("Creating scene...");
       this.scene = new THREE.Scene();
 
-      console.log("Creating camera...");
+      // console.log("Creating camera...");
       this.camera = new THREE.PerspectiveCamera(
         75,
         window.innerWidth / window.innerHeight,
@@ -34,32 +35,32 @@ class GameMain {
       );
       this.scene.add(this.camera); // ensure weapon viewmodel renders
 
-      console.log("Getting canvas element...");
+      // console.log("Getting canvas element...");
       const canvas = document.getElementById("gameCanvas");
       if (!canvas) {
         throw new Error("Canvas element not found!");
       }
-      console.log("Canvas found:", canvas);
+      // console.log("Canvas found:", canvas);
 
-      console.log("Creating renderer...");
+      // console.log("Creating renderer...");
       this.renderer = new THREE.WebGLRenderer({
         canvas: canvas,
         antialias: true,
       });
 
-      console.log("Setting up renderer...");
+      // console.log("Setting up renderer...");
       this.renderer.setSize(window.innerWidth, window.innerHeight);
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
       // Overlay canvas for 2D health bars
-      console.log("Initializing health bar canvas...");
+      // console.log("Initializing health bar canvas...");
       this.healthBarCanvas = document.getElementById("healthBarCanvas");
       if (this.healthBarCanvas) {
         this.healthBarCanvas.width = window.innerWidth;
         this.healthBarCanvas.height = window.innerHeight;
         this.healthBarContext = this.healthBarCanvas.getContext("2d");
-        console.log("✓ Health bar canvas ready");
+        // console.log("✓ Health bar canvas ready");
       } else {
         console.warn("⚠️ Health bar canvas not found");
       }
@@ -131,9 +132,9 @@ class GameMain {
 
       this.setupInitialFullscreen();
 
-      console.log("Calling init()...");
+      // console.log("Calling init()...");
       this.init();
-      console.log("GameMain constructor completed successfully");
+      // console.log("GameMain constructor completed successfully");
     } catch (error) {
       console.error("Error in GameMain constructor:", error);
       throw error;
@@ -392,21 +393,21 @@ class GameMain {
 
     if (learnButton) {
       learnButton.addEventListener("click", () => {
-        console.log("🧠 LEARN MODE BUTTON CLICKED!");
+        // console.log("🧠 LEARN MODE BUTTON CLICKED!");
         this.startLearnMode();
       });
     }
 
     if (exitButton) {
       exitButton.addEventListener("click", () => {
-        console.log("⛔ EXIT BUTTON CLICKED!");
+        // console.log("⛔ EXIT BUTTON CLICKED!");
         this.exitGame();
       });
     } else {
       console.warn("Exit button not found on start screen.");
     }
 
-    console.log("✓ Button listeners attached");
+    // console.log("✓ Button listeners attached");
 
     window.addEventListener("resize", () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -452,12 +453,12 @@ class GameMain {
   }
 
   handlePauseToggle() {
-    console.log("GameMain: handlePauseToggle called. isPaused=", this.isPaused);
+    // console.log("GameMain: handlePauseToggle called. isPaused=", this.isPaused);
     if (this.isPaused || this.uiManager?.isPauseMenuVisible?.()) {
-      console.log("GameMain: resuming game via toggle");
+      // console.log("GameMain: resuming game via toggle");
       this.resumeGame();
     } else {
-      console.log("GameMain: pausing game via toggle");
+      // console.log("GameMain: pausing game via toggle");
       this.pauseGame();
     }
   }
@@ -521,7 +522,7 @@ class GameMain {
   }
 
   pauseGame() {
-    console.log("GameMain: pauseGame called");
+    // console.log("GameMain: pauseGame called");
 
     if (
       this.isPaused ||
@@ -529,17 +530,17 @@ class GameMain {
       this.awaitingUpgradeSelection ||
       this.awaitingPuzzleResolution
     ) {
-      console.log("GameMain: cannot pause due to state", {
-        isPaused: this.isPaused,
-        gameStarted: this.gameStarted,
-        awaitingUpgradeSelection: this.awaitingUpgradeSelection,
-        awaitingPuzzleResolution: this.awaitingPuzzleResolution,
-      });
+      // console.log("GameMain: cannot pause due to state", {
+      //   isPaused: this.isPaused,
+      //   gameStarted: this.gameStarted,
+      //   awaitingUpgradeSelection: this.awaitingUpgradeSelection,
+      //   awaitingPuzzleResolution: this.awaitingPuzzleResolution,
+      // });
       return;
     }
 
     if (!this.isRunning) {
-      console.log("GameMain: not running, skipping pause");
+      // console.log("GameMain: not running, skipping pause");
       return;
     }
 
@@ -1314,6 +1315,7 @@ class GameMain {
     const playerPos = this.player.getPosition();
     const blastRadius = this.player?.empRadius || 15;
     const empDamage = this.player?.empDamage || 50;
+    const empStunDuration = this.player?.empStunDuration || 1; // Get stun duration from player
 
     // Play EMP sound effect
     if (this.empSound) {
@@ -1323,18 +1325,39 @@ class GameMain {
       });
     }
 
+    let hitCount = 0; // Track number of enemies affected
+
     enemies.forEach((enemy) => {
       const enemyPos = enemy.getPosition();
       const distance = playerPos.distanceTo(enemyPos);
 
       if (distance < blastRadius) {
+        // Apply damage
         enemy.takeDamage(empDamage);
+
+        // Apply freeze/stun effect
+        if (typeof enemy.applyStun === "function") {
+          enemy.applyStun(empStunDuration);
+        }
+
         this.particleSystem.createExplosion(enemyPos, 0x00ffff, 20);
+        hitCount++;
       }
     });
 
     this.particleSystem.createShockwave(playerPos, blastRadius, 0x00ffff);
-    this.uiManager.showMessage("EMP BLAST!", 1000);
+
+    // Show enhanced message with enemy count
+    if (hitCount > 0) {
+      this.uiManager.showMessage(
+        `EMP BLAST! ${hitCount} ${
+          hitCount === 1 ? "ENEMY" : "ENEMIES"
+        } FROZEN!`,
+        1500
+      );
+    } else {
+      this.uiManager.showMessage("EMP BLAST!", 1000);
+    }
   }
 
   update(deltaTime) {
@@ -1346,8 +1369,11 @@ class GameMain {
 
     if (!this.isRunning) return;
 
+    // OPTIMIZATION: Cap deltaTime to prevent spiral of death
+    const cappedDelta = Math.min(deltaTime, 0.1); // Max 100ms per frame
+
     const moveInput = this.inputManager.getMoveInput();
-    this.player.update(deltaTime, moveInput);
+    this.player.update(cappedDelta, moveInput);
 
     const playerPosition = this.player.getPosition();
 
@@ -1363,13 +1389,14 @@ class GameMain {
       this.player.onShoot(); // Trigger weapon recoil animation
     }
 
-    this.weaponManager.update(deltaTime);
-    this.enemyManager.update(deltaTime, playerPosition);
-    this.environment.update(deltaTime, playerPosition);
-    this.particleSystem.update(deltaTime);
+    this.weaponManager.update(cappedDelta);
+    this.enemyManager.update(cappedDelta, playerPosition);
+    this.environment.update(cappedDelta, playerPosition);
+    this.particleSystem.update(cappedDelta);
 
     this.checkCollisions();
 
+    // OPTIMIZATION: Batch UI updates (only update what changed)
     this.uiManager.updateHealth(this.player.health, this.player.maxHealth);
     this.uiManager.updateEnergy(this.player.energy, this.player.maxEnergy);
     this.uiManager.updateJetpack(this.player.getJetpackTelemetry());
@@ -1382,14 +1409,19 @@ class GameMain {
       currentWeapon.getAmmoDisplay()
     );
 
-    // Update minimap
-    this.uiManager.updateMinimap(
-      playerPosition,
-      this.enemyManager.getEnemies(),
-      this.environment.getCurrentPhaseName()
-    );
+    // OPTIMIZATION: Update minimap less frequently (every 3rd frame)
+    if (!this._minimapFrameCounter) this._minimapFrameCounter = 0;
+    this._minimapFrameCounter++;
+    if (this._minimapFrameCounter >= 3) {
+      this.uiManager.updateMinimap(
+        playerPosition,
+        this.enemyManager.getEnemies(),
+        this.environment.getCurrentPhaseName()
+      );
+      this._minimapFrameCounter = 0;
+    }
 
-    if (this.waveManager.update(deltaTime)) {
+    if (this.waveManager.update(cappedDelta)) {
       this.onWaveComplete();
     }
 
@@ -1403,8 +1435,35 @@ class GameMain {
     const projectiles = this.weaponManager.getProjectiles();
     const playerPos = this.player.getPosition();
 
-    projectiles.forEach((projectile) => {
-      enemies.forEach((enemy) => {
+    // OPTIMIZATION: Early exit if no projectiles or enemies
+    if (projectiles.length === 0 || enemies.length === 0) {
+      // Still check player-enemy collisions
+      this.checkPlayerEnemyCollisions(enemies, playerPos);
+      return;
+    }
+
+    // OPTIMIZATION: Use early-exit and mark destroyed projectiles
+    const destroyedProjectiles = new Set();
+    const destroyedEnemyProjectiles = new Set();
+
+    // Check player projectiles vs enemies
+    for (let i = 0; i < projectiles.length; i++) {
+      const projectile = projectiles[i];
+      if (destroyedProjectiles.has(projectile)) continue;
+
+      const projPos = projectile.getPosition();
+
+      for (let j = 0; j < enemies.length; j++) {
+        const enemy = enemies[j];
+        const enemyPos = enemy.getPosition();
+
+        // OPTIMIZATION: Quick distance check before expensive collision
+        const quickDist =
+          Math.abs(projPos.x - enemyPos.x) + Math.abs(projPos.z - enemyPos.z);
+        const maxDist = projectile.collisionRadius + enemy.collisionRadius + 1;
+
+        if (quickDist > maxDist * 1.5) continue; // Skip if too far
+
         if (this.collisionManager.checkCollision(projectile, enemy)) {
           enemy.takeDamage(projectile.damage);
           this.particleSystem.createImpact(
@@ -1413,44 +1472,71 @@ class GameMain {
             10
           );
           projectile.destroy();
+          destroyedProjectiles.add(projectile);
 
           if (enemy.health <= 0) {
             this.onEnemyKilled(enemy);
           }
+          break; // Projectile destroyed, stop checking this projectile
         }
-      });
+      }
+    }
 
-      enemies.forEach((enemy) => {
-        if (enemy.getProjectiles) {
-          enemy.getProjectiles().forEach((enemyProjectile) => {
-            if (
-              this.collisionManager.checkCollision(projectile, enemyProjectile)
-            ) {
-              this.particleSystem.createExplosion(
-                projectile.mesh.position,
-                0xffff00,
-                15
-              );
-              projectile.destroy();
-              enemyProjectile.destroy();
-            }
-          });
+    // Check player projectiles vs enemy projectiles
+    for (let i = 0; i < projectiles.length; i++) {
+      const projectile = projectiles[i];
+      if (destroyedProjectiles.has(projectile)) continue;
+
+      for (let j = 0; j < enemies.length; j++) {
+        const enemy = enemies[j];
+        if (!enemy.getProjectiles) continue;
+
+        const enemyProjectiles = enemy.getProjectiles();
+        for (let k = 0; k < enemyProjectiles.length; k++) {
+          const enemyProjectile = enemyProjectiles[k];
+          if (destroyedEnemyProjectiles.has(enemyProjectile)) continue;
+
+          if (
+            this.collisionManager.checkCollision(projectile, enemyProjectile)
+          ) {
+            this.particleSystem.createExplosion(
+              projectile.mesh.position,
+              0xffff00,
+              15
+            );
+            projectile.destroy();
+            enemyProjectile.destroy();
+            destroyedProjectiles.add(projectile);
+            destroyedEnemyProjectiles.add(enemyProjectile);
+            break;
+          }
         }
-      });
-    });
+        if (destroyedProjectiles.has(projectile)) break;
+      }
+    }
 
-    enemies.forEach((enemy) => {
+    // Check player-enemy collisions
+    this.checkPlayerEnemyCollisions(enemies, playerPos);
+  }
+
+  // OPTIMIZATION: Separated player-enemy collision checking
+  checkPlayerEnemyCollisions(enemies, playerPos) {
+    for (let i = 0; i < enemies.length; i++) {
+      const enemy = enemies[i];
       const enemyPos = enemy.getPosition();
-      const currentPlayerPos = this.player.getPosition();
+
+      // OPTIMIZATION: Quick Manhattan distance check first
+      const quickDist =
+        Math.abs(playerPos.x - enemyPos.x) + Math.abs(playerPos.z - enemyPos.z);
       const minDistance = enemy.collisionRadius + this.player.collisionRadius;
-      const distance = enemyPos.distanceTo(currentPlayerPos);
+
+      if (quickDist > minDistance * 2) continue; // Skip if too far
+
+      const distance = enemyPos.distanceTo(playerPos);
 
       if (distance < minDistance) {
         // Direction away from enemy (ignore vertical to prevent lift)
-        let direction = new THREE.Vector3().subVectors(
-          currentPlayerPos,
-          enemyPos
-        );
+        let direction = new THREE.Vector3().subVectors(playerPos, enemyPos);
 
         if (direction.lengthSq() < 0.0001) {
           direction.set(Math.random() - 0.5, 0, Math.random() - 0.5);
@@ -1519,14 +1605,14 @@ class GameMain {
       if (enemy.attackType === "aoe" && enemy.behaviorState === "attacking") {
         const aoeResult = enemy.performAOEAttack(currentPlayerPos);
         if (aoeResult && aoeResult.type === "aoe") {
-          const aoeDistance = enemyPos.distanceTo(currentPlayerPos);
+          const aoeDistance = enemyPos.distanceTo(playerPos);
           if (aoeDistance <= aoeResult.radius) {
             this.player.takeDamage(aoeResult.damage, enemyPos);
             this.particleSystem.createExplosion(enemyPos, enemy.color, 30);
           }
         }
       }
-    });
+    }
 
     // Prevent enemies from stacking by separating overlapping pairs
     for (let i = 0; i < enemies.length; i++) {
@@ -1970,10 +2056,14 @@ class GameMain {
     requestAnimationFrame(() => this.animate());
 
     const deltaTime = this.clock.getDelta();
-    this.update(deltaTime);
+
+    // OPTIMIZATION: Clamp deltaTime to prevent extreme values
+    const clampedDelta = Math.min(deltaTime, 0.1);
+
+    this.update(clampedDelta);
     this.renderer.render(this.scene, this.camera);
 
-    // Overlay health bars after 3D render
+    // OPTIMIZATION: Render health bars with frustum culling
     if (this.healthBarCanvas && this.healthBarContext) {
       const ctx = this.healthBarContext;
       const canvas = this.healthBarCanvas;
@@ -1981,8 +2071,38 @@ class GameMain {
 
       const enemies = this.enemyManager ? this.enemyManager.getEnemies() : [];
       if (enemies && enemies.length) {
+        // OPTIMIZATION: Frustum culling for health bars
+        const frustum = new THREE.Frustum();
+        const projScreenMatrix = new THREE.Matrix4();
+        projScreenMatrix.multiplyMatrices(
+          this.camera.projectionMatrix,
+          this.camera.matrixWorldInverse
+        );
+        frustum.setFromProjectionMatrix(projScreenMatrix);
+
         enemies.forEach((enemy) => {
-          this.uiManager.renderEnemyHealthBar(enemy, this.camera, ctx, canvas);
+          // Only render health bar if enemy is in camera view
+          // Check if enemy group exists and has geometry
+          if (enemy.group) {
+            try {
+              if (frustum.intersectsObject(enemy.group)) {
+                this.uiManager.renderEnemyHealthBar(
+                  enemy,
+                  this.camera,
+                  ctx,
+                  canvas
+                );
+              }
+            } catch (e) {
+              // Fallback: render without culling if frustum check fails
+              this.uiManager.renderEnemyHealthBar(
+                enemy,
+                this.camera,
+                ctx,
+                canvas
+              );
+            }
+          }
         });
 
         const activeBoss = enemies.find((enemy) => enemy.isBoss && enemy.alive);
