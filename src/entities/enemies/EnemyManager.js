@@ -5,6 +5,9 @@ import SpywareVirus from "./types/SpywareVirus.js";
 import RansomwareVirus from "./types/RansomwareVirus.js";
 import AdwareVirus from "./types/AdwareVirus.js";
 import RootkitVirus from "./types/RootkitVirus.js";
+import DroneVirus from "./types/DroneVirus.js";
+import ShieldVirus from "./types/ShieldVirus.js";
+import BlasterVirus from "./types/BlasterVirus.js";
 import CircuitOverlord from "../bosses/CircuitOverlord.js";
 import CorruptionCore from "../bosses/CorruptionCore.js";
 import PixelReaper from "../bosses/PixelReaper.js";
@@ -35,6 +38,9 @@ export default class EnemyManager {
       ransomware: RansomwareVirus,
       adware: AdwareVirus,
       rootkit: RootkitVirus,
+      drone: DroneVirus, // NEW: Flying enemy
+      shield: ShieldVirus, // NEW: Shielded tank
+      blaster: BlasterVirus, // NEW: Ranged attacker
     };
 
     // Boss classes (in order of difficulty)
@@ -176,11 +182,18 @@ export default class EnemyManager {
     const count = Math.floor(5 + waveNumber * 2);
     const radius = 40;
 
-    // Determine enemy types based on wave number
+    // Determine enemy types based on wave number with NEW enemy types
     let allowedTypes = ["trojan", "worm", "adware"];
 
+    if (waveNumber >= 2) {
+      allowedTypes.push("drone"); // NEW: Flying enemy appears early
+    }
     if (waveNumber >= 3) {
       allowedTypes.push("spyware");
+      allowedTypes.push("blaster"); // NEW: Ranged attacker
+    }
+    if (waveNumber >= 4) {
+      allowedTypes.push("shield"); // NEW: Shielded tank
     }
     if (waveNumber >= 5) {
       allowedTypes.push("ransomware");

@@ -1585,8 +1585,11 @@ class GameMain {
         );
       }
 
+      // OPTIMIZATION: Use for loop instead of forEach for enemy projectiles
       if (enemy.getProjectiles) {
-        enemy.getProjectiles().forEach((enemyProjectile) => {
+        const enemyProjectiles = enemy.getProjectiles();
+        for (let k = 0; k < enemyProjectiles.length; k++) {
+          const enemyProjectile = enemyProjectiles[k];
           if (
             this.collisionManager.checkCollision(enemyProjectile, this.player)
           ) {
@@ -1598,8 +1601,9 @@ class GameMain {
               10
             );
             enemyProjectile.destroy();
+            break; // Early exit after hit
           }
-        });
+        }
       }
 
       if (enemy.attackType === "aoe" && enemy.behaviorState === "attacking") {

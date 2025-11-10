@@ -283,11 +283,15 @@ export default class BaseEnemy {
   }
 
   updateProjectiles(deltaTime) {
-    if (!this.projectiles) return;
+    if (!this.projectiles || this.projectiles.length === 0) return;
 
-    this.projectiles = this.projectiles.filter((proj) => {
+    // OPTIMIZATION: Use reverse loop instead of filter for better performance
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      const proj = this.projectiles[i];
+
       if (!this._advanceProjectile(proj, deltaTime)) {
-        return false;
+        this.projectiles.splice(i, 1);
+        continue;
       }
 
       // Add trail effect
@@ -298,11 +302,9 @@ export default class BaseEnemy {
       proj.lifetime -= deltaTime;
       if (proj.lifetime <= 0) {
         this._disposeProjectile(proj);
-        return false;
+        this.projectiles.splice(i, 1);
       }
-
-      return true;
-    });
+    }
   }
 
   setEnvironment(environment) {

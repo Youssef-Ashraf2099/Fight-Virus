@@ -8,7 +8,7 @@ export default class AdwareVirus extends BaseEnemy {
     // Adware stats - Swarm behavior, weak individually, fast melee
     this.maxHealth = 50 * difficulty;
     this.health = this.maxHealth;
-    this.speed = 10; // Very fast
+    this.speed = 8; // Very fast
     this.damage = 8 * difficulty;
     this.contactDamage = 4 * difficulty; // Reduced from 6 for balance
     this.collisionRadius = 0.8;

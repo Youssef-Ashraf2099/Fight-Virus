@@ -18,7 +18,7 @@ export default class TrojanVirus extends BaseEnemy {
     // Attack configuration
     this.attackType = "charger";
     this.attackRange = 15;
-    this.chargeSpeed = 18; // Fast charge speed
+    this.chargeSpeed = 8; // Fast charge speed
     this.isCharging = false;
 
     this.createMesh();
