@@ -277,6 +277,11 @@ export default class Player {
   setWeaponViewModel(weaponId) {
     if (!this.weaponGroup) return;
 
+    // Clear reload tint from current weapon before switching
+    if (this.activeWeaponModel) {
+      this._updateReloadTint(null);
+    }
+
     if (
       this.activeWeaponModel &&
       this.activeWeaponModel.group.parent === this.weaponGroup
@@ -358,7 +363,12 @@ export default class Player {
     if (this.weaponLight) {
       this.reloadTintLightBase = this.weaponLight.color.clone();
     }
+    // Ensure the new weapon starts with no reload tint
     this._updateReloadTint(null);
+
+    // Also clear any ongoing reload animation state
+    this.reloadAnimation = null;
+    this.reloadEndTime = 0;
   }
 
   buildWeaponModel(weaponId) {
@@ -1033,10 +1043,17 @@ export default class Player {
         return;
       }
       seen.add(material);
+
+      // Store the CURRENT color state as the base, ensuring any previous tint is captured as base
+      const currentColor = material.color ? material.color.clone() : null;
+      const currentEmissive = material.emissive
+        ? material.emissive.clone()
+        : null;
+
       this.reloadTintTargets.push({
         material,
-        baseColor: material.color ? material.color.clone() : null,
-        baseEmissive: material.emissive ? material.emissive.clone() : null,
+        baseColor: currentColor,
+        baseEmissive: currentEmissive,
       });
     };
 
