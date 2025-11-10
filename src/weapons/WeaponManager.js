@@ -304,6 +304,42 @@ class WeaponManager {
 
     return this.weapons.length;
   }
+
+  /**
+   * Get list of unlocked weapon IDs for saving
+   * @returns {Array<string>}
+   */
+  getUnlockedWeapons() {
+    return Array.from(this.unlockedWeaponIds);
+  }
+
+  /**
+   * Restore unlocked weapons from save data
+   * @param {Array<string>} weaponIds - List of weapon IDs to unlock
+   * @param {number} currentIndex - Index of currently equipped weapon
+   */
+  restoreWeapons(weaponIds, currentIndex = 0) {
+    if (!Array.isArray(weaponIds) || weaponIds.length === 0) {
+      console.warn("No weapons to restore, using default loadout");
+      return;
+    }
+
+    // Clear current loadout
+    this.clear();
+    this.weapons = [];
+    this.unlockedWeaponIds.clear();
+
+    // Restore each weapon
+    weaponIds.forEach((weaponId, index) => {
+      const autoEquip = index === currentIndex;
+      this.unlockWeapon(weaponId, { autoEquip });
+    });
+
+    // Set correct weapon index
+    if (currentIndex >= 0 && currentIndex < this.weapons.length) {
+      this.switchWeapon(currentIndex);
+    }
+  }
 }
 
 export default WeaponManager;

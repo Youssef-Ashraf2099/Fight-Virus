@@ -588,6 +588,105 @@ class UpgradeManager {
       this.player.jetpackIsActive = false;
     }
   }
+
+  /**
+   * Get current upgrade state for saving
+   * @returns {Object}
+   */
+  getSaveData() {
+    return {
+      history: { ...this.history },
+      state: { ...this.state },
+    };
+  }
+
+  /**
+   * Restore upgrades from save data
+   * @param {Object} saveData - Saved upgrade data
+   */
+  restoreFromSave(saveData) {
+    if (!saveData || typeof saveData !== "object") {
+      console.warn("Invalid save data for upgrades");
+      return;
+    }
+
+    // Restore history and state
+    this.history = saveData.history ? { ...saveData.history } : {};
+    this.state = saveData.state
+      ? { ...saveData.state }
+      : this._createDefaultState();
+
+    // Re-apply all stat modifications based on restored state
+    const context = this._getContext();
+
+    // Apply weapon multipliers
+    if (this.weaponManager) {
+      this.weaponManager.setDamageMultiplier(
+        this.state.weaponDamageMultiplier || 1
+      );
+      this.weaponManager.setProjectileSpeedMultiplier(
+        this.state.projectileSpeedMultiplier || 1
+      );
+    }
+
+    if (!this.player) {
+      return;
+    }
+
+    // Apply player stat multipliers
+    this.player.speed =
+      this.baseStats.speed * (this.state.moveSpeedMultiplier || 1);
+    this.player.sprintMultiplier =
+      this.baseStats.sprintMultiplier * (this.state.moveSpeedMultiplier || 1);
+    this.player.jumpPower =
+      this.baseStats.jumpPower * (this.state.jumpMultiplier || 1);
+    this.player.maxStepHeight =
+      this.baseStats.maxStepHeight *
+      (1 + ((this.state.jumpMultiplier || 1) - 1) * 0.4);
+
+    // Apply EMP stats
+    this.player.empDamage =
+      this.baseStats.empDamage * (this.state.empDamageMultiplier || 1);
+    this.player.empRadius =
+      this.baseStats.empRadius * (this.state.empRadiusMultiplier || 1);
+    this.player.empStunDuration =
+      this.baseStats.empStunDuration + (this.state.empStunDurationBonus || 0);
+    this.player.specialCooldownMax = Math.max(
+      0.8,
+      this.baseStats.specialCooldownMax *
+        (this.state.specialCooldownMultiplier || 1)
+    );
+
+    // Apply health stats
+    this.player.maxHealth =
+      this.baseStats.maxHealth * (this.state.maxHealthMultiplier || 1);
+    this.player.health = Math.min(this.player.health, this.player.maxHealth);
+    this.player.damageReduction = Math.min(
+      0.7,
+      this.baseStats.damageReduction + (this.state.damageReductionBonus || 0)
+    );
+
+    // Restore jetpack state
+    if (this.state.jetpackUnlocked) {
+      if (typeof this.player.unlockJetpack === "function") {
+        this.player.unlockJetpack();
+      } else {
+        this.player.jetpackUnlocked = true;
+      }
+
+      if (typeof this.player.setJetpackFuelBonus === "function") {
+        this.player.setJetpackFuelBonus(this.state.jetpackFuelBonus || 0);
+      } else {
+        const baseFuel =
+          this.player.jetpackMaxFuel || this.baseStats.jetpackBaseFuel;
+        this.player.jetpackMaxFuel =
+          baseFuel + (this.state.jetpackFuelBonus || 0);
+        this.player.jetpackFuel = this.player.jetpackMaxFuel;
+      }
+    }
+
+    console.log("✅ Upgrades restored from save:", this.history);
+  }
 }
 
 export default UpgradeManager;

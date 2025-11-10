@@ -1741,6 +1741,34 @@
         box-shadow: 0 22px 48px rgba(255, 110, 120, 0.28);
       }
 
+      #continueButton {
+        background: linear-gradient(
+          135deg,
+          rgba(34, 209, 255, 0.2),
+          rgba(0, 180, 255, 0.08)
+        );
+        border-color: rgba(34, 209, 255, 0.8);
+        color: #b6f0ff;
+        box-shadow: 0 15px 40px rgba(34, 209, 255, 0.2);
+      }
+
+      #continueButton:hover {
+        border-color: rgba(34, 209, 255, 0.95);
+        box-shadow: 0 22px 50px rgba(34, 209, 255, 0.3);
+      }
+
+      #continueHint {
+        font-size: 13px;
+        color: rgba(173, 255, 214, 0.7);
+        letter-spacing: 1.5px;
+        text-align: center;
+        margin-top: -6px;
+        padding: 8px 12px;
+        background: rgba(0, 40, 28, 0.25);
+        border-radius: 8px;
+        border: 1px solid rgba(34, 209, 255, 0.2);
+      }
+
       .menu-sections {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
@@ -2195,13 +2223,29 @@
           </div>
 
           <div class="menu-actions">
-            <button id="startButton">▶ LAUNCH PLAY MODE</button>
+            <button id="startButton">🆕 NEW GAME</button>
+            <button id="continueButton" style="display: none">
+              ▶️ CONTINUE
+            </button>
             <button id="learnButton">🧠 ENTER LEARN MODE</button>
             <button id="tutorialToggle" class="secondary">
               📘 GUIDED CONTROLS
             </button>
             <button id="exitButton" class="danger">⛔ EXIT</button>
           </div>
+
+          <!-- Checkpoint info hint -->
+          <div
+            id="continueHint"
+            style="
+              display: none;
+              text-align: center;
+              margin-top: 12px;
+              font-size: 14px;
+              color: rgba(173, 255, 214, 0.75);
+              letter-spacing: 1px;
+            "
+          ></div>
 
           <div id="menuFooter">
             <span

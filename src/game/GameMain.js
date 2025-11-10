@@ -15,6 +15,7 @@ import UpgradeManager from "./UpgradeManager.js";
 import SpectatorMode from "./SpectatorMode.js";
 import DetailedWeaponModels from "../weapons/DetailedWeaponModels.js";
 import { createAudioElement } from "../utils/audio.js";
+import SaveManager from "./SaveManager.js";
 
 class GameMain {
   constructor() {
@@ -83,6 +84,9 @@ class GameMain {
       this.pendingNextWaveTimeout = null;
       this.puzzleManager = null;
 
+      // Initialize SaveManager
+      this.saveManager = new SaveManager();
+
       this.backgroundMusicTracks = [
         "../Assets/sounds/game/edm-gaming-music-335408.mp3",
         "../Assets/sounds/game/energy-gaming-electro-trap-301124.mp3",
@@ -101,6 +105,12 @@ class GameMain {
       this.backgroundMusicVolume = 0.3;
 
       this.setupBackgroundMusic();
+
+      // Initialize EMP sound effect
+      this.empSound = createAudioElement("../Assets/sounds/EMP.mp3", {
+        volume: 0.6,
+        loop: false,
+      });
 
       // Track pointer lock / fullscreen state to stabilize pause behaviour
       this.expectingPointerUnlock = false;
@@ -332,9 +342,11 @@ class GameMain {
     console.log("Setting up event listeners...");
 
     const startButton = document.getElementById("startButton");
+    const continueButton = document.getElementById("continueButton");
     const learnButton = document.getElementById("learnButton");
     const exitButton = document.getElementById("exitButton");
     console.log("Start button element:", startButton);
+    console.log("Continue button element:", continueButton);
     console.log("Learn button element:", learnButton);
     console.log("Exit button element:", exitButton);
 
@@ -347,6 +359,36 @@ class GameMain {
       console.log("🎮 START BUTTON CLICKED!");
       this.startGame();
     });
+
+    if (continueButton) {
+      continueButton.addEventListener("click", () => {
+        console.log("▶️ CONTINUE BUTTON CLICKED!");
+        this.continueGame();
+      });
+
+      // Show/hide continue button based on checkpoint existence
+      if (this.saveManager.hasCheckpoint()) {
+        continueButton.style.display = "inline-flex";
+        const checkpointInfo = this.saveManager.getCheckpointInfo();
+        if (checkpointInfo) {
+          const continueHint = document.getElementById("continueHint");
+          if (continueHint) {
+            continueHint.textContent = `Wave ${
+              checkpointInfo.wave
+            } • ${checkpointInfo.score.toLocaleString()} pts • ${
+              checkpointInfo.timeAgo
+            }`;
+            continueHint.style.display = "block";
+          }
+        }
+      } else {
+        continueButton.style.display = "none";
+        const continueHint = document.getElementById("continueHint");
+        if (continueHint) {
+          continueHint.style.display = "none";
+        }
+      }
+    }
 
     if (learnButton) {
       learnButton.addEventListener("click", () => {
@@ -650,6 +692,29 @@ class GameMain {
     const startScreen = document.getElementById("startScreen");
     if (startScreen) {
       startScreen.style.display = "flex";
+    }
+
+    // Update continue button visibility
+    const continueButton = document.getElementById("continueButton");
+    const continueHint = document.getElementById("continueHint");
+    if (continueButton && this.saveManager) {
+      if (this.saveManager.hasCheckpoint()) {
+        continueButton.style.display = "inline-flex";
+        const checkpointInfo = this.saveManager.getCheckpointInfo();
+        if (checkpointInfo && continueHint) {
+          continueHint.textContent = `Wave ${
+            checkpointInfo.wave
+          } • ${checkpointInfo.score.toLocaleString()} pts • ${
+            checkpointInfo.timeAgo
+          }`;
+          continueHint.style.display = "block";
+        }
+      } else {
+        continueButton.style.display = "none";
+        if (continueHint) {
+          continueHint.style.display = "none";
+        }
+      }
     }
 
     const hud = document.getElementById("hud");
@@ -1039,6 +1104,158 @@ class GameMain {
     }, 120);
   }
 
+  /**
+   * Start a new game from saved checkpoint
+   */
+  continueGame() {
+    console.log("🔄 continueGame() called");
+
+    const checkpoint = this.saveManager.loadCheckpoint();
+    if (!checkpoint) {
+      console.warn("No checkpoint found, starting new game");
+      this.startGame();
+      return;
+    }
+
+    // Request fullscreen mode
+    this.requestFullscreen();
+
+    this.showLoadingOverlay(
+      "RESTORING CHECKPOINT",
+      "Recovering saved state and initializing systems..."
+    );
+
+    setTimeout(() => {
+      try {
+        console.log("Loading checkpoint:", checkpoint);
+
+        // Hide start screen and show game UI
+        document.getElementById("startScreen").style.display = "none";
+        document.getElementById("hud").style.display = "block";
+        document.getElementById("score").style.display = "block";
+        document.getElementById("weaponInfo").style.display = "block";
+        document.getElementById("minimap").style.display = "block";
+        document.getElementById("crosshair").style.display = "block";
+
+        console.log("Setting game state...");
+        this.gameStarted = true;
+        this.isRunning = true;
+        this.score = checkpoint.score || 0;
+        this.difficulty = checkpoint.difficulty || 1;
+        this.awaitingUpgradeSelection = false;
+        this.clearPendingWaveTimeout();
+
+        this.uiManager.hideUpgradeSelection?.();
+
+        // Restore player stats
+        console.log("Restoring player...");
+        this.player.reset();
+        if (checkpoint.player) {
+          this.player.health =
+            checkpoint.player.health || this.player.maxHealth;
+          this.player.maxHealth =
+            checkpoint.player.maxHealth || this.player.maxHealth;
+          this.player.energy =
+            checkpoint.player.energy || this.player.maxEnergy;
+          this.player.maxEnergy =
+            checkpoint.player.maxEnergy || this.player.maxEnergy;
+        }
+
+        // Restore upgrades
+        console.log("Restoring upgrades...");
+        if (checkpoint.upgrades && this.upgradeManager) {
+          this.upgradeManager.restoreFromSave(checkpoint.upgrades);
+        }
+
+        // Restore weapons
+        console.log("Restoring weapons...");
+        if (checkpoint.weapons && this.weaponManager) {
+          const weaponIds = checkpoint.weapons.unlockedWeapons || [
+            "pulseCannon",
+          ];
+          const weaponIndex = checkpoint.weapons.currentWeaponIndex || 0;
+          this.weaponManager.restoreWeapons(weaponIds, weaponIndex);
+        }
+
+        // Restore wave and environment
+        const startWave = (checkpoint.wave || 1) + 1; // Start at next wave
+        console.log(`Restoring to wave ${startWave}...`);
+
+        // Set wave manager to correct wave
+        this.waveManager.currentWave = checkpoint.wave || 1;
+        this.waveManager.difficulty = checkpoint.difficulty || 1;
+
+        // Set environment phase
+        const phaseIndex = checkpoint.phaseIndex || 0;
+        this.environment.setPhase(phaseIndex);
+        this.environment.setInteractiveMode(true);
+
+        // Start next wave
+        this.waveManager.startWave();
+        this.environment.setPhaseByWave(this.waveManager.getCurrentWave());
+
+        // Update UI
+        this.uiManager.updateScore(this.score);
+        this.uiManager.updateHealth(this.player.health, this.player.maxHealth);
+        this.uiManager.updateEnergy(this.player.energy, this.player.maxEnergy);
+
+        const phaseName = this.environment.getCurrentPhaseName();
+        this.uiManager.showMessage(
+          `${
+            phaseName ? phaseName.toUpperCase() + "<br>" : ""
+          }CHECKPOINT RESTORED<br>WAVE ${this.waveManager.getCurrentWave()} - INCOMING!`,
+          2500
+        );
+
+        this.enableBackgroundMusic(true);
+
+        console.log("✅ Game continued successfully from checkpoint!");
+      } catch (error) {
+        console.error("❌ Error continuing game:", error);
+        alert(
+          "Error continuing game: " +
+            error.message +
+            "\n\nStarting new game instead."
+        );
+        this.startGame();
+      } finally {
+        this.hideLoadingOverlay();
+      }
+    }, 120);
+  }
+
+  /**
+   * Save current game state as checkpoint
+   */
+  saveCheckpoint() {
+    try {
+      const gameState = {
+        wave: this.waveManager.getCurrentWave(),
+        score: this.score,
+        difficulty: this.difficulty,
+        phaseIndex: this.environment.phaseIndex,
+
+        player: {
+          health: this.player.health,
+          maxHealth: this.player.maxHealth,
+          energy: this.player.energy,
+          maxEnergy: this.player.maxEnergy,
+        },
+
+        upgradeManager: this.upgradeManager,
+        weaponManager: this.weaponManager,
+      };
+
+      const saved = this.saveManager.saveCheckpoint(gameState);
+      if (saved) {
+        console.log("✅ Checkpoint saved at wave", gameState.wave);
+        this.uiManager.showMessage("💾 CHECKPOINT SAVED 💾", 1500);
+      }
+    } catch (error) {
+      console.error("❌ Failed to save checkpoint:", error);
+    }
+  }
+
   startLearnMode() {
     console.log("🧠 startLearnMode() called");
 
@@ -1097,6 +1314,14 @@ class GameMain {
     const playerPos = this.player.getPosition();
     const blastRadius = this.player?.empRadius || 15;
     const empDamage = this.player?.empDamage || 50;
+
+    // Play EMP sound effect
+    if (this.empSound) {
+      this.empSound.currentTime = 0; // Reset to start
+      this.empSound.play().catch((err) => {
+        console.warn("EMP sound playback failed:", err);
+      });
+    }
 
     enemies.forEach((enemy) => {
       const enemyPos = enemy.getPosition();
@@ -1354,8 +1579,22 @@ class GameMain {
     this.difficulty += 0.2;
     const waveNumber = this.waveManager.getCurrentWave();
 
-    this.uiManager.showMessage(`WAVE ${waveNumber} COMPLETE!`, 2000);
+    // Determine if this was a boss wave
+    const wasBossWave = waveNumber % 3 === 0;
 
+    if (wasBossWave) {
+      this.uiManager.showMessage(
+        `🎉 WAVE ${waveNumber} - BOSS DEFEATED! 🎉`,
+        3000
+      );
+
+      // Save checkpoint after boss defeat
+      this.saveCheckpoint();
+    } else {
+      this.uiManager.showMessage(`WAVE ${waveNumber} COMPLETE!`, 2000);
+    }
+
+    // Bonus score
     const scoreMultiplier = this.upgradeManager
       ? this.upgradeManager.getScoreMultiplier()
       : 1;
@@ -1363,20 +1602,22 @@ class GameMain {
     this.score += waveReward;
     this.uiManager.updateScore(this.score);
 
+    // Heal player based on wave performance
+    const healAmount = wasBossWave ? 30 : 20;
     this.player.health = Math.min(
       this.player.maxHealth,
-      this.player.health + 20
+      this.player.health + healAmount
     );
-    this.uiManager.updateHealth(this.player.health, this.player.maxHealth);
+
+    // Restore some energy
+    this.player.energy = Math.min(
+      this.player.maxEnergy,
+      this.player.energy + 30
+    );
 
     this.clearPendingWaveTimeout();
 
-    const bossWave =
-      typeof this.waveManager.wasLastWaveBoss === "function"
-        ? this.waveManager.wasLastWaveBoss()
-        : false;
-
-    if (bossWave) {
+    if (wasBossWave) {
       this.awaitingUpgradeSelection = true;
       this.isRunning = false;
       this.releasePointerLock();
@@ -1616,10 +1857,27 @@ class GameMain {
       this.puzzleManager.abortActivePuzzle();
     }
 
+    // Check if checkpoint exists to offer continue option
+    const hasCheckpoint = this.saveManager?.hasCheckpoint?.() || false;
+    const restartMessage = hasCheckpoint
+      ? "Press R to Restart | Press C to Continue from Checkpoint"
+      : "Press R to Restart";
+
     this.uiManager.showMessage(
-      `GAME OVER<br>FINAL SCORE: ${this.score}<br><small>Press R to Restart</small>`,
+      `GAME OVER<br>FINAL SCORE: ${this.score}<br><small>${restartMessage}</small>`,
       0
     );
+
+    // Add continue from checkpoint option on 'C' key
+    if (hasCheckpoint) {
+      const handleContinue = (e) => {
+        if (e.key === "c" || e.key === "C") {
+          document.removeEventListener("keydown", handleContinue);
+          this.continueGame();
+        }
+      };
+      document.addEventListener("keydown", handleContinue);
+    }
 
     this.enemyManager.clear();
     this.weaponManager.clear();
