@@ -239,6 +239,7 @@ class PuzzleManager {
       "maze-navigation",
       "register-reconfig",
       "checksum-balancer",
+      "math-equation",
     ];
     if (!this.lastPuzzleType) {
       const choice = allTypes[Math.floor(Math.random() * allTypes.length)];
@@ -265,6 +266,8 @@ class PuzzleManager {
         return this._buildRegisterPuzzle(context);
       case "checksum-balancer":
         return this._buildChecksumPuzzle(context);
+      case "math-equation":
+        return this._buildMathPuzzle(context);
       default:
         return this._buildLogicGatePuzzle(context);
     }
@@ -1304,6 +1307,405 @@ class PuzzleManager {
       return Math.floor(Math.random() * (min + 1));
     }
     return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  _buildMathPuzzle({ waveNumber, reward, failPenalty, skipPenalty }) {
+    // Determine difficulty based on wave number
+    let difficulty = "easy";
+    if (waveNumber >= 15) {
+      difficulty = "hard";
+    } else if (waveNumber >= 8) {
+      difficulty = "medium";
+    }
+
+    // Select a random puzzle from the difficulty pool
+    const puzzleData = this._selectMathPuzzle(difficulty);
+
+    const puzzle = {
+      id: "math-equation",
+      title: "Mathematical Challenge",
+      subtitle: `Difficulty: ${difficulty.toUpperCase()}`,
+      reward,
+      failPenalty,
+      skipPenalty,
+      showSubmit: true,
+      submitLabel: "Submit Answer",
+      instructions: puzzleData.instructions,
+      state: {
+        userAnswer: "",
+        correctAnswer: puzzleData.answer,
+        puzzleType: puzzleData.type,
+        attempts: 0,
+        maxAttempts: 1,
+        hint: puzzleData.hint,
+      },
+    };
+
+    puzzle.render = (container, helpers) => {
+      container.classList.remove(
+        "puzzle-logic",
+        "puzzle-register",
+        "puzzle-password",
+        "puzzle-maze",
+        "puzzle-checksum"
+      );
+      container.classList.add("puzzle-math");
+
+      // Problem display
+      const problemDiv = document.createElement("div");
+      problemDiv.className = "math-problem-display";
+      problemDiv.innerHTML = `<div class="math-equation">${puzzleData.display}</div>`;
+      container.appendChild(problemDiv);
+
+      // Hint display
+      const hintDiv = document.createElement("div");
+      hintDiv.className = "math-hint";
+      hintDiv.innerHTML = `<strong>💡 Hint:</strong> ${puzzle.state.hint}`;
+      container.appendChild(hintDiv);
+
+      // Input field
+      const inputWrapper = document.createElement("div");
+      inputWrapper.className = "math-input-wrapper";
+
+      const inputLabel = document.createElement("label");
+      inputLabel.textContent = "Your Answer: ";
+      inputLabel.className = "math-input-label";
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "math-answer-input";
+      input.placeholder = puzzleData.placeholder || "Enter answer...";
+      input.maxLength = 50;
+      input.autocomplete = "off";
+
+      input.addEventListener("input", (e) => {
+        puzzle.state.userAnswer = e.target.value.trim();
+      });
+
+      // Auto-submit on Enter key
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          helpers.triggerSubmit?.();
+        }
+      });
+
+      inputLabel.appendChild(input);
+      inputWrapper.appendChild(inputLabel);
+      container.appendChild(inputWrapper);
+
+      // Attempts counter
+      const attemptsDiv = document.createElement("div");
+      attemptsDiv.className = "math-attempts";
+      attemptsDiv.textContent = `Attempts remaining: ${
+        puzzle.state.maxAttempts - puzzle.state.attempts
+      }`;
+      container.appendChild(attemptsDiv);
+
+      // Focus input
+      setTimeout(() => input.focus(), 100);
+
+      // Store reference for validation
+      puzzle.state.inputElement = input;
+      puzzle.state.attemptsElement = attemptsDiv;
+
+      return () => {
+        // Cleanup
+        puzzle.state.inputElement = null;
+        puzzle.state.attemptsElement = null;
+      };
+    };
+
+    puzzle.validate = () => {
+      const userAnswer = puzzle.state.userAnswer.toLowerCase().trim();
+      const correctAnswer = puzzle.state.correctAnswer.toLowerCase().trim();
+
+      // Increment attempts
+      puzzle.state.attempts++;
+
+      // Update attempts display
+      if (puzzle.state.attemptsElement) {
+        puzzle.state.attemptsElement.textContent = `Attempts remaining: ${
+          puzzle.state.maxAttempts - puzzle.state.attempts
+        }`;
+      }
+
+      // Check if answer is correct
+      if (this._compareMathAnswers(userAnswer, correctAnswer)) {
+        return {
+          success: true,
+          message: "🎉 Correct! Mathematical prowess confirmed!",
+        };
+      } else {
+        // Check if attempts exhausted
+        if (puzzle.state.attempts >= puzzle.state.maxAttempts) {
+          // Auto-fail after max attempts
+          setTimeout(() => {
+            if (this.active && !this.active.resolved) {
+              this._complete("failure", {
+                message: `❌ Incorrect! The answer was: ${puzzle.state.correctAnswer}`,
+                scoreDelta: -failPenalty,
+                reason: "max-attempts",
+              });
+            }
+          }, 100);
+
+          return {
+            success: false,
+            message: `❌ Incorrect! Out of attempts. Answer: ${puzzle.state.correctAnswer}`,
+          };
+        } else {
+          return {
+            success: false,
+            message: `❌ Incorrect! Try again. (${
+              puzzle.state.maxAttempts - puzzle.state.attempts
+            } attempt${
+              puzzle.state.maxAttempts - puzzle.state.attempts > 1 ? "s" : ""
+            } left)`,
+          };
+        }
+      }
+    };
+
+    return puzzle;
+  }
+
+  _selectMathPuzzle(difficulty) {
+    const puzzles = {
+      easy: [
+        {
+          type: "simple-calculation",
+          display: "12 × 4 − 15 + 3 = ?",
+          answer: "36",
+          hint: "PEMDAS is your friend! (Or BODMAS, depending on your style.)",
+          instructions: "Calculate the value of the expression.",
+          placeholder: "e.g., 36",
+        },
+        {
+          type: "find-x-addition",
+          display: "x + 17 = 42",
+          answer: "x=25",
+          hint: "Think about what you need to add to 17 to get 42.",
+          instructions: "Find the value of x.",
+          placeholder: "e.g., x=25",
+        },
+        {
+          type: "simple-calculation",
+          display: "8 + 6 × 3 − 4 = ?",
+          answer: "22",
+          hint: "Remember: multiplication before addition!",
+          instructions: "Calculate the value of the expression.",
+          placeholder: "e.g., 22",
+        },
+        {
+          type: "find-x-division",
+          display: "x ÷ 3 = 9",
+          answer: "x=27",
+          hint: "The opposite of division is multiplication!",
+          instructions: "Find the value of x.",
+          placeholder: "e.g., x=27",
+        },
+        {
+          type: "missing-operator",
+          display:
+            "5 __ 3 + 2 = 17<br><small>Find the missing operator (+ − × ÷)</small>",
+          answer: "×",
+          hint: "Try all four basic operators. Which one works?",
+          instructions:
+            "Find the missing operator that makes the equation true.",
+          placeholder: "e.g., ×",
+        },
+        {
+          type: "simple-calculation",
+          display: "20 ÷ 4 + 7 × 2 = ?",
+          answer: "19",
+          hint: "Division and multiplication come before addition.",
+          instructions: "Calculate the value of the expression.",
+          placeholder: "e.g., 19",
+        },
+        {
+          type: "find-x-subtraction",
+          display: "x − 12 = 30",
+          answer: "x=42",
+          hint: "Add 12 to both sides to isolate x.",
+          instructions: "Find the value of x.",
+          placeholder: "e.g., x=42",
+        },
+        {
+          type: "find-x-multiplication",
+          display: "4x = 28",
+          answer: "x=7",
+          hint: "Divide both sides by 4.",
+          instructions: "Find the value of x.",
+          placeholder: "e.g., x=7",
+        },
+      ],
+      medium: [
+        {
+          type: "two-step-equation",
+          display: "5x − 8 = 32",
+          answer: "x=8",
+          hint: "First, isolate the term with x. Then, divide.",
+          instructions: "Solve for x.",
+          placeholder: "e.g., x=8",
+        },
+        {
+          type: "equation-with-powers",
+          display: "3³ + 4² = ?",
+          answer: "43",
+          hint: "Remember aᵇ means a multiplied by itself b times.",
+          instructions: "Calculate the value.",
+          placeholder: "e.g., 43",
+        },
+        {
+          type: "distributive-property",
+          display: "4(x + 2) = 28",
+          answer: "x=5",
+          hint: "You can either distribute the 4, or divide both sides by 4 first.",
+          instructions: "Solve for x.",
+          placeholder: "e.g., x=5",
+        },
+        {
+          type: "equation-with-decimals",
+          display: "2.5x = 10",
+          answer: "x=4",
+          hint: "Multiplying by 2.5 is the same as dividing by 0.4.",
+          instructions: "Solve for x.",
+          placeholder: "e.g., x=4",
+        },
+        {
+          type: "two-step-equation",
+          display: "3x + 7 = 22",
+          answer: "x=5",
+          hint: "Subtract 7 first, then divide by 3.",
+          instructions: "Solve for x.",
+          placeholder: "e.g., x=5",
+        },
+        {
+          type: "equation-with-powers",
+          display: "2⁴ − 5² + 3 = ?",
+          answer: "-6",
+          hint: "2⁴ = 16, 5² = 25, then do the arithmetic.",
+          instructions: "Calculate the value.",
+          placeholder: "e.g., -6",
+        },
+        {
+          type: "fractions",
+          display: "(x ÷ 2) + 5 = 12",
+          answer: "x=14",
+          hint: "First subtract 5, then multiply by 2.",
+          instructions: "Solve for x.",
+          placeholder: "e.g., x=14",
+        },
+      ],
+      hard: [
+        {
+          type: "variables-both-sides",
+          display: "3x + 1 = 5x − 7",
+          answer: "x=4",
+          hint: "Get the x terms on one side and the numbers on the other.",
+          instructions: "Solve for x.",
+          placeholder: "e.g., x=4",
+        },
+        {
+          type: "system-of-equations",
+          display: "If x + y = 10 and x − y = 4, find x.",
+          answer: "x=7",
+          hint: "Try adding the two equations together. What happens to y?",
+          instructions: "Find the value of x.",
+          placeholder: "e.g., x=7",
+        },
+        {
+          type: "square-root",
+          display: "If x² = 81, what is the positive value of x?",
+          answer: "x=9",
+          hint: "What number multiplied by itself gives 81?",
+          instructions: "Find the positive value of x.",
+          placeholder: "e.g., x=9",
+        },
+        {
+          type: "sequence",
+          display: "The next number in the sequence: 2, 5, 11, 23, __",
+          answer: "47",
+          hint: "Rule: n × 2 + 1",
+          instructions: "Find the missing number.",
+          placeholder: "e.g., 47",
+        },
+        {
+          type: "variables-both-sides",
+          display: "7x − 4 = 2x + 11",
+          answer: "x=3",
+          hint: "Move all x terms to one side, all numbers to the other.",
+          instructions: "Solve for x.",
+          placeholder: "e.g., x=3",
+        },
+        {
+          type: "quadratic",
+          display: "If x² − 5x + 6 = 0, find the smaller value of x.",
+          answer: "x=2",
+          hint: "Factor: (x-2)(x-3) = 0. So x = 2 or x = 3.",
+          instructions: "Find the smaller solution.",
+          placeholder: "e.g., x=2",
+        },
+        {
+          type: "system-of-equations",
+          display: "If 2x + y = 15 and x + y = 9, find x.",
+          answer: "x=6",
+          hint: "Subtract the second equation from the first to eliminate y.",
+          instructions: "Find the value of x.",
+          placeholder: "e.g., x=6",
+        },
+        {
+          type: "sequence",
+          display: "The next number in the sequence: 1, 4, 9, 16, 25, __",
+          answer: "36",
+          hint: "These are perfect squares: 1², 2², 3², 4², 5², ...",
+          instructions: "Find the missing number.",
+          placeholder: "e.g., 36",
+        },
+      ],
+    };
+
+    const pool = puzzles[difficulty] || puzzles.easy;
+    return pool[this._randomInt(0, pool.length - 1)];
+  }
+
+  _compareMathAnswers(userAnswer, correctAnswer) {
+    // Normalize both answers for comparison
+    const normalize = (str) => {
+      return str
+        .replace(/\s+/g, "") // Remove all spaces
+        .replace(/[×*]/g, "*") // Normalize multiplication
+        .replace(/[÷/]/g, "/") // Normalize division
+        .replace(/\+/g, "+")
+        .replace(/-/g, "-")
+        .toLowerCase();
+    };
+
+    const normalizedUser = normalize(userAnswer);
+    const normalizedCorrect = normalize(correctAnswer);
+
+    // Direct comparison
+    if (normalizedUser === normalizedCorrect) {
+      return true;
+    }
+
+    // For equations with x=value, also accept just the value
+    if (normalizedCorrect.startsWith("x=")) {
+      const justValue = normalizedCorrect.substring(2);
+      if (normalizedUser === justValue) {
+        return true;
+      }
+    }
+
+    // For numeric answers, try parsing and comparing
+    const userNum = parseFloat(normalizedUser);
+    const correctNum = parseFloat(normalizedCorrect);
+    if (!isNaN(userNum) && !isNaN(correctNum)) {
+      return Math.abs(userNum - correctNum) < 0.001;
+    }
+
+    return false;
   }
 }
 
