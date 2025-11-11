@@ -4,6 +4,7 @@ import ShockwaveEmitter from "./types/ShockwaveEmitter.js";
 import PlasmaLauncher from "./types/PlasmaLauncher.js";
 import Revolver from "./types/Revolver.js";
 import SciFiSword from "./types/SciFiSword.js";
+import NeonKnife from "./types/NeonKnife.js";
 
 class WeaponManager {
   constructor(scene, player, particleSystem, environment) {
@@ -30,12 +31,16 @@ class WeaponManager {
         order: 3,
         create: () => new SciFiSword(scene, particleSystem),
       },
-      shockwaveEmitter: {
+      neonKnife: {
         order: 4,
+        create: () => new NeonKnife(scene, particleSystem),
+      },
+      shockwaveEmitter: {
+        order: 5,
         create: () => new ShockwaveEmitter(scene, particleSystem),
       },
       plasmaLauncher: {
-        order: 5,
+        order: 6,
         create: () => new PlasmaLauncher(scene, particleSystem),
       },
     };

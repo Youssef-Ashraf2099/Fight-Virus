@@ -18,6 +18,8 @@ export default class DetailedWeaponModels {
         return this.#buildPlasmaLauncher();
       case "shockwaveemitter":
         return this.#buildShockwaveEmitter();
+      case "neonknife":
+        return this.#buildNeonKnife();
       default:
         console.warn(`Unknown weapon model '${type}', returning null.`);
         return null;
@@ -1067,6 +1069,181 @@ export default class DetailedWeaponModels {
       handData: null,
       hud,
       accentColor: accent,
+    };
+  }
+
+  static #buildNeonKnife() {
+    const accent = 0xff00ff;
+    const group = new THREE.Group();
+    group.name = "NeonKnifeViewModel";
+
+    const weaponHolder = new THREE.Group();
+    weaponHolder.name = "weaponHolder";
+    group.add(weaponHolder);
+    group.userData.weaponHolder = weaponHolder;
+
+    const bladeMaterial = new THREE.MeshStandardMaterial({
+      color: accent,
+      emissive: accent,
+      emissiveIntensity: 1.3,
+      metalness: 0.95,
+      roughness: 0.15,
+      transparent: true,
+      opacity: 0.92,
+    });
+
+    const handleMaterial = new THREE.MeshStandardMaterial({
+      color: 0x0a0a0a,
+      metalness: 0.3,
+      roughness: 0.6,
+    });
+
+    const accentMaterial = new THREE.MeshStandardMaterial({
+      color: accent,
+      emissive: accent,
+      emissiveIntensity: 1.1,
+      transparent: true,
+      opacity: 0.85,
+    });
+
+    // Knife blade (elongated diamond shape)
+    const bladeGeometry = new THREE.ConeGeometry(0.08, 0.6, 4);
+    const blade = new THREE.Mesh(bladeGeometry, bladeMaterial);
+    blade.rotation.x = Math.PI / 2;
+    blade.position.set(0, 0.1, -0.5);
+    weaponHolder.add(blade);
+
+    // Blade edge glow
+    const edgeGeometry = new THREE.PlaneGeometry(0.05, 0.65);
+    const edgeMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.6,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
+    const edge1 = new THREE.Mesh(edgeGeometry, edgeMaterial);
+    edge1.position.set(0, 0.1, -0.5);
+    edge1.rotation.y = Math.PI / 4;
+    weaponHolder.add(edge1);
+
+    const edge2 = edge1.clone();
+    edge2.rotation.y = -Math.PI / 4;
+    weaponHolder.add(edge2);
+
+    // Handle
+    const handleGeometry = new THREE.CylinderGeometry(0.045, 0.045, 0.24, 12);
+    const handle = new THREE.Mesh(handleGeometry, handleMaterial);
+    handle.rotation.x = Math.PI / 2;
+    handle.position.set(0, 0.1, -0.12);
+    weaponHolder.add(handle);
+
+    // Handle accent rings
+    const rings = [];
+    for (let i = 0; i < 3; i++) {
+      const ringGeometry = new THREE.TorusGeometry(0.05, 0.01, 8, 16);
+      const ring = new THREE.Mesh(ringGeometry, accentMaterial.clone());
+      ring.rotation.y = Math.PI / 2;
+      ring.position.set(0, 0.1, -0.22 + i * 0.08);
+      weaponHolder.add(ring);
+      rings.push(ring);
+    }
+
+    // Guard
+    const guardGeometry = new THREE.BoxGeometry(0.16, 0.04, 0.04);
+    const guard = new THREE.Mesh(guardGeometry, accentMaterial.clone());
+    guard.position.set(0, 0.1, -0.22);
+    weaponHolder.add(guard);
+
+    // Energy particles around blade
+    const particleGeometry = new THREE.SphereGeometry(0.015, 6, 6);
+    const particles = [];
+    for (let i = 0; i < 8; i++) {
+      const particle = new THREE.Mesh(particleGeometry, accentMaterial.clone());
+      particle.position.set(
+        (Math.random() - 0.5) * 0.1,
+        0.1,
+        -0.3 - Math.random() * 0.4
+      );
+      weaponHolder.add(particle);
+      particles.push({ mesh: particle, offset: Math.random() * Math.PI * 2 });
+    }
+
+    // Blade glow aura
+    const glowGeometry = new THREE.PlaneGeometry(0.4, 0.7);
+    const glowMaterial = new THREE.MeshBasicMaterial({
+      color: accent,
+      transparent: true,
+      opacity: 0.25,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
+    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+    glow.position.set(0, 0.1, -0.5);
+    weaponHolder.add(glow);
+
+    const muzzle = new THREE.Object3D();
+    muzzle.position.set(0, 0.1, -0.82);
+    weaponHolder.add(muzzle);
+
+    const hud = this.#createWeaponHUD("NEON KNIFE", accent, {
+      position: new THREE.Vector3(-0.22, 0.18, -0.24),
+      rotation: new THREE.Vector3(-Math.PI / 10, Math.PI / 5, 0.08),
+    });
+    group.add(hud.mesh);
+
+    const animate = (time, delta = 0, context = {}) => {
+      this.#applyIdleMotion(weaponHolder, time, context);
+
+      // Pulsing blade
+      const pulse = 1.25 + Math.sin(time * 5.5) * 0.35;
+      bladeMaterial.emissiveIntensity = pulse;
+      edgeMaterial.opacity = 0.5 + Math.sin(time * 6) * 0.2;
+
+      // Spinning guard
+      guard.rotation.z += delta * 2.2;
+
+      // Pulsing rings
+      rings.forEach((ring, idx) => {
+        ring.material.emissiveIntensity =
+          0.9 + Math.sin(time * 4 + idx * 0.8) * 0.25;
+        ring.scale.setScalar(1 + Math.sin(time * 3.5 + idx) * 0.05);
+      });
+
+      // Floating particles
+      particles.forEach(({ mesh, offset }) => {
+        mesh.position.x = Math.cos(time * 2 + offset) * 0.08;
+        mesh.position.z = -0.3 - Math.abs(Math.sin(time * 1.5 + offset)) * 0.4;
+        mesh.material.emissiveIntensity =
+          0.8 + Math.sin(time * 5 + offset) * 0.3;
+      });
+
+      // Pulsing glow
+      glowMaterial.opacity = 0.2 + Math.sin(time * 4.8) * 0.1;
+      glow.scale.setScalar(1 + Math.sin(time * 3.2) * 0.08);
+    };
+
+    return {
+      group,
+      muzzle,
+      flashColor: accent,
+      flashRadius: 0.06,
+      lightColor: accent,
+      lightIntensity: 1.12,
+      animate,
+      handData: null,
+      hud,
+      accentColor: accent,
+      viewTransform: {
+        hip: {
+          position: new THREE.Vector3(0.18, -0.22, -0.68),
+          rotation: new THREE.Euler(-0.08, 0.14, 0.12),
+        },
+        aim: {
+          position: new THREE.Vector3(-0.04, -0.16, -0.48),
+          rotation: new THREE.Euler(-0.02, 0.06, 0.04),
+        },
+      },
     };
   }
 

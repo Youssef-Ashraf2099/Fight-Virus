@@ -390,6 +390,34 @@ class UpgradeManager {
         },
       },
       {
+        id: "unlock-neon-knife",
+        name: "Deploy Neon Knife",
+        icon: "🔪",
+        iconClass: "rarity-common",
+        rarity: "common",
+        weight: 2.5,
+        baseCost: 3000,
+        waveScaling: 250,
+        levelScaling: 0,
+        maxStacks: 1,
+        description:
+          "Unlocks the Neon Knife - throwable weapon with spinning neon blades.",
+        detail: (ctx) =>
+          ctx.weaponManager?.hasWeapon?.("neonKnife")
+            ? "Status: Already integrated."
+            : "Status: Not yet acquired.",
+        availability: (ctx) => !ctx.weaponManager?.hasWeapon?.("neonKnife"),
+        apply: (ctx) => {
+          const unlocked = ctx.weaponManager?.unlockWeapon?.("neonKnife", {
+            autoEquip: true,
+          });
+          if (!unlocked) {
+            return "Neon Knife already integrated into the arsenal.";
+          }
+          return "Neon Knife ready - throw spinning blades of neon energy.";
+        },
+      },
+      {
         id: "unlock-shockwave-emitter",
         name: "Deploy Shockwave Emitter",
         icon: "🌀",
