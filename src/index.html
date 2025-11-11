@@ -1361,6 +1361,111 @@
         border: 1px solid rgba(255, 0, 255, 0.25);
       }
 
+      /* ========== COMPUTER RIDDLE PUZZLE STYLES ========== */
+      .puzzle-body.puzzle-computer-riddle {
+        gap: 28px;
+        padding: 32px;
+        align-items: center;
+      }
+
+      .riddle-display {
+        width: 100%;
+        max-width: 680px;
+        padding: 36px 28px;
+        background: rgba(0, 30, 50, 0.5);
+        border: 2px solid rgba(0, 174, 255, 0.35);
+        border-radius: 16px;
+        text-align: center;
+      }
+
+      .riddle-question {
+        font-family: var(--heading-font);
+        font-size: 26px;
+        font-weight: 500;
+        color: #00d4ff;
+        text-shadow: 0 0 20px rgba(0, 212, 255, 0.5),
+          0 0 40px rgba(0, 212, 255, 0.25);
+        letter-spacing: 1.5px;
+        line-height: 1.5;
+        margin-bottom: 20px;
+      }
+
+      .riddle-hint {
+        max-width: 550px;
+        margin: 0 auto;
+        padding: 18px 22px;
+        background: rgba(0, 40, 60, 0.5);
+        border-left: 4px solid rgba(0, 212, 255, 0.6);
+        border-radius: 10px;
+        font-size: 15px;
+        line-height: 1.6;
+        color: rgba(183, 249, 255, 0.9);
+        letter-spacing: 0.8px;
+        text-align: left;
+      }
+
+      .riddle-input-wrapper {
+        width: 100%;
+        max-width: 500px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .riddle-label {
+        font-family: var(--heading-font);
+        font-size: 18px;
+        letter-spacing: 2px;
+        color: #00d4ff;
+        text-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+      }
+
+      .riddle-answer-input {
+        width: 100%;
+        height: 56px;
+        padding: 14px 24px;
+        font-family: var(--heading-font);
+        font-size: 22px;
+        text-align: center;
+        background: rgba(0, 20, 30, 0.8);
+        border: 2px solid rgba(0, 174, 255, 0.4);
+        border-radius: 12px;
+        color: #00d4ff;
+        letter-spacing: 2px;
+        transition: all 0.3s ease;
+      }
+
+      .riddle-answer-input::placeholder {
+        color: rgba(0, 212, 255, 0.4);
+        font-size: 16px;
+      }
+
+      .riddle-answer-input:focus {
+        outline: none;
+        border-color: rgba(0, 212, 255, 0.8);
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.4),
+          0 0 40px rgba(0, 212, 255, 0.2);
+        background: rgba(0, 20, 30, 0.95);
+      }
+
+      .riddle-attempts {
+        font-size: 15px;
+        letter-spacing: 2px;
+        color: rgba(0, 212, 255, 0.85);
+        text-align: center;
+        padding: 12px;
+        background: rgba(0, 20, 30, 0.5);
+        border-radius: 8px;
+        border: 1px solid rgba(0, 174, 255, 0.3);
+      }
+
+      .riddle-attempts .attempts-count {
+        color: #00d4ff;
+        font-weight: bold;
+        font-size: 17px;
+        text-shadow: 0 0 8px rgba(0, 212, 255, 0.5);
+      }
+
       /* ========== MEMORY PATTERN PUZZLE STYLES ========== */
       .puzzle-body.puzzle-memory {
         gap: 24px;

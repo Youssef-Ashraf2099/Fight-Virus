@@ -240,6 +240,7 @@ class PuzzleManager {
       "register-reconfig",
       "checksum-balancer",
       "math-equation",
+      "computer-riddle",
     ];
     if (!this.lastPuzzleType) {
       const choice = allTypes[Math.floor(Math.random() * allTypes.length)];
@@ -268,6 +269,8 @@ class PuzzleManager {
         return this._buildChecksumPuzzle(context);
       case "math-equation":
         return this._buildMathPuzzle(context);
+      case "computer-riddle":
+        return this._buildComputerRiddlePuzzle(context);
       default:
         return this._buildLogicGatePuzzle(context);
     }
@@ -1706,6 +1709,176 @@ class PuzzleManager {
     }
 
     return false;
+  }
+
+  /**
+   * Build a computer riddle puzzle
+   */
+  _buildComputerRiddlePuzzle(context) {
+    const riddle = this._selectComputerRiddle();
+
+    return {
+      type: "computer-riddle",
+      title: "💻 COMPUTER COMPONENT RIDDLE",
+      description: "Identify the computer component based on the clue.",
+      data: {
+        riddle: riddle.question,
+        hint: riddle.hint,
+        acceptedAnswers: riddle.answers, // Array of valid answers
+      },
+      timeout: 60,
+      maxAttempts: 1,
+      checkAnswer: (input) => this._compareRiddleAnswer(input, riddle.answers),
+      getHtml: () => this._getRiddleHtml(riddle),
+    };
+  }
+
+  /**
+   * Select a random computer riddle
+   */
+  _selectComputerRiddle() {
+    const riddles = [
+      {
+        question:
+          "I am the Grand Architect of the system. Every command must pass through my mind before it can become reality.",
+        hint: "Think about what does the thinking... The true core of intelligence.",
+        answers: [
+          "cpu",
+          "processor",
+          "central processing unit",
+          "microprocessor",
+          "the brain",
+        ],
+      },
+      {
+        question:
+          "I am the Scribe of the Present. My pages fill and empty constantly, but if the lights go out, my entire temporary history is wiped clean.",
+        hint: "The amount of space you have for multitasking right now.",
+        answers: ["ram", "memory", "random access memory", "system memory"],
+      },
+      {
+        question:
+          "I am the Eye of the Machine. I take complex mathematics and translate them into the vibrant world you see. Without me, the world is dark and dull and AI will not raise.",
+        hint: "I render the visuals... Graphics is key.",
+        answers: [
+          "gpu",
+          "graphics card",
+          "video card",
+          "graphics processing unit",
+        ],
+      },
+      {
+        question:
+          "I am the Ancient Archive. I hold the secrets, stories, and histories long after the power has failed. I am the long-term memory.",
+        hint: "Where do all the permanent files live? Spin or flash.",
+        answers: [
+          "hard drive",
+          "hdd",
+          "hard disk",
+          "storage drive",
+          "ssd",
+          "solid state drive",
+        ],
+      },
+      {
+        question:
+          "I am the Unifying Continent. Every single vital organ must be directly plugged into my surface to communicate and operate.",
+        hint: "The main foundation that ties all the pieces together.",
+        answers: ["motherboard", "mainboard", "mobo", "system board"],
+      },
+      {
+        question:
+          "I am the Great Alchemist. I take wild, dangerous power from the wall and turn it into the stable, gentle current that the machine can sip safely.",
+        hint: "What supplies the power to everything?",
+        answers: ["psu", "power supply", "power supply unit"],
+      },
+
+      {
+        question:
+          "I am the Digital Bridge to the outside world. I speak the languages of networks and bring messages back and forth across the wire.",
+        hint: "How does the machine connect to the internet?",
+        answers: [
+          "nic",
+          "network card",
+          "network interface card",
+          "ethernet card",
+        ],
+      },
+      {
+        question:
+          "I am the Waking Ritual. I am the very first code executed, ensuring every limb is ready before the true King (the OS) takes the throne.",
+        hint: "Basic Input/Output checks before boot.",
+        answers: ["bios", "basic input output system", "firmware"],
+      },
+      {
+        question:
+          "I am the Looking Glass. I have no thoughts of my own, but I am the only way for the machine to show you its truth.",
+        hint: "The display that lets you see.",
+        answers: ["monitor", "display", "screen"],
+      },
+      {
+        question: "I'm connector of the digital world and physical world.",
+
+        hint: "I am the core of the computer without me it is useless.",
+
+        answers: ["kernel", "os kernel", "system kernel"],
+      },
+      {
+        question:
+          "I'm the speed at which the  brain executes instructions, measured in GHz.",
+
+        hint: "Think about the ticking of the clock...",
+
+        answers: ["clock speed", "frequency", "clock rate", "processor speed"],
+      },
+    ];
+
+    return riddles[Math.floor(Math.random() * riddles.length)];
+  }
+
+  /**
+   * Compare riddle answer with accepted answers (case-insensitive)
+   */
+  _compareRiddleAnswer(userInput, acceptedAnswers) {
+    if (!userInput || !acceptedAnswers || acceptedAnswers.length === 0) {
+      return false;
+    }
+
+    // Normalize user input
+    const normalized = userInput.trim().toLowerCase();
+
+    // Check if the normalized input matches any accepted answer
+    return acceptedAnswers.some((answer) => {
+      const normalizedAnswer = answer.toLowerCase();
+      return normalized === normalizedAnswer;
+    });
+  }
+
+  /**
+   * Generate HTML for riddle puzzle
+   */
+  _getRiddleHtml(riddle) {
+    return `
+      <div class="riddle-display">
+        <div class="riddle-question">${riddle.question}</div>
+        ${
+          riddle.hint
+            ? `<div class="riddle-hint">💡 Hint: ${riddle.hint}</div>`
+            : ""
+        }
+      </div>
+      <div class="riddle-input-wrapper">
+        <label for="riddleAnswer" class="riddle-label">Your Answer:</label>
+        <input
+          type="text"
+          id="riddleAnswer"
+          class="riddle-answer-input"
+          placeholder="Type your answer..."
+          autocomplete="off"
+        />
+      </div>
+      <div class="riddle-attempts">Attempts remaining: <span class="attempts-count">1</span></div>
+    `;
   }
 }
 
