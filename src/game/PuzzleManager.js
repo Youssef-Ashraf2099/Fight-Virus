@@ -241,6 +241,7 @@ class PuzzleManager {
       "checksum-balancer",
       "math-equation",
       "computer-riddle",
+      "caesar-cipher",
     ];
     if (!this.lastPuzzleType) {
       const choice = allTypes[Math.floor(Math.random() * allTypes.length)];
@@ -271,6 +272,8 @@ class PuzzleManager {
         return this._buildMathPuzzle(context);
       case "computer-riddle":
         return this._buildComputerRiddlePuzzle(context);
+      case "caesar-cipher":
+        return this._buildCaesarCipherPuzzle(context);
       default:
         return this._buildLogicGatePuzzle(context);
     }
@@ -1878,6 +1881,225 @@ class PuzzleManager {
         />
       </div>
       <div class="riddle-attempts">Attempts remaining: <span class="attempts-count">1</span></div>
+    `;
+  }
+
+  /**
+   * Build a Caesar cipher puzzle
+   */
+  _buildCaesarCipherPuzzle(context) {
+    const cipher = this._selectCaesarCipher();
+
+    return {
+      type: "caesar-cipher",
+      title: "🔐 CAESAR CIPHER DECRYPTION",
+      description: "Decrypt the message by shifting the letters.",
+      data: {
+        encryptedMessage: cipher.encrypted,
+        shift: cipher.shift,
+        operation: cipher.operation, // "add" or "subtract"
+        correctAnswer: cipher.decrypted,
+        hint: cipher.hint,
+      },
+      timeout: 60,
+      maxAttempts: 1,
+      checkAnswer: (input) =>
+        this._compareCipherAnswer(input, cipher.decrypted),
+      getHtml: () => this._getCaesarCipherHtml(cipher),
+    };
+  }
+
+  /**
+   * Select a random Caesar cipher puzzle
+   */
+  _selectCaesarCipher() {
+    const ciphers = [
+      {
+        encrypted: "KVSU",
+        decrypted: "DOOR",
+        shift: 7,
+        operation: "subtract",
+        hint: "Each letter moves 7 positions back in the alphabet",
+      },
+      {
+        encrypted: "KHOOR",
+        decrypted: "HELLO",
+        shift: 3,
+        operation: "subtract",
+        hint: "Classic Caesar cipher with shift of 3",
+      },
+      {
+        encrypted: "FRPSXWHU",
+        decrypted: "COMPUTER",
+        shift: 3,
+        operation: "subtract",
+        hint: "Think about the device you're using",
+      },
+      {
+        encrypted: "YLUXV",
+        decrypted: "VIRUS",
+        shift: 3,
+        operation: "subtract",
+        hint: "What are you fighting in this game?",
+      },
+      {
+        encrypted: "JRRG",
+        decrypted: "GOOD",
+        shift: 3,
+        operation: "subtract",
+        hint: "A positive word",
+      },
+      {
+        encrypted: "CVZA",
+        decrypted: "HACK",
+        shift: 5,
+        operation: "subtract",
+        hint: "What cybersecurity experts prevent",
+      },
+      {
+        encrypted: "HQFUBSW",
+        decrypted: "ENCRYPT",
+        shift: 1,
+        operation: "subtract",
+        hint: "The opposite of decrypt",
+      },
+      {
+        encrypted: "UHJLVWHU",
+        decrypted: "REGISTER",
+        shift: 3,
+        operation: "subtract",
+        hint: "A CPU component that stores data",
+      },
+      {
+        encrypted: "GCV",
+        decrypted: "CPU",
+        shift: 4,
+        operation: "subtract",
+        hint: "The brain of the computer",
+      },
+      {
+        encrypted: "NHUQHO",
+        decrypted: "KERNEL",
+        shift: 3,
+        operation: "subtract",
+        hint: "The core of an operating system",
+      },
+      {
+        encrypted: "ELMW",
+        decrypted: "BYTE",
+        shift: 7,
+        operation: "subtract",
+        hint: "8 bits make one of these",
+      },
+      {
+        encrypted: "QHWZRUN",
+        decrypted: "NETWORK",
+        shift: 3,
+        operation: "subtract",
+        hint: "Connected computers form this",
+      },
+      {
+        encrypted: "KDUGGULWH",
+        decrypted: "HARDDRIVE",
+        shift: 1,
+        operation: "subtract",
+        hint: "Permanent storage device",
+      },
+      {
+        encrypted: "PHPSBZ",
+        decrypted: "MEMORY",
+        shift: 3,
+        operation: "subtract",
+        hint: "RAM is this type of component",
+      },
+      {
+        encrypted: "ILUHZDOO",
+        decrypted: "FIREWALL",
+        shift: 3,
+        operation: "subtract",
+        hint: "Network security barrier",
+      },
+    ];
+
+    return ciphers[Math.floor(Math.random() * ciphers.length)];
+  }
+
+  /**
+   * Encode/decode Caesar cipher
+   */
+  _applyCaesarShift(text, shift, isDecoding = false) {
+    const actualShift = isDecoding ? -shift : shift;
+    return text
+      .split("")
+      .map((char) => {
+        if (char >= "A" && char <= "Z") {
+          const code = char.charCodeAt(0) - 65;
+          const shifted = (code + actualShift + 26) % 26;
+          return String.fromCharCode(shifted + 65);
+        } else if (char >= "a" && char <= "z") {
+          const code = char.charCodeAt(0) - 97;
+          const shifted = (code + actualShift + 26) % 26;
+          return String.fromCharCode(shifted + 97);
+        }
+        return char; // Non-alphabetic characters remain unchanged
+      })
+      .join("");
+  }
+
+  /**
+   * Compare Caesar cipher answer
+   */
+  _compareCipherAnswer(userInput, correctAnswer) {
+    if (!userInput || !correctAnswer) {
+      return false;
+    }
+
+    // Normalize both strings: trim, convert to uppercase
+    const normalized = userInput.trim().toUpperCase();
+    const normalizedCorrect = correctAnswer.trim().toUpperCase();
+
+    return normalized === normalizedCorrect;
+  }
+
+  /**
+   * Generate HTML for Caesar cipher puzzle
+   */
+  _getCaesarCipherHtml(cipher) {
+    const operationText =
+      cipher.operation === "subtract"
+        ? `Subtract ${cipher.shift}`
+        : `Add ${cipher.shift}`;
+
+    return `
+      <div class="cipher-display">
+        <div class="cipher-encrypted-message">${cipher.encrypted}</div>
+        <div class="cipher-instruction">
+          <span class="cipher-operation">${operationText}</span>
+          <span class="cipher-arrow">→</span>
+          <span class="cipher-question">?</span>
+        </div>
+        ${
+          cipher.hint
+            ? `<div class="cipher-hint">💡 Hint: ${cipher.hint}</div>`
+            : ""
+        }
+      </div>
+      <div class="cipher-input-wrapper">
+        <label for="cipherAnswer" class="cipher-label">Decrypted Message:</label>
+        <input
+          type="text"
+          id="cipherAnswer"
+          class="cipher-answer-input"
+          placeholder="Type the decoded message..."
+          autocomplete="off"
+        />
+      </div>
+      <div class="cipher-attempts">Attempts remaining: <span class="attempts-count">1</span></div>
+      <div class="cipher-explanation">
+        <small>Each letter shifts ${cipher.shift} position(s) ${
+      cipher.operation === "subtract" ? "backward" : "forward"
+    } in the alphabet</small>
+      </div>
     `;
   }
 }
