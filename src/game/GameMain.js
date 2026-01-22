@@ -17,11 +17,21 @@ import DetailedWeaponModels from "../weapons/DetailedWeaponModels.js";
 import { createAudioElement } from "../utils/audio.js";
 import SaveManager from "./SaveManager.js";
 import WorkerManager from "../workers/WorkerManager.js";
+import {
+  vector3Pool,
+  withTempVector3,
+  withTempVectors3,
+} from "../utils/ObjectPool.js";
+import { profiler } from "../utils/PerformanceProfiler.js";
 
 class GameMain {
   constructor() {
     // Performance optimization: Debug logging disabled for production
     // console.log("GameMain constructor called");
+
+    // Initialize profiler for lag detection
+    this.profiler = profiler;
+    this.showPerformanceOverlay = false; // Set to true to see lag sources
 
     try {
       // console.log("Creating scene...");
@@ -460,6 +470,29 @@ class GameMain {
     this.inputManager.on("special", () => {
       if (this.gameStarted && this.player.useSpecialAbility()) {
         this.handleSpecialAbility();
+      }
+    });
+
+    // Performance monitoring (press P to toggle)
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "p" || e.key === "P") {
+        this.showPerformanceOverlay = !this.showPerformanceOverlay;
+
+        if (this.showPerformanceOverlay) {
+          if (!this.performanceOverlayElement) {
+            this.performanceOverlayElement =
+              this.profiler.createVisualOverlay();
+          }
+          this.performanceOverlayElement.style.display = "block";
+          console.log(
+            "🔍 Performance overlay enabled - Monitoring lag sources...",
+          );
+        } else {
+          if (this.performanceOverlayElement) {
+            this.performanceOverlayElement.style.display = "none";
+          }
+          console.log("🔍 Performance overlay disabled");
+        }
       }
     });
 
@@ -1389,19 +1422,28 @@ class GameMain {
   }
 
   update(deltaTime) {
+    // Start profiling this frame
+    this.profiler.startFrame();
+
     // Update learn mode if active
     if (this.spectatorMode && this.spectatorMode.isActive()) {
       this.spectatorMode.update(deltaTime);
+      this.profiler.endFrame();
       return; // Skip game updates while Learn Mode is active
     }
 
-    if (!this.isRunning) return;
+    if (!this.isRunning) {
+      this.profiler.endFrame();
+      return;
+    }
 
     // OPTIMIZATION: Cap deltaTime to prevent spiral of death
     const cappedDelta = Math.min(deltaTime, 0.1); // Max 100ms per frame
 
+    this.profiler.startOperation("player-update");
     const moveInput = this.inputManager.getMoveInput();
     this.player.update(cappedDelta, moveInput);
+    this.profiler.endOperation("player-update");
 
     const playerPosition = this.player.getPosition();
 
@@ -1410,6 +1452,7 @@ class GameMain {
 
     // Shooting with left mouse button (button 0)
     if (this.inputManager.isMouseButtonDown(0) && this.gameStarted) {
+      this.profiler.startOperation("weapon-fire");
       // Fire from weapon muzzle position
       const muzzlePos = this.player.getMuzzlePosition();
       const direction = this.player.getMuzzleDirection();
@@ -1425,15 +1468,30 @@ class GameMain {
         this.weaponManager.fire(null, this.camera, muzzlePos, direction);
         this.player.onShoot(); // Trigger weapon recoil animation
       }
+      this.profiler.endOperation("weapon-fire");
     }
 
+    this.profiler.startOperation("weapon-update");
     this.weaponManager.update(cappedDelta);
+    this.profiler.endOperation("weapon-update");
+
+    this.profiler.startOperation("enemy-update");
     this.enemyManager.update(cappedDelta, playerPosition);
+    this.profiler.endOperation("enemy-update");
+
+    this.profiler.startOperation("environment-update");
     this.environment.update(cappedDelta, playerPosition);
+    this.profiler.endOperation("environment-update");
+
+    this.profiler.startOperation("particle-update");
     this.particleSystem.update(cappedDelta);
+    this.profiler.endOperation("particle-update");
 
+    this.profiler.startOperation("collision-check");
     this.checkCollisions();
+    this.profiler.endOperation("collision-check");
 
+    this.profiler.startOperation("ui-update");
     // OPTIMIZATION: Batch UI updates (only update what changed)
     this.uiManager.updateHealth(this.player.health, this.player.maxHealth);
     this.uiManager.updateEnergy(this.player.energy, this.player.maxEnergy);
@@ -1458,14 +1516,20 @@ class GameMain {
       );
       this._minimapFrameCounter = 0;
     }
+    this.profiler.endOperation("ui-update");
 
+    this.profiler.startOperation("wave-manager");
     if (this.waveManager.update(cappedDelta)) {
       this.onWaveComplete();
     }
+    this.profiler.endOperation("wave-manager");
 
     if (this.player.health <= 0) {
       this.gameOver();
     }
+
+    // End frame profiling
+    this.profiler.endFrame();
   }
 
   checkCollisions() {
@@ -1574,7 +1638,9 @@ class GameMain {
 
       if (distance < minDistance) {
         // Direction away from enemy (ignore vertical to prevent lift)
-        let direction = new THREE.Vector3().subVectors(playerPos, enemyPos);
+        // USE OBJECT POOL to prevent GC lag
+        const direction = vector3Pool.acquire();
+        direction.subVectors(playerPos, enemyPos);
 
         if (direction.lengthSq() < 0.0001) {
           direction.set(Math.random() - 0.5, 0, Math.random() - 0.5);
@@ -1605,14 +1671,24 @@ class GameMain {
 
         // Push enemy back slightly so it doesn't keep overlapping
         if (enemy.position) {
-          enemy.position.add(direction.clone().multiplyScalar(-overlap * 0.4));
+          const enemyPushback = vector3Pool.acquire();
+          enemyPushback.copy(direction).multiplyScalar(-overlap * 0.4);
+          enemy.position.add(enemyPushback);
+          vector3Pool.release(enemyPushback);
+
           if (enemy.group) {
             enemy.group.position.copy(enemy.position);
           }
         }
 
         // Add strong knockback to velocity for continued separation
-        this.player.applyKnockback(direction.clone(), 9 + overlap * 8);
+        const knockbackVec = vector3Pool.acquire();
+        knockbackVec.copy(direction);
+        this.player.applyKnockback(knockbackVec, 9 + overlap * 8);
+        vector3Pool.release(knockbackVec);
+
+        // Release direction vector back to pool
+        vector3Pool.release(direction);
 
         // Apply contact damage (invulnerability frames handled by player)
         this.player.takeDamage(enemy.contactDamage, enemyPos);
@@ -1669,17 +1745,21 @@ class GameMain {
 
         if (enemyDistance < minEnemyDistance && enemyDistance > 0.05) {
           const overlap = minEnemyDistance - enemyDistance;
-          const separationDir = new THREE.Vector3()
-            .subVectors(posA, posB)
-            .normalize();
+          const separationDir = vector3Pool.acquire();
+          separationDir.subVectors(posA, posB).normalize();
           const separationAmount = overlap * 0.35;
 
-          enemyA.position.add(
-            separationDir.clone().multiplyScalar(separationAmount),
-          );
-          enemyB.position.add(
-            separationDir.clone().multiplyScalar(-separationAmount),
-          );
+          const offsetA = vector3Pool.acquire();
+          const offsetB = vector3Pool.acquire();
+          offsetA.copy(separationDir).multiplyScalar(separationAmount);
+          offsetB.copy(separationDir).multiplyScalar(-separationAmount);
+
+          enemyA.position.add(offsetA);
+          enemyB.position.add(offsetB);
+
+          vector3Pool.release(offsetA);
+          vector3Pool.release(offsetB);
+          vector3Pool.release(separationDir);
 
           if (enemyA.group) enemyA.group.position.copy(enemyA.position);
           if (enemyB.group) enemyB.group.position.copy(enemyB.position);
