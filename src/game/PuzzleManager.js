@@ -61,7 +61,7 @@ class PuzzleManager {
         updateSubmitLabel: (label) =>
           this.uiManager?.setPuzzleSubmitVisibility?.(
             puzzle.showSubmit !== false,
-            label
+            label,
           ),
         getSkipLabel: () => skipLabel,
         triggerSkip: () => this._handleSkip(),
@@ -115,7 +115,7 @@ class PuzzleManager {
     const submitVisible = puzzle.showSubmit !== false;
     this.uiManager?.setPuzzleSubmitVisibility?.(
       submitVisible,
-      puzzle.submitLabel || "Validate"
+      puzzle.submitLabel || "Validate",
     );
     const skipLabel = `Skip (-${this._formatScore(skipPenalty)} SCORE)`;
     this.uiManager?.setPuzzleSkipLabel?.(skipLabel);
@@ -171,7 +171,7 @@ class PuzzleManager {
       });
     } else {
       this.uiManager?.setPuzzleFeedback?.(
-        result.message || "Keep working on the puzzle."
+        result.message || "Keep working on the puzzle.",
       );
     }
   }
@@ -286,7 +286,7 @@ class PuzzleManager {
     for (let attempts = 0; attempts < 40 && !config; attempts++) {
       const inputCount = Math.random() < 0.55 ? 3 : 2;
       const inputs = Array.from({ length: inputCount }, () =>
-        Math.random() < 0.5 ? 0 : 1
+        Math.random() < 0.5 ? 0 : 1,
       );
       if (this._logicHasSolution(inputs, gates)) {
         config = { inputs, inputCount };
@@ -323,7 +323,7 @@ class PuzzleManager {
       container.classList.remove(
         "puzzle-register",
         "puzzle-password",
-        "puzzle-maze"
+        "puzzle-maze",
       );
       container.classList.add("puzzle-logic");
 
@@ -402,7 +402,7 @@ class PuzzleManager {
       };
 
       puzzle.state.invertCheckboxes.forEach((checkbox) =>
-        checkbox.addEventListener("change", preview)
+        checkbox.addEventListener("change", preview),
       );
       selectPrimary.addEventListener("change", preview);
       puzzle.state.secondaryGate?.addEventListener("change", preview);
@@ -521,7 +521,7 @@ class PuzzleManager {
       container.classList.remove(
         "puzzle-logic",
         "puzzle-register",
-        "puzzle-maze"
+        "puzzle-maze",
       );
       container.classList.add("puzzle-password");
 
@@ -603,7 +603,7 @@ class PuzzleManager {
 
         const { correctPosition, correctDigit } = this._comparePasswordGuess(
           puzzle.state.secret,
-          guess
+          guess,
         );
 
         const resultText = `${correctPosition} in place, ${correctDigit} misplaced`;
@@ -621,7 +621,7 @@ class PuzzleManager {
         }
 
         helpers.setFeedback?.(
-          `${correctPosition} digit(s) are perfect, ${correctDigit} are correct but misplaced.`
+          `${correctPosition} digit(s) are perfect, ${correctDigit} are correct but misplaced.`,
         );
       };
 
@@ -718,7 +718,7 @@ class PuzzleManager {
       updateDisplay();
       updateAttempts();
       helpers.setFeedback?.(
-        "Crack the code before the firewall locks you out."
+        "Crack the code before the firewall locks you out.",
       );
 
       window.addEventListener("keydown", handleKeyDown);
@@ -756,7 +756,7 @@ class PuzzleManager {
       container.classList.remove(
         "puzzle-logic",
         "puzzle-register",
-        "puzzle-password"
+        "puzzle-password",
       );
       container.classList.add("puzzle-maze");
 
@@ -874,7 +874,7 @@ class PuzzleManager {
             "Move budget exhausted — simulation aborted.",
             {
               reason: "maze-out-of-moves",
-            }
+            },
           );
           return;
         }
@@ -971,7 +971,7 @@ class PuzzleManager {
 
       updateStatus();
       helpers.setFeedback?.(
-        `Plot a path to the goal. Optimal route length: ${layoutInfo.pathLength} steps.`
+        `Plot a path to the goal. Optimal route length: ${layoutInfo.pathLength} steps.`,
       );
 
       window.addEventListener("keydown", handleKeyDown, true);
@@ -1029,7 +1029,7 @@ class PuzzleManager {
       container.classList.remove(
         "puzzle-logic",
         "puzzle-password",
-        "puzzle-maze"
+        "puzzle-maze",
       );
       container.classList.add("puzzle-register");
 
@@ -1042,10 +1042,10 @@ class PuzzleManager {
       header.className = "register-header";
       header.innerHTML = `
         <div class="register-value">Current: <strong id="registerCurrent">${binary(
-          current
+          current,
         )}</strong></div>
         <div class="register-value">Target: <strong>${binary(
-          targetValue
+          targetValue,
         )}</strong></div>
       `;
 
@@ -1192,7 +1192,7 @@ class PuzzleManager {
 
     if (furthestKey === `${start.row}:${start.col}`) {
       const keys = Object.keys(distances).filter(
-        (key) => key !== `${start.row}:${start.col}`
+        (key) => key !== `${start.row}:${start.col}`,
       );
       if (keys.length) {
         furthestKey = keys[0];
@@ -1260,6 +1260,160 @@ class PuzzleManager {
       directions[j] = temp;
     }
     return directions;
+  }
+
+  _buildChecksumPuzzle({ reward, failPenalty, skipPenalty, waveNumber }) {
+    const targetSum =
+      this._randomInt(15, 35) + Math.floor((waveNumber || 1) * 2);
+    const slotCount = 5;
+    const maxValue = 10;
+
+    const puzzle = {
+      id: "checksum-balancer",
+      title: "Checksum Balancer",
+      subtitle: "Adjust memory slots to reach the target checksum.",
+      reward,
+      failPenalty,
+      skipPenalty,
+      showSubmit: true,
+      submitLabel: "Validate Sum",
+      instructions: `Adjust each memory slot's value (0-${maxValue}) so the total sum equals ${targetSum}. Use +/- buttons or direct input.`,
+      state: {
+        slots: Array(slotCount).fill(0),
+        targetSum,
+        maxValue,
+      },
+    };
+
+    puzzle.render = (container, helpers) => {
+      container.classList.remove(
+        "puzzle-logic",
+        "puzzle-password",
+        "puzzle-maze",
+        "puzzle-register",
+      );
+      container.classList.add("puzzle-checksum");
+
+      const header = document.createElement("div");
+      header.className = "checksum-header";
+      header.innerHTML = `
+        <div class="checksum-info">
+          <div class="checksum-label">Current Sum</div>
+          <div class="checksum-current" id="checksumCurrent">0</div>
+        </div>
+        <div class="checksum-info">
+          <div class="checksum-label">Target Sum</div>
+          <div class="checksum-target">${targetSum}</div>
+        </div>
+      `;
+
+      const slotsContainer = document.createElement("div");
+      slotsContainer.className = "checksum-slots";
+
+      const updateSum = () => {
+        const sum = puzzle.state.slots.reduce((a, b) => a + b, 0);
+        const currentEl = header.querySelector("#checksumCurrent");
+        if (currentEl) {
+          currentEl.textContent = sum;
+          if (sum === targetSum) {
+            currentEl.style.color = "#4dffaa";
+            currentEl.style.textShadow = "0 0 20px rgba(77, 255, 170, 0.8)";
+          } else if (sum > targetSum) {
+            currentEl.style.color = "#ff6b6b";
+            currentEl.style.textShadow = "0 0 20px rgba(255, 107, 107, 0.8)";
+          } else {
+            currentEl.style.color = "#b7f9ff";
+            currentEl.style.textShadow = "0 0 20px rgba(34, 209, 255, 0.6)";
+          }
+        }
+        helpers.setFeedback?.(
+          sum === targetSum
+            ? "Checksum matched. Click Validate."
+            : `Current: ${sum} | Need: ${targetSum > sum ? "+" : ""}${
+                targetSum - sum
+              }`,
+        );
+      };
+
+      puzzle.state.slots.forEach((value, index) => {
+        const slot = document.createElement("div");
+        slot.className = "checksum-slot";
+
+        const slotLabel = document.createElement("div");
+        slotLabel.className = "checksum-slot-label";
+        slotLabel.textContent = `Slot ${index + 1}`;
+
+        const controls = document.createElement("div");
+        controls.className = "checksum-slot-controls";
+
+        const decButton = document.createElement("button");
+        decButton.type = "button";
+        decButton.className = "checksum-button";
+        decButton.textContent = "-";
+        decButton.addEventListener("click", () => {
+          if (puzzle.state.slots[index] > 0) {
+            puzzle.state.slots[index]--;
+            valueInput.value = puzzle.state.slots[index];
+            updateSum();
+          }
+        });
+
+        const valueInput = document.createElement("input");
+        valueInput.type = "number";
+        valueInput.className = "checksum-input";
+        valueInput.min = "0";
+        valueInput.max = maxValue.toString();
+        valueInput.value = value.toString();
+        valueInput.addEventListener("input", () => {
+          let val = parseInt(valueInput.value, 10) || 0;
+          val = Math.max(0, Math.min(maxValue, val));
+          puzzle.state.slots[index] = val;
+          valueInput.value = val;
+          updateSum();
+        });
+
+        const incButton = document.createElement("button");
+        incButton.type = "button";
+        incButton.className = "checksum-button";
+        incButton.textContent = "+";
+        incButton.addEventListener("click", () => {
+          if (puzzle.state.slots[index] < maxValue) {
+            puzzle.state.slots[index]++;
+            valueInput.value = puzzle.state.slots[index];
+            updateSum();
+          }
+        });
+
+        controls.appendChild(decButton);
+        controls.appendChild(valueInput);
+        controls.appendChild(incButton);
+
+        slot.appendChild(slotLabel);
+        slot.appendChild(controls);
+        slotsContainer.appendChild(slot);
+      });
+
+      container.appendChild(header);
+      container.appendChild(slotsContainer);
+
+      updateSum();
+    };
+
+    puzzle.validate = () => {
+      const sum = puzzle.state.slots.reduce((a, b) => a + b, 0);
+      if (sum === puzzle.state.targetSum) {
+        return {
+          success: true,
+          message: "Checksum validated. Memory stable.",
+        };
+      }
+      return {
+        success: false,
+        message: `Sum mismatch: ${sum} != ${puzzle.state.targetSum}`,
+      };
+    };
+
+    return puzzle;
   }
 
   _comparePasswordGuess(secret, guess) {
@@ -1353,7 +1507,7 @@ class PuzzleManager {
         "puzzle-register",
         "puzzle-password",
         "puzzle-maze",
-        "puzzle-checksum"
+        "puzzle-checksum",
       );
       container.classList.add("puzzle-math");
 
@@ -2203,8 +2357,8 @@ class PuzzleManager {
       <div class="cipher-attempts">Attempts remaining: <span class="attempts-count">1</span></div>
       <div class="cipher-explanation">
         <small>Each letter shifts ${cipher.shift} position(s) ${
-      cipher.operation === "subtract" ? "backward" : "forward"
-    } in the alphabet</small>
+          cipher.operation === "subtract" ? "backward" : "forward"
+        } in the alphabet</small>
       </div>
     `;
   }

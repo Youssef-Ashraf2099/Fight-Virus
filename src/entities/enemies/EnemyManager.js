@@ -31,6 +31,8 @@ export default class EnemyManager {
     this.safeSpawnDistance = 18;
     this.lastPlayerPosition = null;
     this._spawnOffset = new THREE.Vector3();
+    this.workerManager = null; // Set by GameMain after worker init
+    this.useWorkers = false; // Enable after worker init
     this.enemyClasses = {
       trojan: TrojanVirus,
       worm: WormVirus,
@@ -62,6 +64,21 @@ export default class EnemyManager {
     this.environment = environment || null;
   }
 
+  /**
+   * Initialize with worker manager for optimized spawning
+   * @param {WorkerManager} workerManager - Worker manager instance
+   */
+  setWorkerManager(workerManager) {
+    this.workerManager = workerManager;
+    // DISABLED: Worker-based spawning needs proper integration
+    // Wave generation workers don't return data to main thread correctly
+    this.useWorkers = false;
+
+    console.log(
+      "⚠️ EnemyManager: Using fallback main-thread spawning (workers disabled for now)",
+    );
+  }
+
   spawnEnemy(type, position, difficulty = 1) {
     const EnemyClass = this.enemyClasses[type];
     if (!EnemyClass) {
@@ -78,7 +95,7 @@ export default class EnemyManager {
     if (this.environment) {
       spawnPosition.y = this.environment.getFloorHeightAt(
         spawnPosition.x,
-        spawnPosition.z
+        spawnPosition.z,
       );
     }
 
@@ -86,7 +103,7 @@ export default class EnemyManager {
       this.scene,
       spawnPosition,
       this.particleSystem,
-      difficulty
+      difficulty,
     );
 
     if (enemy) {
@@ -135,7 +152,7 @@ export default class EnemyManager {
     if (this.environment) {
       spawnPosition.y = this.environment.getFloorHeightAt(
         spawnPosition.x,
-        spawnPosition.z
+        spawnPosition.z,
       );
     }
 
@@ -143,7 +160,7 @@ export default class EnemyManager {
       this.scene,
       spawnPosition,
       this.particleSystem,
-      difficulty
+      difficulty,
     );
 
     if (boss) {
@@ -170,15 +187,32 @@ export default class EnemyManager {
   }
 
   queueSpawn(type, position, difficulty, delaySeconds = 0) {
-    this.spawnQueue.push({
-      type,
-      position: position ? position.clone() : new THREE.Vector3(),
-      difficulty,
-      delay: Math.max(0, delaySeconds),
-    });
+    // Use worker if available, otherwise fallback to main thread queue
+    if (this.useWorkers) {
+      this.workerManager.queueSpawn(
+        type,
+        position
+          ? { x: position.x, y: position.y, z: position.z }
+          : { x: 0, y: 0, z: 0 },
+        difficulty,
+        delaySeconds,
+      );
+    } else {
+      // Fallback: main thread queue
+      this.spawnQueue.push({
+        type,
+        position: position ? position.clone() : new THREE.Vector3(),
+        difficulty,
+        delay: Math.max(0, delaySeconds),
+      });
+    }
   }
 
   spawnWave(waveNumber, difficulty) {
+    // ALWAYS use main thread wave generation for now
+    // Workers are available but wave generation needs proper callback integration
+
+    // Main thread wave generation
     const count = Math.floor(5 + waveNumber * 2);
     const radius = 40;
 
@@ -211,7 +245,7 @@ export default class EnemyManager {
       const position = new THREE.Vector3(
         Math.cos(angle) * spawnRadius,
         0,
-        Math.sin(angle) * spawnRadius
+        Math.sin(angle) * spawnRadius,
       );
 
       const randomType =
@@ -226,8 +260,38 @@ export default class EnemyManager {
   update(deltaTime, playerPosition) {
     this.lastPlayerPosition = playerPosition ? playerPosition.clone() : null;
 
-    // OPTIMIZATION: Process spawn queue
-    if (this.spawnQueue.length) {
+    // OPTIMIZATION: Process spawn queue (worker or main thread)
+    if (this.useWorkers) {
+      // Use worker for spawn processing
+      this.workerManager.updateSpawns(
+        deltaTime,
+        playerPosition
+          ? { x: playerPosition.x, y: playerPosition.y, z: playerPosition.z }
+          : null,
+        (readySpawns) => {
+          // Worker returns ready spawns, create them
+          const availableSlots = Math.max(
+            0,
+            this.maxActiveEnemies - this.enemies.length,
+          );
+          const spawnsToCreate = Math.min(
+            readySpawns.length,
+            availableSlots,
+            this.maxSpawnsPerFrame,
+          );
+
+          for (let i = 0; i < spawnsToCreate; i++) {
+            const spawn = readySpawns[i];
+            const position = new THREE.Vector3(
+              spawn.position.x,
+              spawn.position.y,
+              spawn.position.z,
+            );
+            this.spawnEnemy(spawn.type, position, spawn.difficulty);
+          }
+        },
+      );
+    } else if (this.spawnQueue.length) {
       // Spread queued spawns across frames to avoid hitches
       this.spawnQueue.forEach((request) => {
         request.delay = Math.max(0, request.delay - deltaTime);
@@ -236,7 +300,7 @@ export default class EnemyManager {
       let spawnsThisFrame = 0;
       let availableSlots = Math.max(
         0,
-        this.maxActiveEnemies - this.enemies.length
+        this.maxActiveEnemies - this.enemies.length,
       );
       for (let i = 0; i < this.spawnQueue.length; ) {
         if (spawnsThisFrame >= this.maxSpawnsPerFrame) {
@@ -263,7 +327,7 @@ export default class EnemyManager {
         spawnsThisFrame++;
         availableSlots = Math.max(
           0,
-          this.maxActiveEnemies - this.enemies.length
+          this.maxActiveEnemies - this.enemies.length,
         );
       }
     }
@@ -337,6 +401,11 @@ export default class EnemyManager {
     this.enemies.forEach((enemy) => enemy.destroy());
     this.enemies = [];
     this.spawnQueue = [];
+
+    // Clear worker queue if using workers
+    if (this.useWorkers && this.workerManager) {
+      this.workerManager.clearSpawnQueue();
+    }
   }
 
   setMaxActiveEnemies(limit) {

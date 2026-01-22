@@ -52,6 +52,8 @@ class WeaponManager {
     this.time = 0;
     this.damageMultiplier = 1;
     this.projectileSpeedMultiplier = 1;
+    this._lastSlowLog = 0;
+    this._profilingThresholdMs = 6; // log when weapon+projectile work exceeds this frame budget
 
     this.unlockWeapon("pulseCannon", { autoEquip: true });
   }
@@ -114,20 +116,13 @@ class WeaponManager {
     const fireDirection = direction || this.player.getDirection();
 
     // Validate fire positions to prevent null reference errors
-    if (
-      !firePosition ||
-      isNaN(firePosition.x) ||
-      isNaN(firePosition.y) ||
-      isNaN(firePosition.z)
-    ) {
+    const isFiniteVec = (v) =>
+      v && Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z);
+
+    if (!isFiniteVec(firePosition)) {
       return;
     }
-    if (
-      !fireDirection ||
-      isNaN(fireDirection.x) ||
-      isNaN(fireDirection.y) ||
-      isNaN(fireDirection.z)
-    ) {
+    if (!isFiniteVec(fireDirection)) {
       return;
     }
 
@@ -135,13 +130,22 @@ class WeaponManager {
       return;
     }
 
-    const projectile = weapon.fire(
-      firePosition,
-      mousePos,
-      camera,
-      fireDirection,
-      this.enemyManager,
-    );
+    let projectile = null;
+    try {
+      projectile = weapon.fire(
+        firePosition,
+        mousePos,
+        camera,
+        fireDirection,
+        this.enemyManager,
+      );
+    } catch (err) {
+      // Prevent fire-time errors (often null targets) from freezing the frame
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("Weapon fire failed:", err);
+      }
+      return;
+    }
 
     if (projectile) {
       const applyScaling = (proj) => {
@@ -185,12 +189,30 @@ class WeaponManager {
   }
 
   update(deltaTime) {
+    const frameStart = performance.now();
     this.time += deltaTime;
-    this.weapons.forEach((weapon) => weapon.update(deltaTime));
+    let weaponUpdateMs = 0;
+    let projectileUpdateMs = 0;
+
+    const weaponsStart = performance.now();
+    for (let i = 0; i < this.weapons.length; i += 1) {
+      const weapon = this.weapons[i];
+      if (!weapon || typeof weapon.update !== "function") continue;
+      try {
+        weapon.update(deltaTime);
+      } catch (err) {
+        // Avoid a single bad weapon update stalling the frame
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("Weapon update failed:", err);
+        }
+      }
+    }
+    weaponUpdateMs = performance.now() - weaponsStart;
 
     // OPTIMIZATION: Batch projectile updates with early removal
     const projCount = this.projectiles.length;
-    const aliveProjectiles = [];
+    let writeIndex = 0;
+    const projStart = performance.now();
 
     for (let i = 0; i < projCount; i++) {
       const proj = this.projectiles[i];
@@ -199,31 +221,57 @@ class WeaponManager {
         continue; // Skip destroyed projectiles
       }
 
-      const updateResult =
-        typeof proj.update === "function"
-          ? proj.update(deltaTime, this.environment)
-          : true;
+      try {
+        const updateResult =
+          typeof proj.update === "function"
+            ? proj.update(deltaTime, this.environment)
+            : true;
 
-      if (updateResult === false) {
-        if (typeof proj.destroy === "function") {
+        if (updateResult === false) {
+          if (typeof proj.destroy === "function") {
+            proj.destroy();
+          }
+          continue;
+        }
+
+        if (typeof proj.isExpired === "function" && proj.isExpired()) {
+          if (typeof proj.destroy === "function") {
+            proj.destroy();
+          }
+          continue;
+        }
+
+        this.projectiles[writeIndex++] = proj;
+      } catch (error) {
+        // Defensive: prevent a single bad projectile from stalling the frame
+        if (typeof proj?.destroy === "function") {
           proj.destroy();
         }
-        continue;
-      }
-
-      if (typeof proj.isExpired === "function" && proj.isExpired()) {
-        if (typeof proj.destroy === "function") {
-          proj.destroy();
+        // Optionally log in dev mode
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("Projectile update failed:", error);
         }
-        continue;
       }
-
-      aliveProjectiles.push(proj);
     }
 
-    this.projectiles = aliveProjectiles;
+    this.projectiles.length = writeIndex;
+    projectileUpdateMs = performance.now() - projStart;
 
     this.player.updateWeaponHUD?.(this.getCurrentWeapon());
+
+    // Log occasional slow frames to help trace lingering lag sources (dev only)
+    const totalMs = performance.now() - frameStart;
+    const now = performance.now();
+    if (
+      process.env.NODE_ENV !== "production" &&
+      totalMs > this._profilingThresholdMs &&
+      now - this._lastSlowLog > 1500
+    ) {
+      this._lastSlowLog = now;
+      console.warn(
+        `Weapon frame slow: ${totalMs.toFixed(2)}ms (weapons ${weaponUpdateMs.toFixed(2)}ms, projectiles ${projectileUpdateMs.toFixed(2)}ms, count ${writeIndex}/${projCount})`,
+      );
+    }
   }
 
   getProjectiles() {

@@ -83,7 +83,7 @@ export default class WaveManager {
     if (bossConfig.message) {
       this.uiManager.showMessage(
         bossConfig.message,
-        bossConfig.messageDuration || 3200
+        bossConfig.messageDuration || 3200,
       );
     }
 
@@ -93,12 +93,12 @@ export default class WaveManager {
     const boss = this.enemyManager.spawnBoss(
       bossType,
       bossPosition,
-      bossDifficulty
+      bossDifficulty,
     );
 
     if (boss) {
       console.log(
-        `Boss spawned: ${boss.bossName || bossType} at center position`
+        `👹 BOSS WAVE: ${boss.bossName || bossType} spawned at center (Wave ${this.currentWave})`,
       );
       this.previousBossType = bossType;
     }
@@ -188,7 +188,7 @@ export default class WaveManager {
 
     const candidates = Array.from(pool);
     const filtered = candidates.filter(
-      (type) => type !== this.previousBossType
+      (type) => type !== this.previousBossType,
     );
     const selectionPool = filtered.length ? filtered : candidates;
     const selectedType =
@@ -221,19 +221,23 @@ export default class WaveManager {
         this.enemyManager.hasPendingSpawns();
 
       if (hasPendingSpawns) {
-        return false;
+        return false; // Still spawning enemies
       }
 
+      // All regular enemies cleared - check if boss fight should trigger
       if (!this.bossFightTriggered) {
-        // Regular enemies cleared, trigger boss fight before ending wave
-        if (this.currentWave % 3 === 0) {
+        // Boss waves: every 3rd wave, but only starting from wave 3
+        const shouldSpawnBoss =
+          this.currentWave >= 3 && this.currentWave % 3 === 0;
+
+        if (shouldSpawnBoss) {
           // Start boss fight
           this.startBossFight();
-          return false; // Wave not complete yet
+          return false; // Wave not complete yet, boss battle ongoing
         }
       }
 
-      // Boss defeated or no boss this wave - wave complete
+      // Boss defeated (if there was one) or no boss for this wave - wave complete
       this.waveActive = false;
       this.bossActive = false;
       this.lastWaveHadBoss = this.bossFightTriggered;

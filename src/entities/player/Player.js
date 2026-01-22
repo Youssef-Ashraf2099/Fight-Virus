@@ -42,7 +42,6 @@ export default class Player {
     this.jumpVelocity = 0;
     this.jumpPower = 10;
     this.gravity = -25;
-
     // Bob animation for walking
     this.bobTime = 0;
     this.bobSpeed = 10;
@@ -64,6 +63,7 @@ export default class Player {
     this.cameraShakeOffset = { x: 0, z: 0 };
     this.damageShakeFrame = null;
 
+    // Constructor continues with damage indicators and jetpack setup
     // Damage indicator system
     this.damageIndicators = [];
     this.damageVignetteIntensity = 0;
@@ -511,7 +511,10 @@ export default class Player {
   }
 
   update(deltaTime, moveInput) {
+    const frameStart = performance.now();
     this.time += deltaTime;
+    let jetpackMs = 0;
+    let movementMs = 0;
 
     // Update camera rotation from mouse look
     this.camera.rotation.order = "YXZ";
@@ -551,6 +554,7 @@ export default class Player {
     const wantsJetpack =
       this.jetpackUnlocked && moveInput.jump && this.jetpackFuel > 0;
 
+    const jetStart = performance.now();
     if (wantsJetpack) {
       this.jetpackFuel = Math.max(0, this.jetpackFuel - deltaTime);
       this.jetpackRefuelTimer = this.jetpackRefuelDelay;
@@ -569,6 +573,7 @@ export default class Player {
       const maxJetpackVelocity = 18;
       this.jumpVelocity = Math.min(this.jumpVelocity, maxJetpackVelocity);
     }
+    jetpackMs = performance.now() - jetStart;
 
     this.position.y += this.jumpVelocity * deltaTime;
 
@@ -578,6 +583,7 @@ export default class Player {
     const wasGrounded = this.isGrounded;
 
     // Apply horizontal movement
+    const moveStart = performance.now();
     this.position.x += this.velocity.x;
     this.position.z += this.velocity.z;
 
@@ -599,6 +605,8 @@ export default class Player {
         ? this.environment.getFloorHeightAt(this.position.x, this.position.z)
         : 0;
     }
+
+    movementMs = performance.now() - moveStart;
 
     // Constrain to play area after collision resolution
     const boundary = 45;
@@ -819,6 +827,20 @@ export default class Player {
 
     // Update crosshair for aiming
     this.updateCrosshair();
+
+    if (process.env.NODE_ENV !== "production") {
+      const totalMs = performance.now() - frameStart;
+      if (
+        totalMs > 6 &&
+        (!this._lastPlayerSlowLog ||
+          performance.now() - this._lastPlayerSlowLog > 1500)
+      ) {
+        this._lastPlayerSlowLog = performance.now();
+        console.warn(
+          `Player update slow: ${totalMs.toFixed(2)}ms (movement ${movementMs.toFixed(2)}ms, jetpack ${jetpackMs.toFixed(2)}ms, other ${(totalMs - movementMs - jetpackMs).toFixed(2)}ms)`,
+        );
+      }
+    }
   }
 
   animateWeaponView(deltaTime = 0, time = this.time) {

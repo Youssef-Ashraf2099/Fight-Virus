@@ -51,6 +51,7 @@ const bootGame = () => {
   }
 
   gameMainInstance = new GameMain();
+
   return gameMainInstance;
 };
 

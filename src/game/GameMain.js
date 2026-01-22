@@ -16,6 +16,7 @@ import SpectatorMode from "./SpectatorMode.js";
 import DetailedWeaponModels from "../weapons/DetailedWeaponModels.js";
 import { createAudioElement } from "../utils/audio.js";
 import SaveManager from "./SaveManager.js";
+import WorkerManager from "../workers/WorkerManager.js";
 
 class GameMain {
   constructor() {
@@ -163,6 +164,18 @@ class GameMain {
     // Setup camera for FPS (will be controlled by player)
     this.camera.position.set(0, 1.8, 0);
 
+    // Initialize worker manager for performance optimization
+    console.log("Initializing worker threads...");
+    this.workerManager = new WorkerManager();
+    try {
+      await this.workerManager.init();
+      const status = this.workerManager.getStatus();
+      console.log("✅ Workers initialized:", status.ready);
+    } catch (error) {
+      console.warn("⚠️ Workers failed to initialize, using fallback:", error);
+      this.workerManager = null;
+    }
+
     // Initialize systems
     this.inputManager = new InputManager();
     this.uiManager = new UIManager();
@@ -213,6 +226,11 @@ class GameMain {
     );
     if (typeof this.enemyManager.setMaxActiveEnemies === "function") {
       this.enemyManager.setMaxActiveEnemies(15);
+    }
+
+    // Connect worker manager to enemy manager for optimized spawning
+    if (this.workerManager) {
+      this.enemyManager.setWorkerManager(this.workerManager);
     }
 
     // Connect enemy manager to weapon manager for melee weapons
@@ -684,6 +702,13 @@ class GameMain {
     this.weaponManager?.clear?.();
     this.waveManager?.reset?.();
     this.environment?.setPhase?.(0);
+
+    // Cleanup workers
+    if (this.workerManager) {
+      this.workerManager.destroy();
+      this.workerManager = null;
+      console.log("✅ Worker threads terminated");
+    }
 
     this.score = 0;
     this.difficulty = 1;
@@ -1682,8 +1707,8 @@ class GameMain {
     this.difficulty += 0.2;
     const waveNumber = this.waveManager.getCurrentWave();
 
-    // Determine if this was a boss wave
-    const wasBossWave = waveNumber % 3 === 0;
+    // Determine if this was a boss wave (matches WaveManager logic: every 3rd wave starting from wave 3)
+    const wasBossWave = waveNumber >= 3 && waveNumber % 3 === 0;
 
     if (wasBossWave) {
       this.uiManager.showMessage(
@@ -1730,6 +1755,7 @@ class GameMain {
         this.presentUpgradeSelection(waveNumber);
       }, 900);
     } else {
+      // Regular wave - offer puzzle challenge
       this.launchPuzzleChallenge(waveNumber);
     }
   }
