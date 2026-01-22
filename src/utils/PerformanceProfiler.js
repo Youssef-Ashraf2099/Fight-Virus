@@ -28,6 +28,9 @@ export class PerformanceProfiler {
     this.lagThreshold = 16.67; // 60 FPS = 16.67ms per frame
     this.lagSpikes = [];
     this.maxLagSpikes = 50;
+
+    // Target frame budget (main thread headroom visualization)
+    this.targetFrameMs = 16.67; // 60 FPS budget
   }
 
   /**
@@ -54,7 +57,7 @@ export class PerformanceProfiler {
     // Record frame
     this.frameHistory.push({
       time: performance.now(),
-      frameTime: frameTime,
+      frameTime,
       operations: { ...this.currentFrame.operations },
     });
 
@@ -63,12 +66,10 @@ export class PerformanceProfiler {
       this.frameHistory.shift();
     }
 
-    // Detect lag spike
     if (frameTime > this.lagThreshold * 2) {
-      // 2x normal frame time
       this.lagSpikes.push({
         time: performance.now(),
-        frameTime: frameTime,
+        frameTime,
         operations: { ...this.currentFrame.operations },
       });
 
@@ -160,6 +161,8 @@ export class PerformanceProfiler {
         max: 0,
         p95: 0,
         p99: 0,
+        headroomPct: 100,
+        fps: this.fps,
       };
     }
 
@@ -168,12 +171,19 @@ export class PerformanceProfiler {
       .sort((a, b) => a - b);
     const sum = times.reduce((a, b) => a + b, 0);
 
+    const avg = sum / times.length;
+    const headroomPct = Math.max(
+      0,
+      100 - Math.min(100, (avg / this.targetFrameMs) * 100),
+    );
+
     return {
-      avg: sum / times.length,
+      avg,
       min: times[0],
       max: times[times.length - 1],
       p95: times[Math.floor(times.length * 0.95)],
       p99: times[Math.floor(times.length * 0.99)],
+      headroomPct,
       fps: this.fps,
     };
   }
@@ -215,6 +225,9 @@ export class PerformanceProfiler {
     console.log(`FPS: ${stats.fps.toFixed(1)}`);
     console.log(
       `Frame Time: ${stats.avg.toFixed(2)}ms (${stats.min.toFixed(2)}-${stats.max.toFixed(2)}ms)`,
+    );
+    console.log(
+      `Main Thread Load: ${(100 - stats.headroomPct).toFixed(0)}% (budget ${this.targetFrameMs.toFixed(2)}ms)`,
     );
     console.log(
       `P95: ${stats.p95.toFixed(2)}ms | P99: ${stats.p99.toFixed(2)}ms`,
@@ -270,6 +283,7 @@ export class PerformanceProfiler {
         <div style="margin-top: 5px;">
           Frame: ${stats.avg.toFixed(2)}ms (${stats.min.toFixed(1)}-${stats.max.toFixed(1)}ms)
         </div>
+        <div>Main Thread Load: ${(100 - stats.headroomPct).toFixed(0)}% (Budget: ${this.targetFrameMs.toFixed(2)}ms)</div>
         <div>P95: ${stats.p95.toFixed(2)}ms | P99: ${stats.p99.toFixed(2)}ms</div>
         <div style="margin-top: 5px; border-top: 1px solid #0f0; padding-top: 5px;">
           <strong>Slowest:</strong><br>

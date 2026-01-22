@@ -17,6 +17,7 @@ import DetailedWeaponModels from "../weapons/DetailedWeaponModels.js";
 import { createAudioElement } from "../utils/audio.js";
 import SaveManager from "./SaveManager.js";
 import WorkerManager from "../workers/WorkerManager.js";
+import ModelGallery from "./ModelGallery.js";
 import {
   vector3Pool,
   withTempVector3,
@@ -246,6 +247,10 @@ class GameMain {
     // Connect enemy manager to weapon manager for melee weapons
     this.weaponManager.setEnemyManager(this.enemyManager);
 
+    // Initialize Model Gallery
+    this.modelGallery = new ModelGallery(this.scene);
+    await this.modelGallery.init();
+
     // Create wave manager
     this.waveManager = new WaveManager(this.enemyManager, this.uiManager);
     if (typeof this.waveManager.setEnvironment === "function") {
@@ -377,10 +382,12 @@ class GameMain {
     const continueButton = document.getElementById("continueButton");
     const learnButton = document.getElementById("learnButton");
     const exitButton = document.getElementById("exitButton");
+    const galleryButton = document.getElementById("galleryButton");
     console.log("Start button element:", startButton);
     console.log("Continue button element:", continueButton);
     console.log("Learn button element:", learnButton);
     console.log("Exit button element:", exitButton);
+    console.log("Gallery button element:", galleryButton);
 
     if (!startButton) {
       console.error("Start button not found!");
@@ -436,6 +443,15 @@ class GameMain {
       });
     } else {
       console.warn("Exit button not found on start screen.");
+    }
+
+    if (galleryButton) {
+      galleryButton.addEventListener("click", () => {
+        console.log("🖼️ MODEL GALLERY BUTTON CLICKED!");
+        this.modelGallery.open();
+      });
+    } else {
+      console.warn("Gallery button not found on start screen.");
     }
 
     // console.log("✓ Button listeners attached");
