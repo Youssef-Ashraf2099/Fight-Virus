@@ -9,3 +9,12 @@ Thumbs.db
 *~
 .vscode/
 .idea/
+# Tauri
+src-tauri/target/
+.tauri/
+
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb

@@ -1,0 +1,35 @@
+{
+  "productName": "Virus Hunter",
+  "version": "1.0.0",
+  "identifier": "com.virusHunter.appid",
+  "build": {
+    "beforeBuildCommand": "npm run build:renderer",
+    "beforeDevCommand": "npm run dev:vite",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "./build/renderer"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Virus Hunter",
+        "width": 1280,
+        "height": 720,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis"],
+    "icon": ["icons/icon.ico", "icons/icon.png"],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    }
+  }
+}

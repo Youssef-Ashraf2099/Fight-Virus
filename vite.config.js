@@ -4,13 +4,17 @@ import path from "node:path";
 const rootDir = path.resolve(__dirname, "src");
 const outDir = path.resolve(__dirname, "build/renderer");
 
+// Use Tauri's environment variables if available
+const isTauri =
+  !!process.env.TAURI_ENV_DEBUG || !!process.env.TAURI_ENV_TARGET_TRIPLE;
+
 export default defineConfig({
   root: rootDir,
-  base: "./",
+  base: isTauri ? "./" : "./",
   publicDir: path.resolve(__dirname, "Assets"),
   server: {
     port: 5173,
-    strictPort: true,
+    strictPort: false,
     fs: {
       allow: [rootDir, path.resolve(__dirname, "Assets")],
     },
@@ -41,13 +45,12 @@ export default defineConfig({
         assetFileNames: "[name]-[hash][extname]",
         // Optimize chunk splitting
         manualChunks: {
-          three: ["./lib/three.min.js"],
-          vendor: ["node_modules"],
+          vendor: ["three"],
         },
       },
     },
     // Enable CSS minification and optimization
-    cssMinify: "lightningcss",
+    cssMinify: "esbuild",
     // Reduce bundle size
     brotliSize: false,
     sourcemap: false,
