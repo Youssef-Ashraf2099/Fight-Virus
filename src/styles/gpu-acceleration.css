@@ -1,0 +1,255 @@
+/**
+ * Hardware Acceleration CSS Optimization
+ * These styles force GPU acceleration for performance-critical elements
+ * Add these to your main stylesheet or include as a separate file
+ */
+
+:root {
+  /* GPU Acceleration Flags */
+  --gpu-enabled: 1;
+  --use-3d-transforms: true;
+}
+
+/* Force GPU acceleration on root element */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  will-change: auto;
+}
+
+/* Body optimization */
+body {
+  -webkit-font-smoothing: antialiased;
+  -webkit-backface-visibility: hidden;
+  -webkit-perspective: 1000;
+  will-change: auto;
+}
+
+/* Canvas GPU acceleration */
+canvas {
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-perspective: 1000;
+  perspective: 1000;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  will-change: auto;
+}
+
+/* UI Panels - GPU accelerated */
+.learn-overlay,
+.ui-panel,
+[role="dialog"],
+.modal {
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+
+/* Animations - use transform instead of top/left/margin */
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    -webkit-transform: translate3d(-30px, 0, 0);
+    transform: translate3d(-30px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    -webkit-transform: scale3d(0.95, 0.95, 1);
+    transform: scale3d(0.95, 0.95, 1);
+  }
+  to {
+    opacity: 1;
+    -webkit-transform: scale3d(1, 1, 1);
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+/* Game UI Elements */
+.health-bar,
+.damage-number,
+.particle-effect {
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+
+/* Smooth transitions */
+button,
+.clickable,
+[role="button"] {
+  -webkit-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+button:hover,
+.clickable:hover,
+[role="button"]:hover {
+  -webkit-transform: translate3d(0, -2px, 0);
+  transform: translate3d(0, -2px, 0);
+}
+
+button:active,
+.clickable:active,
+[role="button"]:active {
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+}
+
+/* Text rendering optimization */
+.text-content,
+p,
+span,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+}
+
+/* Avoid GPU thrashing with containment */
+.game-container {
+  contain: layout style paint;
+  will-change: auto;
+}
+
+.ui-container {
+  contain: layout style;
+}
+
+/* Performance-critical animations */
+.smooth-animation {
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-perspective: 1000;
+  perspective: 1000;
+  will-change: transform, opacity;
+}
+
+/* Fixed positioning optimization */
+.hud,
+.overlay,
+.modal-overlay,
+[position="fixed"] {
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* Disable GPU acceleration for heavy calculations */
+.cpu-intensive {
+  will-change: auto;
+  contain: auto;
+}
+
+/* Media elements optimization */
+img,
+video {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-perspective: 1000;
+  perspective: 1000;
+}
+
+/* Optimize scrolling performance */
+.scrollable {
+  -webkit-overflow-scrolling: touch;
+  will-change: scroll-position;
+}
+
+/* Filter performance optimization */
+.blur-effect {
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  will-change: backdrop-filter;
+}
+
+/* Disable transformations on complex nested elements to prevent layer explosion */
+.nested-content {
+  contain: layout style paint;
+  will-change: auto;
+}
+
+/* Print styles - disable GPU for printing */
+@media print {
+  * {
+    -webkit-transform: none !important;
+    transform: none !important;
+    -webkit-backface-visibility: visible !important;
+    backface-visibility: visible !important;
+    will-change: auto !important;
+  }
+}
+
+/* Reduced motion respect */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High DPI optimization */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  body {
+    -webkit-font-smoothing: subpixel-antialiased;
+  }
+
+  canvas {
+    image-rendering: -webkit-optimize-contrast;
+  }
+}
+
+/* Performance monitoring classes */
+.performance-monitor {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #00ff88;
+  font-family: monospace;
+  font-size: 12px;
+  border: 1px solid #00ff88;
+  border-radius: 4px;
+  z-index: 10000;
+  pointer-events: none;
+  will-change: auto;
+}

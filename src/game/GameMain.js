@@ -31,7 +31,7 @@ class GameMain {
         75,
         window.innerWidth / window.innerHeight,
         0.01, // Reduced near plane for weapon viewmodel
-        1000
+        1000,
       );
       this.scene.add(this.camera); // ensure weapon viewmodel renders
 
@@ -125,7 +125,7 @@ class GameMain {
       document.addEventListener("fullscreenchange", this.onFullscreenChange);
       document.addEventListener(
         "webkitfullscreenchange",
-        this.onFullscreenChange
+        this.onFullscreenChange,
       );
       document.addEventListener("mozfullscreenchange", this.onFullscreenChange);
       document.addEventListener("MSFullscreenChange", this.onFullscreenChange);
@@ -189,7 +189,7 @@ class GameMain {
       } catch (err) {
         console.warn(
           "Failed to load weapon blueprints, fallback weapons will be used:",
-          err
+          err,
         );
       }
     }
@@ -202,14 +202,14 @@ class GameMain {
       this.scene,
       this.player,
       this.particleSystem,
-      this.environment
+      this.environment,
     );
 
     // Create enemy manager
     this.enemyManager = new EnemyManager(
       this.scene,
       this.particleSystem,
-      this.environment
+      this.environment,
     );
     if (typeof this.enemyManager.setMaxActiveEnemies === "function") {
       this.enemyManager.setMaxActiveEnemies(15);
@@ -232,7 +232,7 @@ class GameMain {
       this.scene,
       this.camera,
       this.inputManager,
-      this.environment
+      this.environment,
     );
 
     // Setup event listeners
@@ -429,7 +429,7 @@ class GameMain {
     this.inputManager.on("weapon4", () => this.weaponManager.switchWeapon(3));
     this.inputManager.on("weaponNext", () => this.weaponManager.cycleWeapon(1));
     this.inputManager.on("weaponPrev", () =>
-      this.weaponManager.cycleWeapon(-1)
+      this.weaponManager.cycleWeapon(-1),
     );
 
     this.inputManager.on("reload", () => {
@@ -565,7 +565,7 @@ class GameMain {
 
     const audioActive = this.activeBackgroundAudio;
     this.pausedAudioShouldResume = Boolean(
-      audioActive && audioActive.paused === false
+      audioActive && audioActive.paused === false,
     );
     if (this.pausedAudioShouldResume && audioActive) {
       try {
@@ -786,7 +786,7 @@ class GameMain {
       console.warn("Unable to automatically exit; prompting user manually.");
       this.uiManager?.showMessage?.(
         "Close the window or press Alt+F4 to exit.",
-        2800
+        2800,
       );
     }
   }
@@ -892,17 +892,17 @@ class GameMain {
     document.addEventListener(
       "pointerdown",
       this.fullscreenFallbackHandler,
-      options
+      options,
     );
     document.addEventListener(
       "keydown",
       this.fullscreenFallbackHandler,
-      options
+      options,
     );
     document.addEventListener(
       "mousedown",
       this.fullscreenFallbackHandler,
-      options
+      options,
     );
   }
 
@@ -1018,7 +1018,7 @@ class GameMain {
     if (!this.activeBackgroundAudio || this.activeBackgroundAudio.paused) {
       if (this.backgroundMusicElements.length > 1) {
         this.backgroundMusicIndex = Math.floor(
-          Math.random() * this.backgroundMusicElements.length
+          Math.random() * this.backgroundMusicElements.length,
         );
       } else {
         this.backgroundMusicIndex = 0;
@@ -1048,7 +1048,7 @@ class GameMain {
 
     this.showLoadingOverlay(
       "DEPLOYING GUARDIAN",
-      "Calibrating weapon systems and uplinking environment..."
+      "Calibrating weapon systems and uplinking environment...",
     );
 
     setTimeout(() => {
@@ -1089,7 +1089,7 @@ class GameMain {
           `${
             phaseName ? phaseName.toUpperCase() + "<br>" : ""
           }WAVE 1 - GET READY!`,
-          2200
+          2200,
         );
 
         this.enableBackgroundMusic(true);
@@ -1100,7 +1100,7 @@ class GameMain {
         alert(
           "Error starting game: " +
             error.message +
-            "\n\nCheck console for details."
+            "\n\nCheck console for details.",
         );
       } finally {
         this.hideLoadingOverlay();
@@ -1126,7 +1126,7 @@ class GameMain {
 
     this.showLoadingOverlay(
       "RESTORING CHECKPOINT",
-      "Recovering saved state and initializing systems..."
+      "Recovering saved state and initializing systems...",
     );
 
     setTimeout(() => {
@@ -1208,7 +1208,7 @@ class GameMain {
           `${
             phaseName ? phaseName.toUpperCase() + "<br>" : ""
           }CHECKPOINT RESTORED<br>WAVE ${this.waveManager.getCurrentWave()} - INCOMING!`,
-          2500
+          2500,
         );
 
         this.enableBackgroundMusic(true);
@@ -1219,7 +1219,7 @@ class GameMain {
         alert(
           "Error continuing game: " +
             error.message +
-            "\n\nStarting new game instead."
+            "\n\nStarting new game instead.",
         );
         this.startGame();
       } finally {
@@ -1265,7 +1265,7 @@ class GameMain {
 
     this.showLoadingOverlay(
       "LEARN MODE",
-      "Deploying Pixel and preparing sectors for guided exploration..."
+      "Deploying Pixel and preparing sectors for guided exploration...",
     );
 
     setTimeout(() => {
@@ -1298,7 +1298,7 @@ class GameMain {
         alert(
           "Error starting learn mode: " +
             error.message +
-            "\n\nCheck console for details."
+            "\n\nCheck console for details.",
         );
       } finally {
         this.hideLoadingOverlay();
@@ -1308,7 +1308,7 @@ class GameMain {
 
   startSpectatorMode() {
     console.warn(
-      "startSpectatorMode() is deprecated. Forwarding to startLearnMode()."
+      "startSpectatorMode() is deprecated. Forwarding to startLearnMode().",
     );
     this.startLearnMode();
   }
@@ -1356,7 +1356,7 @@ class GameMain {
         `EMP BLAST! ${hitCount} ${
           hitCount === 1 ? "ENEMY" : "ENEMIES"
         } FROZEN!`,
-        1500
+        1500,
       );
     } else {
       this.uiManager.showMessage("EMP BLAST!", 1000);
@@ -1388,8 +1388,18 @@ class GameMain {
       // Fire from weapon muzzle position
       const muzzlePos = this.player.getMuzzlePosition();
       const direction = this.player.getMuzzleDirection();
-      this.weaponManager.fire(null, this.camera, muzzlePos, direction);
-      this.player.onShoot(); // Trigger weapon recoil animation
+
+      // Validate positions before firing to prevent null reference lag
+      if (
+        muzzlePos &&
+        direction &&
+        muzzlePos.x !== undefined &&
+        muzzlePos.y !== undefined &&
+        muzzlePos.z !== undefined
+      ) {
+        this.weaponManager.fire(null, this.camera, muzzlePos, direction);
+        this.player.onShoot(); // Trigger weapon recoil animation
+      }
     }
 
     this.weaponManager.update(cappedDelta);
@@ -1409,7 +1419,7 @@ class GameMain {
     const currentWeapon = this.weaponManager.getCurrentWeapon();
     this.uiManager.updateWeapon(
       currentWeapon.name,
-      currentWeapon.getAmmoDisplay()
+      currentWeapon.getAmmoDisplay(),
     );
 
     // OPTIMIZATION: Update minimap less frequently (every 3rd frame)
@@ -1419,7 +1429,7 @@ class GameMain {
       this.uiManager.updateMinimap(
         playerPosition,
         this.enemyManager.getEnemies(),
-        this.environment.getCurrentPhaseName()
+        this.environment.getCurrentPhaseName(),
       );
       this._minimapFrameCounter = 0;
     }
@@ -1472,7 +1482,7 @@ class GameMain {
           this.particleSystem.createImpact(
             projectile.mesh.position,
             projectile.color,
-            10
+            10,
           );
           projectile.destroy();
           destroyedProjectiles.add(projectile);
@@ -1505,7 +1515,7 @@ class GameMain {
             this.particleSystem.createExplosion(
               projectile.mesh.position,
               0xffff00,
-              15
+              15,
             );
             projectile.destroy();
             enemyProjectile.destroy();
@@ -1562,7 +1572,7 @@ class GameMain {
         if (this.player.environment) {
           const groundHeight = this.player.environment.getFloorHeightAt(
             this.player.position.x,
-            this.player.position.z
+            this.player.position.z,
           );
           this.player.position.y = groundHeight + this.player.height;
           this.camera.position.y = this.player.position.y;
@@ -1584,7 +1594,7 @@ class GameMain {
         this.particleSystem.createImpact(
           this.player.getPosition(),
           0xff0000,
-          15
+          15,
         );
       }
 
@@ -1601,7 +1611,7 @@ class GameMain {
             this.particleSystem.createImpact(
               this.player.getPosition(),
               0xff0000,
-              10
+              10,
             );
             enemyProjectile.destroy();
             break; // Early exit after hit
@@ -1640,10 +1650,10 @@ class GameMain {
           const separationAmount = overlap * 0.35;
 
           enemyA.position.add(
-            separationDir.clone().multiplyScalar(separationAmount)
+            separationDir.clone().multiplyScalar(separationAmount),
           );
           enemyB.position.add(
-            separationDir.clone().multiplyScalar(-separationAmount)
+            separationDir.clone().multiplyScalar(-separationAmount),
           );
 
           if (enemyA.group) enemyA.group.position.copy(enemyA.position);
@@ -1678,7 +1688,7 @@ class GameMain {
     if (wasBossWave) {
       this.uiManager.showMessage(
         `🎉 WAVE ${waveNumber} - BOSS DEFEATED! 🎉`,
-        3000
+        3000,
       );
 
       // Save checkpoint after boss defeat
@@ -1699,13 +1709,13 @@ class GameMain {
     const healAmount = wasBossWave ? 30 : 20;
     this.player.health = Math.min(
       this.player.maxHealth,
-      this.player.health + healAmount
+      this.player.health + healAmount,
     );
 
     // Restore some energy
     this.player.energy = Math.min(
       this.player.maxEnergy,
-      this.player.energy + 30
+      this.player.energy + 30,
     );
 
     this.clearPendingWaveTimeout();
@@ -1815,7 +1825,7 @@ class GameMain {
 
     if (!this.puzzleManager.active) {
       console.warn(
-        "PuzzleManager did not activate a puzzle. Resuming normal wave flow."
+        "PuzzleManager did not activate a puzzle. Resuming normal wave flow.",
       );
       this.awaitingPuzzleResolution = false;
       this.isRunning = true;
@@ -1879,16 +1889,19 @@ class GameMain {
   scheduleNextWave(delayMs = 3000) {
     this.clearPendingWaveTimeout();
 
-    this.pendingNextWaveTimeout = setTimeout(() => {
-      if (
-        !this.gameStarted ||
-        this.awaitingUpgradeSelection ||
-        this.awaitingPuzzleResolution
-      ) {
-        return;
-      }
-      this.beginNextWave();
-    }, Math.max(0, delayMs));
+    this.pendingNextWaveTimeout = setTimeout(
+      () => {
+        if (
+          !this.gameStarted ||
+          this.awaitingUpgradeSelection ||
+          this.awaitingPuzzleResolution
+        ) {
+          return;
+        }
+        this.beginNextWave();
+      },
+      Math.max(0, delayMs),
+    );
   }
 
   beginNextWave() {
@@ -1897,7 +1910,7 @@ class GameMain {
     this.waveManager.startWave();
 
     const phaseChanged = this.environment.setPhaseByWave(
-      this.waveManager.getCurrentWave()
+      this.waveManager.getCurrentWave(),
     );
     const phaseName = this.environment.getCurrentPhaseName();
     const waveLabel = `WAVE ${this.waveManager.getCurrentWave()} - INCOMING!`;
@@ -1906,14 +1919,14 @@ class GameMain {
       if (!this.gameStarted) return;
       this.uiManager.showMessage(
         `${phaseName ? phaseName.toUpperCase() + "<br>" : ""}${waveLabel}`,
-        2200
+        2200,
       );
     };
 
     if (phaseChanged) {
       this.uiManager.showMessage(
         `${phaseName ? phaseName.toUpperCase() : "NEW SECTOR"} ONLINE`,
-        2200
+        2200,
       );
 
       setTimeout(() => {
@@ -1958,7 +1971,7 @@ class GameMain {
 
     this.uiManager.showMessage(
       `GAME OVER<br>FINAL SCORE: ${this.score}<br><small>${restartMessage}</small>`,
-      0
+      0,
     );
 
     // Add continue from checkpoint option on 'C' key
@@ -1981,7 +1994,7 @@ class GameMain {
 
     this.showLoadingOverlay(
       "REINITIALIZING",
-      "Resetting wave manager and respawning systems..."
+      "Resetting wave manager and respawning systems...",
     );
 
     try {
@@ -2043,7 +2056,7 @@ class GameMain {
         `${
           phaseName ? phaseName.toUpperCase() + "<br>" : ""
         }WAVE 1 - GET READY!`,
-        2200
+        2200,
       );
 
       this.enableBackgroundMusic(true);
@@ -2083,7 +2096,7 @@ class GameMain {
         const projScreenMatrix = new THREE.Matrix4();
         projScreenMatrix.multiplyMatrices(
           this.camera.projectionMatrix,
-          this.camera.matrixWorldInverse
+          this.camera.matrixWorldInverse,
         );
         frustum.setFromProjectionMatrix(projScreenMatrix);
 
@@ -2097,7 +2110,7 @@ class GameMain {
                   enemy,
                   this.camera,
                   ctx,
-                  canvas
+                  canvas,
                 );
               }
             } catch (e) {
@@ -2106,7 +2119,7 @@ class GameMain {
                 enemy,
                 this.camera,
                 ctx,
-                canvas
+                canvas,
               );
             }
           }

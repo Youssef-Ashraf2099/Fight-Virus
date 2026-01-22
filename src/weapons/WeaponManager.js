@@ -113,6 +113,24 @@ class WeaponManager {
     const firePosition = muzzlePos || this.player.getPosition();
     const fireDirection = direction || this.player.getDirection();
 
+    // Validate fire positions to prevent null reference errors
+    if (
+      !firePosition ||
+      isNaN(firePosition.x) ||
+      isNaN(firePosition.y) ||
+      isNaN(firePosition.z)
+    ) {
+      return;
+    }
+    if (
+      !fireDirection ||
+      isNaN(fireDirection.x) ||
+      isNaN(fireDirection.y) ||
+      isNaN(fireDirection.z)
+    ) {
+      return;
+    }
+
     if (!weapon.canFire()) {
       return;
     }
@@ -122,7 +140,7 @@ class WeaponManager {
       mousePos,
       camera,
       fireDirection,
-      this.enemyManager
+      this.enemyManager,
     );
 
     if (projectile) {
@@ -304,7 +322,7 @@ class WeaponManager {
         this.player.playReloadAnimation(
           weapon.viewModelId || weapon.name,
           duration,
-          weapon
+          weapon,
         );
       }
     };

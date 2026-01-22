@@ -1,6 +1,14 @@
 const { app, BrowserWindow, ipcMain, protocol } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const {
+  initializeGPUAcceleration,
+  getGPUOptimizedPreferences,
+  applyRuntimeGPUOptimizations,
+} = require("./systems/GPUOptimizer.js");
+
+// Initialize GPU acceleration before any windows are created
+initializeGPUAcceleration();
 
 let mainWindow;
 
@@ -10,13 +18,13 @@ function createWindow() {
     height: 720,
     fullscreen: true, // Start in fullscreen mode
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      enableRemoteModule: true,
-      webSecurity: false, // Allow file:// protocol module imports
+      ...getGPUOptimizedPreferences(),
+      hardwareAcceleration: true,
+      enableBlinkFeatures: "CSSHardwareAcceleration",
     },
     backgroundColor: "#000000",
     title: "Virus Hunter",
+    show: false, // Don't show until ready
     // Prefer ICO for Windows (packager), fall back to PNG if missing
     icon: (function () {
       try {
@@ -41,7 +49,7 @@ function createWindow() {
   if (app.isPackaged) {
     buildIndexPath = path.join(
       process.resourcesPath,
-      "app.asar.unpacked/build/renderer/index.html"
+      "app.asar.unpacked/build/renderer/index.html",
     );
   } else {
     buildIndexPath = path.join(__dirname, "../build/renderer/index.html");
@@ -55,7 +63,7 @@ function createWindow() {
   } else {
     if (!fs.existsSync(buildIndexPath)) {
       console.warn(
-        "Renderer bundle not found. Run `npm run build:renderer` before launching Electron in production mode."
+        "Renderer bundle not found. Run `npm run build:renderer` before launching Electron in production mode.",
       );
       console.warn(`Tried to load from: ${buildIndexPath}`);
       console.warn(`isPackaged: ${app.isPackaged}`);
@@ -76,6 +84,8 @@ function createWindow() {
   // Log when page is loaded
   mainWindow.webContents.on("did-finish-load", () => {
     console.log("Page loaded successfully");
+    console.log("[GPU] Applying runtime optimizations...");
+    applyRuntimeGPUOptimizations(mainWindow);
   });
 
   // Log any failed resource loads
@@ -83,7 +93,7 @@ function createWindow() {
     "did-fail-load",
     (event, errorCode, errorDescription, validatedURL) => {
       console.error(`Failed to load: ${validatedURL}`, errorDescription);
-    }
+    },
   );
 
   mainWindow.webContents.on(
@@ -92,7 +102,7 @@ function createWindow() {
       const levels = ["log", "info", "warn", "error"]; // Electron levels 0-3
       const label = levels[level] || level;
       console.log(`[renderer:${label}] ${message} (${sourceId}:${line})`);
-    }
+    },
   );
   mainWindow.on("closed", () => {
     mainWindow = null;
@@ -100,6 +110,11 @@ function createWindow() {
 
   // Remove menu bar
   mainWindow.setMenuBarVisibility(false);
+
+  // Show window when ready
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
+  });
 }
 
 app.whenReady().then(createWindow);

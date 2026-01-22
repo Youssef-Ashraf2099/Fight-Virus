@@ -9,8 +9,25 @@ export default class Projectile {
     lifetime,
     color,
     damage,
-    size = 0.5
+    size = 0.5,
   ) {
+    // Validate inputs to prevent null reference errors
+    if (!scene || !position || !direction) {
+      throw new Error(
+        "Projectile: Invalid scene, position, or direction provided",
+      );
+    }
+    if (isNaN(position.x) || isNaN(position.y) || isNaN(position.z)) {
+      throw new Error(
+        "Projectile: Invalid position coordinates (NaN detected)",
+      );
+    }
+    if (isNaN(direction.x) || isNaN(direction.y) || isNaN(direction.z)) {
+      throw new Error(
+        "Projectile: Invalid direction coordinates (NaN detected)",
+      );
+    }
+
     this.scene = scene;
     this.position = position.clone();
     this.velocity = direction.clone().normalize().multiplyScalar(speed);
@@ -63,7 +80,7 @@ export default class Projectile {
         this._previousPosition,
         this.position,
         this.collisionRadius,
-        this.heightPadding
+        this.heightPadding,
       )
     ) {
       this._handleImpact(this.position);

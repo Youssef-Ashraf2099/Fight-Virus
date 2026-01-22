@@ -97,7 +97,7 @@ export default class Player {
       {
         loop: true,
         volume: 0,
-      }
+      },
     );
 
     this.setupMouseLook();
@@ -107,7 +107,7 @@ export default class Player {
     if (this.environment) {
       this.currentGroundHeight = this.environment.getFloorHeightAt(
         this.position.x,
-        this.position.z
+        this.position.z,
       );
       this.position.y = this.currentGroundHeight + this.height;
     }
@@ -131,7 +131,7 @@ export default class Player {
         // Clamp pitch to prevent over-rotation
         this.pitch = Math.max(
           -Math.PI / 2 + 0.1,
-          Math.min(Math.PI / 2 - 0.1, this.pitch)
+          Math.min(Math.PI / 2 - 0.1, this.pitch),
         );
       }
     });
@@ -386,7 +386,7 @@ export default class Player {
     if (muzzle) {
       flash = this.createMuzzleFlash(
         model.flashColor || model.accentColor || 0x00ff99,
-        model.flashRadius || 0.09
+        model.flashRadius || 0.09,
       );
       muzzle.add(flash);
     }
@@ -430,7 +430,7 @@ export default class Player {
 
     const body = new THREE.Mesh(
       new THREE.BoxGeometry(0.14, 0.16, 0.5),
-      material
+      material,
     );
     body.position.set(0, 0, -0.1);
     group.add(body);
@@ -441,7 +441,7 @@ export default class Player {
         color: 0x00ff99,
         emissive: 0x00ffcc,
         emissiveIntensity: 1.2,
-      })
+      }),
     );
     barrel.rotation.x = Math.PI / 2;
     barrel.position.set(0, 0.02, -0.42);
@@ -449,7 +449,7 @@ export default class Player {
 
     const grip = new THREE.Mesh(
       new THREE.BoxGeometry(0.08, 0.16, 0.08),
-      new THREE.MeshPhongMaterial({ color: 0x141920 })
+      new THREE.MeshPhongMaterial({ color: 0x141920 }),
     );
     grip.position.set(-0.05, -0.16, 0.02);
     grip.rotation.z = 0.25;
@@ -592,7 +592,7 @@ export default class Player {
         this.height,
         { x: previousX, z: previousZ },
         previousGround,
-        this.maxStepHeight
+        this.maxStepHeight,
       );
     } else {
       groundHeight = this.environment
@@ -642,7 +642,7 @@ export default class Player {
     if (this.jetpackRefuelTimer > 0) {
       this.jetpackRefuelTimer = Math.max(
         0,
-        this.jetpackRefuelTimer - deltaTime
+        this.jetpackRefuelTimer - deltaTime,
       );
     } else if (this.jetpackUnlocked && !this.jetpackIsActive) {
       let regenRate = this.jetpackRefuelRate;
@@ -651,7 +651,7 @@ export default class Player {
       }
       this.jetpackFuel = Math.min(
         this.jetpackMaxFuel,
-        this.jetpackFuel + regenRate * deltaTime
+        this.jetpackFuel + regenRate * deltaTime,
       );
     }
 
@@ -668,7 +668,7 @@ export default class Player {
       this.jetpackGlow.intensity = THREE.MathUtils.lerp(
         this.jetpackGlow.intensity,
         targetIntensity,
-        deltaTime * 12
+        deltaTime * 12,
       );
       this.jetpackGlow.distance = 7;
     }
@@ -682,14 +682,14 @@ export default class Player {
     this.aimProgress = THREE.MathUtils.lerp(
       this.aimProgress,
       this.isAiming ? 1 : 0,
-      deltaTime * 8
+      deltaTime * 8,
     );
 
     // Interpolate weapon position between hip and aim
     const targetPos = new THREE.Vector3().lerpVectors(
       this.baseWeaponPos,
       this.aimWeaponPos,
-      this.aimProgress
+      this.aimProgress,
     );
 
     // Interpolate weapon rotation between hip and aim
@@ -698,15 +698,15 @@ export default class Player {
         new THREE.Vector3(
           this.baseWeaponRot.x,
           this.baseWeaponRot.y,
-          this.baseWeaponRot.z
+          this.baseWeaponRot.z,
         ),
         new THREE.Vector3(
           this.aimWeaponRot.x,
           this.aimWeaponRot.y,
-          this.aimWeaponRot.z
+          this.aimWeaponRot.z,
         ),
-        this.aimProgress
-      )
+        this.aimProgress,
+      ),
     );
 
     // Head bob animation when moving (reduced when aiming)
@@ -731,17 +731,17 @@ export default class Player {
     this.weaponGroup.rotation.x = THREE.MathUtils.lerp(
       this.weaponGroup.rotation.x,
       targetRot.x,
-      deltaTime * 10
+      deltaTime * 10,
     );
     this.weaponGroup.rotation.y = THREE.MathUtils.lerp(
       this.weaponGroup.rotation.y,
       targetRot.y,
-      deltaTime * 10
+      deltaTime * 10,
     );
     this.weaponGroup.rotation.z = THREE.MathUtils.lerp(
       this.weaponGroup.rotation.z,
       targetRot.z,
-      deltaTime * 10
+      deltaTime * 10,
     );
 
     // Animate energy core pulsing
@@ -754,13 +754,13 @@ export default class Player {
     const baseZPos = THREE.MathUtils.lerp(
       this.baseWeaponPos.z,
       this.aimWeaponPos.z,
-      this.aimProgress
+      this.aimProgress,
     );
     if (this.weaponGroup.position.z < baseZPos) {
       this.weaponGroup.position.z = THREE.MathUtils.lerp(
         this.weaponGroup.position.z,
         baseZPos,
-        deltaTime * 10
+        deltaTime * 10,
       );
     }
 
@@ -769,7 +769,7 @@ export default class Player {
     this.camera.fov = THREE.MathUtils.lerp(
       this.camera.fov,
       targetFOV,
-      deltaTime * 8
+      deltaTime * 8,
     );
     this.camera.updateProjectionMatrix();
 
@@ -777,7 +777,7 @@ export default class Player {
     if (this.muzzleFlash && this.muzzleFlash.material.opacity > 0) {
       this.muzzleFlash.material.opacity = Math.max(
         0,
-        this.muzzleFlash.material.opacity - deltaTime * 12
+        this.muzzleFlash.material.opacity - deltaTime * 12,
       );
     }
 
@@ -798,7 +798,7 @@ export default class Player {
       this.weaponLight.intensity = THREE.MathUtils.lerp(
         this.weaponLight.intensity,
         targetIntensity,
-        deltaTime * 6
+        deltaTime * 6,
       );
     }
 
@@ -902,7 +902,7 @@ export default class Player {
       this.reloadAnimators = this._createReloadAnimators();
     }
     const key = this._normalizeWeaponKey(
-      weaponId || weapon?.name || this.currentWeaponModelId || ""
+      weaponId || weapon?.name || this.currentWeaponModelId || "",
     );
     const resolvedKey = this.reloadAnimators[key] ? key : "default";
 
@@ -946,7 +946,7 @@ export default class Player {
     const progress = THREE.MathUtils.clamp(
       state.elapsed / state.duration,
       0,
-      1
+      1,
     );
 
     const animator =
@@ -1354,20 +1354,52 @@ export default class Player {
 
   // Get the world position of the weapon muzzle for accurate bullet spawning
   getMuzzlePosition() {
-    if (!this.weaponMuzzle) {
-      console.error("weaponMuzzle is undefined!");
+    try {
+      if (!this.weaponMuzzle) {
+        // Fallback: Use player position offset forward
+        const offset = new THREE.Vector3(0, 0, 1);
+        const direction = new THREE.Vector3();
+        this.camera.getWorldDirection(direction);
+        return this.position.clone().add(direction.multiplyScalar(2));
+      }
+
+      const muzzleWorldPos = new THREE.Vector3();
+      this.weaponMuzzle.getWorldPosition(muzzleWorldPos);
+
+      // Validate the position is valid (not NaN, not at origin unexpectedly)
+      if (
+        isNaN(muzzleWorldPos.x) ||
+        isNaN(muzzleWorldPos.y) ||
+        isNaN(muzzleWorldPos.z)
+      ) {
+        return this.position.clone();
+      }
+
+      return muzzleWorldPos;
+    } catch (error) {
+      console.warn("Error getting muzzle position:", error);
       return this.position.clone();
     }
-
-    const muzzleWorldPos = new THREE.Vector3();
-    this.weaponMuzzle.getWorldPosition(muzzleWorldPos);
-
-    return muzzleWorldPos;
   }
 
   // Get muzzle direction (same as camera but from muzzle point)
   getMuzzleDirection() {
-    return this.getDirection();
+    try {
+      const direction = this.getDirection();
+      // Validate direction is valid
+      if (
+        !direction ||
+        isNaN(direction.x) ||
+        isNaN(direction.y) ||
+        isNaN(direction.z)
+      ) {
+        return new THREE.Vector3(0, 0, 1);
+      }
+      return direction;
+    } catch (error) {
+      console.warn("Error getting muzzle direction:", error);
+      return new THREE.Vector3(0, 0, 1);
+    }
   }
 
   _createAudio(relativePath, { loop = false, volume = 1 } = {}) {
@@ -1389,12 +1421,12 @@ export default class Player {
     const nextVolume = THREE.MathUtils.lerp(
       this.jetpackAudio.volume,
       targetVolume,
-      fadeFactor
+      fadeFactor,
     );
     this.jetpackAudio.volume = THREE.MathUtils.clamp(
       nextVolume,
       0,
-      this.jetpackAudioBaseVolume
+      this.jetpackAudioBaseVolume,
     );
 
     if (shouldPlay) {
@@ -1503,7 +1535,7 @@ export default class Player {
     if (this.environment) {
       this.currentGroundHeight = this.environment.getFloorHeightAt(
         this.position.x,
-        this.position.z
+        this.position.z,
       );
       this.position.y = this.currentGroundHeight + this.height;
     } else {
