@@ -28,9 +28,55 @@ export class PerformanceProfiler {
     this.lagThreshold = 16.67; // 60 FPS = 16.67ms per frame
     this.lagSpikes = [];
     this.maxLagSpikes = 50;
+    this.lastLagLogTs = 0;
+    this.lagLogCooldownMs = 2000; // throttle console spam
 
     // Target frame budget (main thread headroom visualization)
     this.targetFrameMs = 16.67; // 60 FPS budget
+
+    // Long tasks and GC attribution
+    this.longTasks = [];
+    this.maxLongTasks = 50;
+    this.gcEvents = [];
+    this.totalGCTime = 0;
+    this.lastGC = null;
+    this.memoryStats = { used: 0, total: 0, limit: 0 };
+
+    try {
+      if (typeof window !== "undefined" && "PerformanceObserver" in window) {
+        // Long tasks observer
+        const ltObserver = new PerformanceObserver((list) => {
+          list.getEntries().forEach((e) => {
+            if (e.entryType === "longtask") {
+              this.longTasks.push({ start: e.startTime, duration: e.duration });
+              if (this.longTasks.length > this.maxLongTasks)
+                this.longTasks.shift();
+            }
+          });
+        });
+        ltObserver.observe({ entryTypes: ["longtask"] });
+
+        // GC observer (Chromium)
+        const gcObserver = new PerformanceObserver((list) => {
+          list.getEntries().forEach((e) => {
+            if (e.entryType === "gc") {
+              const evt = {
+                start: e.startTime,
+                duration: e.duration,
+                kind: e.kind,
+              };
+              this.gcEvents.push(evt);
+              this.lastGC = evt;
+              this.totalGCTime += e.duration;
+              if (this.gcEvents.length > 50) this.gcEvents.shift();
+            }
+          });
+        });
+        gcObserver.observe({ entryTypes: ["gc"] });
+      }
+    } catch (err) {
+      // Observers not supported; ignore
+    }
   }
 
   /**
@@ -77,8 +123,10 @@ export class PerformanceProfiler {
         this.lagSpikes.shift();
       }
 
-      // Log severe spikes
-      if (frameTime > 50) {
+      // Log severe spikes (throttled)
+      const nowTs = performance.now();
+      if (frameTime > 50 && nowTs - this.lastLagLogTs > this.lagLogCooldownMs) {
+        this.lastLagLogTs = nowTs;
         console.warn(
           `🔴 LAG SPIKE: ${frameTime.toFixed(2)}ms`,
           this.currentFrame.operations,
@@ -272,6 +320,15 @@ export class PerformanceProfiler {
       const slowest = this.getSlowestOperations(5);
       const spikes = this.getLagSpikes();
 
+      // Memory (Chrome only)
+      try {
+        if (performance && performance.memory) {
+          this.memoryStats.used = performance.memory.usedJSHeapSize || 0;
+          this.memoryStats.total = performance.memory.totalJSHeapSize || 0;
+          this.memoryStats.limit = performance.memory.jsHeapSizeLimit || 0;
+        }
+      } catch {}
+
       let fpsColor = "#0f0";
       if (stats.fps < 50) fpsColor = "#ff0";
       if (stats.fps < 30) fpsColor = "#f00";
@@ -288,6 +345,17 @@ export class PerformanceProfiler {
         <div style="margin-top: 5px; border-top: 1px solid #0f0; padding-top: 5px;">
           <strong>Slowest:</strong><br>
           ${slowest.map((op) => `${op.name}: ${op.time.toFixed(2)}ms`).join("<br>")}
+        </div>
+        <div style="margin-top: 5px;">
+          <strong>Long Tasks:</strong> ${this.longTasks.length}
+          ${this.longTasks.length ? `| Last: ${this.longTasks[this.longTasks.length - 1].duration.toFixed(1)}ms` : ""}
+        </div>
+        <div>
+          <strong>GC:</strong> ${this.gcEvents.length} events, total ${this.totalGCTime.toFixed(1)}ms
+          ${this.lastGC ? `| Last: ${this.lastGC.duration.toFixed(1)}ms` : ""}
+        </div>
+        <div>
+          <strong>Heap:</strong> ${(this.memoryStats.used / 1e6).toFixed(1)} / ${(this.memoryStats.limit / 1e6).toFixed(0)} MB
         </div>
         ${
           spikes.count > 0

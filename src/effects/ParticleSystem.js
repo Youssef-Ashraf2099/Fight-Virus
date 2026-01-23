@@ -17,6 +17,9 @@ export default class ParticleSystem {
 
     this.materialPool = new Map(); // Store materials by color
     this.maxParticles = 500; // Limit total particles to prevent memory issues
+
+    // Defer particle creation to spread allocations across frames
+    this._pendingAdds = [];
   }
 
   // OPTIMIZATION: Get or create material from pool
@@ -38,80 +41,54 @@ export default class ParticleSystem {
   }
 
   createExplosion(position, color, count = 20) {
-    if (typeof window !== "undefined" && window.profiler?.startOperation) {
-      window.profiler.startOperation("particle-explosion");
-    }
-
-    // OPTIMIZATION: Limit particle count if approaching max
-    if (this.particles.length > this.maxParticles - 50) {
-      count = Math.min(count, 10); // Reduce particles when near limit
-    }
-
-    const material = this.getMaterial(color);
-
-    for (let i = 0; i < count; i++) {
-      // OPTIMIZATION: Reuse geometry from pool
-      const particle = new THREE.Mesh(this.geometryPool.sphere, material);
-      particle.position.copy(position);
-
-      const velocity = new THREE.Vector3(
-        (Math.random() - 0.5) * 10,
-        (Math.random() - 0.5) * 10,
-        (Math.random() - 0.5) * 10,
-      );
-
-      this.scene.add(particle);
-
-      this.particles.push({
-        mesh: particle,
-        velocity: velocity,
+    // OPTIMIZATION: Defer creation to avoid burst allocations
+    const px = position.x,
+      py = position.y,
+      pz = position.z;
+    const mat = this.getMaterial(color);
+    const toCreate = Math.max(
+      0,
+      Math.min(count, this.maxParticles - this.particles.length),
+    );
+    for (let i = 0; i < toCreate; i++) {
+      this._pendingAdds.push({
+        type: "sphere",
+        px,
+        py,
+        pz,
+        mat,
         lifetime: 1,
-        maxLifetime: 1,
         gravity: -5,
+        vx: (Math.random() - 0.5) * 10,
+        vy: (Math.random() - 0.5) * 10,
+        vz: (Math.random() - 0.5) * 10,
       });
-    }
-
-    if (typeof window !== "undefined" && window.profiler?.endOperation) {
-      window.profiler.endOperation("particle-explosion");
     }
   }
 
   createImpact(position, color, count = 6) {
-    if (typeof window !== "undefined" && window.profiler?.startOperation) {
-      window.profiler.startOperation("particle-impact");
-    }
-
-    // OPTIMIZATION: Limit particle count if approaching max
-    if (this.particles.length > this.maxParticles - 30) {
-      count = Math.min(count, 3);
-    }
-
-    const material = this.getMaterial(color);
-
-    for (let i = 0; i < count; i++) {
-      // OPTIMIZATION: Reuse geometry from pool
-      const particle = new THREE.Mesh(this.geometryPool.box, material);
-      particle.position.copy(position);
-
-      const velocity = new THREE.Vector3(
-        (Math.random() - 0.5) * 5,
-        Math.random() * 5,
-        (Math.random() - 0.5) * 5,
-      );
-
-      this.scene.add(particle);
-
-      this.particles.push({
-        mesh: particle,
-        velocity: velocity,
+    // OPTIMIZATION: Defer creation to avoid burst allocations
+    const px = position.x,
+      py = position.y,
+      pz = position.z;
+    const mat = this.getMaterial(color);
+    const toCreate = Math.max(
+      0,
+      Math.min(count, this.maxParticles - this.particles.length),
+    );
+    for (let i = 0; i < toCreate; i++) {
+      this._pendingAdds.push({
+        type: "box",
+        px,
+        py,
+        pz,
+        mat,
         lifetime: 0.5,
-        maxLifetime: 0.5,
         gravity: -8,
+        vx: (Math.random() - 0.5) * 5,
+        vy: Math.random() * 5,
+        vz: (Math.random() - 0.5) * 5,
       });
-    }
-
-    if (typeof window !== "undefined" && window.profiler?.endOperation) {
-      window.profiler.endOperation("particle-impact");
     }
   }
 
@@ -165,6 +142,30 @@ export default class ParticleSystem {
   }
 
   update(deltaTime) {
+    // Process pending particle creations in chunks to avoid spikes
+    const maxCreates = 40; // cap creations per frame
+    let created = 0;
+    while (created < maxCreates && this._pendingAdds.length) {
+      const req = this._pendingAdds.shift();
+      const geo =
+        req.type === "sphere"
+          ? this.geometryPool.sphere
+          : this.geometryPool.box;
+      const mesh = new THREE.Mesh(geo, req.mat);
+      mesh.position.set(req.px, req.py, req.pz);
+      this.scene.add(mesh);
+
+      const velocity = new THREE.Vector3(req.vx, req.vy, req.vz);
+      this.particles.push({
+        mesh,
+        velocity,
+        lifetime: req.lifetime,
+        maxLifetime: req.lifetime,
+        gravity: req.gravity,
+      });
+      created++;
+    }
+
     // OPTIMIZATION: Limit update iterations and clean old particles
     const maxUpdates = Math.min(this.particles.length, 300);
 
