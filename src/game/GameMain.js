@@ -34,6 +34,11 @@ class GameMain {
     this.profiler = profiler;
     this.showPerformanceOverlay = false; // Set to true to see lag sources
 
+    // Expose profiler globally for other modules
+    if (typeof window !== "undefined") {
+      window.profiler = this.profiler;
+    }
+
     try {
       // console.log("Creating scene...");
       this.scene = new THREE.Scene();
@@ -63,7 +68,8 @@ class GameMain {
       // console.log("Setting up renderer...");
       this.renderer.setSize(window.innerWidth, window.innerHeight);
       this.renderer.shadowMap.enabled = true;
-      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      // Faster shadow filter to reduce GPU cost (desktop friendly)
+      this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
       // Overlay canvas for 2D health bars
       // console.log("Initializing health bar canvas...");
@@ -182,6 +188,18 @@ class GameMain {
       await this.workerManager.init();
       const status = this.workerManager.getStatus();
       console.log("✅ Workers initialized:", status.ready);
+      console.log("📊 Worker Status Details:", {
+        spawn: status.ready.spawn,
+        collision: status.ready.collision,
+        physics: status.ready.physics,
+        ai: status.ready.ai,
+        environment: status.ready.environment,
+      });
+      if (!status.ready.environment) {
+        console.warn(
+          "⚠️ Environment worker NOT ready - sector binning will use main thread fallback!",
+        );
+      }
     } catch (error) {
       console.warn("⚠️ Workers failed to initialize, using fallback:", error);
       this.workerManager = null;
@@ -205,6 +223,9 @@ class GameMain {
 
     // Create environment
     this.environment = new Environment(this.scene);
+    if (this.workerManager) {
+      this.environment.setWorkerManager(this.workerManager);
+    }
 
     // Initialize weapon blueprints before creating player
     if (typeof DetailedWeaponModels?.init === "function") {
@@ -1122,8 +1143,22 @@ class GameMain {
 
     this.showLoadingOverlay(
       "DEPLOYING GUARDIAN",
-      "Calibrating weapon systems and uplinking environment...",
+      "Preloading all environment maps (10)...",
     );
+
+    // CRITICAL FIX: Wait for environment maps to preload before starting
+    this.environment.waitForCriticalMaps(() => {
+      console.log("✅ Critical maps ready - starting game...");
+      this.showLoadingOverlay(
+        "DEPLOYING GUARDIAN",
+        "Calibrating weapon systems...",
+      );
+      this._actuallyStartGame();
+    });
+  }
+
+  _actuallyStartGame() {
+    console.log("🎮 _actuallyStartGame() - maps preloaded, safe to proceed");
 
     setTimeout(() => {
       try {
@@ -1150,6 +1185,9 @@ class GameMain {
 
         console.log("Resetting player...");
         this.player.reset();
+
+        // Prewarm scene to avoid first-frame compile hitch
+        this.prewarmFrame();
 
         console.log("Starting wave...");
         this.waveManager.startWave();
@@ -1180,6 +1218,21 @@ class GameMain {
         this.hideLoadingOverlay();
       }
     }, 120);
+  }
+
+  prewarmFrame() {
+    try {
+      const playerPos = this.player?.getPosition?.() || new THREE.Vector3();
+      this.environment?.update(0, playerPos);
+      if (this.renderer && this.scene && this.camera) {
+        if (typeof this.renderer.compile === "function") {
+          this.renderer.compile(this.scene, this.camera);
+        }
+        this.renderer.render(this.scene, this.camera);
+      }
+    } catch (err) {
+      console.warn("Prewarm frame failed", err);
+    }
   }
 
   /**
@@ -1438,18 +1491,13 @@ class GameMain {
   }
 
   update(deltaTime) {
-    // Start profiling this frame
-    this.profiler.startFrame();
-
     // Update learn mode if active
     if (this.spectatorMode && this.spectatorMode.isActive()) {
       this.spectatorMode.update(deltaTime);
-      this.profiler.endFrame();
       return; // Skip game updates while Learn Mode is active
     }
 
     if (!this.isRunning) {
-      this.profiler.endFrame();
       return;
     }
 
@@ -1543,9 +1591,6 @@ class GameMain {
     if (this.player.health <= 0) {
       this.gameOver();
     }
-
-    // End frame profiling
-    this.profiler.endFrame();
   }
 
   checkCollisions() {
@@ -2202,11 +2247,18 @@ class GameMain {
     // OPTIMIZATION: Clamp deltaTime to prevent extreme values
     const clampedDelta = Math.min(deltaTime, 0.1);
 
+    // Frame profiling around update + render
+    this.profiler.startFrame();
+
     this.update(clampedDelta);
+
+    this.profiler.startOperation("render");
     this.renderer.render(this.scene, this.camera);
+    this.profiler.endOperation("render");
 
     // OPTIMIZATION: Render health bars with frustum culling
     if (this.healthBarCanvas && this.healthBarContext) {
+      this.profiler.startOperation("ui-healthbars");
       const ctx = this.healthBarContext;
       const canvas = this.healthBarCanvas;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2252,7 +2304,11 @@ class GameMain {
           this.uiManager.renderBossHealthBar(activeBoss, ctx, canvas);
         }
       }
+
+      this.profiler.endOperation("ui-healthbars");
     }
+
+    this.profiler.endFrame();
   }
 
   showLoadingOverlay(title, message) {

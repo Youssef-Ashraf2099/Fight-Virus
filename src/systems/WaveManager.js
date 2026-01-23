@@ -71,7 +71,13 @@ export default class WaveManager {
     this.uiManager.updateWave(this.currentWave);
 
     // Spawn enemies for this wave
+    if (typeof window !== "undefined" && window.profiler?.startOperation) {
+      window.profiler.startOperation("wave-spawn");
+    }
     this.enemyManager.spawnWave(this.currentWave, this.difficulty);
+    if (typeof window !== "undefined" && window.profiler?.endOperation) {
+      window.profiler.endOperation("wave-spawn");
+    }
   }
 
   startBossFight() {
@@ -96,7 +102,12 @@ export default class WaveManager {
       bossDifficulty,
     );
 
-    if (boss) {
+    // Only log boss spawns in dev mode
+    if (
+      boss &&
+      (typeof window === "undefined" ||
+        window.location?.hostname === "localhost")
+    ) {
       console.log(
         `👹 BOSS WAVE: ${boss.bossName || bossType} spawned at center (Wave ${this.currentWave})`,
       );

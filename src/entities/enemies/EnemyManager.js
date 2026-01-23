@@ -216,6 +216,9 @@ export default class EnemyManager {
     const count = Math.floor(5 + waveNumber * 2);
     const radius = 40;
 
+    // Pre-allocate position vector to avoid per-spawn allocation
+    if (!this._tempSpawnPos) this._tempSpawnPos = new THREE.Vector3();
+
     // Determine enemy types based on wave number with NEW enemy types
     let allowedTypes = ["trojan", "worm", "adware"];
 
@@ -242,11 +245,13 @@ export default class EnemyManager {
       const angle = (i / count) * Math.PI * 2;
       const spawnRadius = radius + Math.random() * 10;
 
-      const position = new THREE.Vector3(
+      // Reuse temp vector
+      this._tempSpawnPos.set(
         Math.cos(angle) * spawnRadius,
         0,
         Math.sin(angle) * spawnRadius,
       );
+      const position = this._tempSpawnPos.clone();
 
       const randomType =
         allowedTypes[Math.floor(Math.random() * allowedTypes.length)];
@@ -258,7 +263,14 @@ export default class EnemyManager {
   }
 
   update(deltaTime, playerPosition) {
-    this.lastPlayerPosition = playerPosition ? playerPosition.clone() : null;
+    // Reuse temp vector to avoid allocation
+    if (!this._tempPlayerPos) this._tempPlayerPos = new THREE.Vector3();
+    if (playerPosition) {
+      this._tempPlayerPos.copy(playerPosition);
+      this.lastPlayerPosition = this._tempPlayerPos;
+    } else {
+      this.lastPlayerPosition = null;
+    }
 
     // OPTIMIZATION: Process spawn queue (worker or main thread)
     if (this.useWorkers) {

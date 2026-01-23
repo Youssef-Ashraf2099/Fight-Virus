@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { profiler } from "../utils/PerformanceProfiler.js";
 import CPUEnvironment from "./maps/CPUEnvironment.js";
 import KernelEnvironment from "./maps/KernelEnvironment.js";
 import MemoryEnvironment from "./maps/MemoryEnvironment.js";
@@ -43,6 +44,29 @@ export default class Environment {
     this._idlePreloadHandle = null;
     this._pendingBuildTimeout = null;
 
+    this.workerManager = null;
+    this.sectorConfig = {
+      sectorSize: 40,
+      activationRadius: 1, // how many sectors around player stay visible
+    };
+
+    // OPTIMIZATION: Track preload completion to prevent gameplay during builds
+    this.preloadComplete = false;
+    this.preloadCallbacks = [];
+    this.criticalMapsLoaded = 0;
+    this.criticalMapCount = 10; // ALL maps - cache everything before gameplay
+    this.gameplayStarted = false; // Track if we're in gameplay or preload phase
+
+    this.sectorState = {
+      mapKey: null,
+      sectorMap: null,
+      sectorSize: this.sectorConfig.sectorSize,
+      childCount: 0,
+      childVisibility: [],
+      enabled: false,
+      lastCenterKey: null,
+    };
+
     this.phaseConfigs = [
       { key: "cpu", factory: () => new CPUEnvironment(this) },
       { key: "kernel", factory: () => new KernelEnvironment(this) },
@@ -57,7 +81,16 @@ export default class Environment {
     ];
 
     this.setPhase(0);
+
+    // CRITICAL FIX: Count initial map (CPU) as loaded
+    this.criticalMapsLoaded = 1; // CPU is phase 0, already loaded
+    console.log("   📊 Initial map (CPU) counted: 1/10 maps loaded");
+
     this._preparePreloadQueue();
+  }
+
+  setWorkerManager(workerManager) {
+    this.workerManager = workerManager;
   }
 
   createLightingRig() {
@@ -68,14 +101,16 @@ export default class Environment {
     const dirLight = new THREE.DirectionalLight(0x1cff9b, 0.9);
     dirLight.position.set(30, 50, 20);
     dirLight.castShadow = true;
-    dirLight.shadow.camera.left = -120;
-    dirLight.shadow.camera.right = 120;
-    dirLight.shadow.camera.top = 120;
-    dirLight.shadow.camera.bottom = -120;
+    // Tighter, cheaper shadow frustum for combat bubble
+    dirLight.shadow.camera.left = -90;
+    dirLight.shadow.camera.right = 90;
+    dirLight.shadow.camera.top = 90;
+    dirLight.shadow.camera.bottom = -90;
     dirLight.shadow.camera.near = 5;
-    dirLight.shadow.camera.far = 200;
-    dirLight.shadow.mapSize.width = 4096;
-    dirLight.shadow.mapSize.height = 4096;
+    dirLight.shadow.camera.far = 180;
+    // Lower shadow map size for perf; still acceptable quality on desktop
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
     this.dirLight = dirLight;
     this.scene.add(dirLight);
 
@@ -113,7 +148,7 @@ export default class Environment {
       star.position.set(
         radius * Math.sin(phi) * Math.cos(theta),
         radius * Math.sin(phi) * Math.sin(theta),
-        radius * Math.cos(phi)
+        radius * Math.cos(phi),
       );
       star.userData = {
         baseOpacity: star.material.opacity,
@@ -160,12 +195,15 @@ export default class Environment {
     }
 
     console.log(
-      `🔄 Environment.setPhase called with index: ${index}, clamped: ${clamped}`
+      `🔄 Environment.setPhase called with index: ${index}, clamped: ${clamped}`,
     );
     console.log(`   Current phase index: ${this.phaseIndex}`);
 
     if (!forceReload && clamped === this.phaseIndex && this.currentMap) {
-      console.log("   Phase unchanged; skipping rebuild");
+      const phase = this.gameplayStarted ? "GAMEPLAY" : "STARTUP";
+      console.log(
+        `   ✅ Phase unchanged (${phase}); skipping rebuild - using existing map`,
+      );
       return false;
     }
 
@@ -190,19 +228,36 @@ export default class Environment {
       try {
         newMap = config.factory();
         console.log(
-          `   ✅ Factory created map: ${newMap.constructor.name}, displayName: ${newMap.displayName}`
+          `   ✅ Factory created map: ${newMap.constructor.name}, displayName: ${newMap.displayName}`,
         );
       } catch (error) {
         console.error(`   ❌ Error creating environment:`, error);
         return false;
       }
 
-      console.log(`   Building new map instance...`);
+      console.log(`   ⚠️ CACHE MISS - Building map during gameplay...`);
+      if (this.gameplayStarted) {
+        console.error(
+          "   🚨🚨🚨 CRITICAL: MAP BUILD DURING GAMEPLAY! THIS SHOULD NEVER HAPPEN! 🚨🚨🚨",
+        );
+        console.error("   🔍 CACHE MISS STACK TRACE:", new Error().stack);
+      }
+      console.log(
+        `   🔍 Cache state: ${this.mapCache.size} maps cached, looking for key: ${config.key}`,
+      );
+
+      // Use different profiler operations for preload vs gameplay
+      const profilerOp = this.gameplayStarted
+        ? "env-build-GAMEPLAY"
+        : "env-preload";
+      if (profiler?.startOperation) profiler.startOperation(profilerOp);
       newMap.build(this.mapGroup);
+      if (profiler?.endOperation) profiler.endOperation(profilerOp);
       console.log(`   ✅ Map built successfully`);
       this.mapCache.set(config.key, { map: newMap });
     } else {
-      console.log("   Reusing cached map instance");
+      const phase = this.gameplayStarted ? "GAMEPLAY" : "PRELOAD";
+      console.log(`   ✅ CACHE HIT (${phase}) - Reusing cached map instance`);
       if (typeof newMap.onEnter === "function") {
         newMap.onEnter();
       }
@@ -244,6 +299,8 @@ export default class Environment {
     this.nextPhysicsColliders = [];
     this.nextBaseFloorHeight = 0;
     this._preparePreloadQueue();
+
+    this._prepareSectorVisibility(config.key);
 
     return true;
   }
@@ -371,33 +428,73 @@ export default class Environment {
   _preparePreloadQueue() {
     this._clearPreloadTimers();
     this._preloadQueue = [];
+
+    // CRITICAL FIX: Cache ALL maps, not just first 3
+    const criticalKeys = [
+      "cpu",
+      "kernel",
+      "memory",
+      "gpu",
+      "motherboard",
+      "harddrive",
+      "firewall",
+      "terminal",
+      "network",
+      "ai-core",
+    ];
+    let criticalAlreadyCached = 0;
+
     for (let i = 0; i < this.phaseConfigs.length; i++) {
       if (i === this.phaseIndex) {
         continue;
       }
       const config = this.phaseConfigs[i];
-      if (!config || this.mapCache.has(config.key)) {
+      if (!config) continue;
+
+      // Check if critical map is already cached
+      if (criticalKeys.includes(config.key) && this.mapCache.has(config.key)) {
+        criticalAlreadyCached++;
+      }
+
+      if (this.mapCache.has(config.key)) {
         continue;
       }
       this._preloadQueue.push({ index: i, config });
     }
 
+    // CRITICAL FIX: If critical maps already cached, mark as complete
+    if (
+      this.criticalMapsLoaded + criticalAlreadyCached >=
+      this.criticalMapCount
+    ) {
+      this.preloadComplete = true;
+      console.log(
+        "   🎉 All critical maps already loaded - game can start immediately!",
+      );
+      this.preloadCallbacks.forEach((cb) => cb());
+      this.preloadCallbacks = [];
+    }
+
     if (this._preloadQueue.length) {
-      this._scheduleNextPreload(300);
+      // OPTIMIZATION: Start preloading immediately (was 300ms delay)
+      this._scheduleNextPreload(10);
     }
   }
 
-  _scheduleNextPreload(delay = 120) {
+  _scheduleNextPreload(delay = 50) {
     if (!this._preloadQueue.length) {
       this._clearPreloadTimers();
       return;
     }
 
     this._clearPreloadTimers();
-    this._preloadTimer = setTimeout(() => {
-      this._preloadTimer = null;
-      this._preloadNextMap();
-    }, Math.max(0, delay));
+    this._preloadTimer = setTimeout(
+      () => {
+        this._preloadTimer = null;
+        this._preloadNextMap();
+      },
+      Math.max(0, delay),
+    );
   }
 
   _preloadNextMap() {
@@ -419,7 +516,10 @@ export default class Environment {
     const buildMap = () => {
       try {
         const map = config.factory();
+        console.log(`   ⚙️ Preloading ${config.key}...`);
+        if (profiler?.startOperation) profiler.startOperation("env-preload");
         map.build(this.mapGroup);
+        if (profiler?.endOperation) profiler.endOperation("env-preload");
         if (map.group) {
           map.group.visible = false;
         }
@@ -428,28 +528,52 @@ export default class Environment {
         }
         this.mapCache.set(config.key, { map });
         console.log(`   ✅ Preloaded environment: ${config.key}`);
+
+        // OPTIMIZATION: Track critical map preloads (first 3 waves)
+        const criticalKeys = [
+          "cpu",
+          "kernel",
+          "memory",
+          "gpu",
+          "motherboard",
+          "harddrive",
+          "firewall",
+          "terminal",
+          "network",
+          "ai-core",
+        ];
+        if (criticalKeys.includes(config.key)) {
+          this.criticalMapsLoaded++;
+          console.log(
+            `   📊 Maps loaded: ${this.criticalMapsLoaded}/${this.criticalMapCount}`,
+          );
+
+          if (this.criticalMapsLoaded >= this.criticalMapCount) {
+            this.preloadComplete = true;
+            this.gameplayStarted = true; // Mark gameplay phase
+            console.log("   🎉 ALL MAPS PRELOADED - Game can start!");
+            this.preloadCallbacks.forEach((cb) => cb());
+            this.preloadCallbacks = [];
+          }
+        }
       } catch (error) {
         console.warn(
           `   ⚠️ Failed to preload environment ${config.key}:`,
-          error
+          error,
         );
       } finally {
         this._idlePreloadHandle = null;
-        this._scheduleNextPreload(160);
+        // OPTIMIZATION: Faster preloading (was 160ms between maps)
+        this._scheduleNextPreload(50);
       }
     };
 
-    if (
-      typeof window !== "undefined" &&
-      typeof window.requestIdleCallback === "function"
-    ) {
-      this._idlePreloadHandle = window.requestIdleCallback(() => buildMap());
-    } else {
-      this._pendingBuildTimeout = setTimeout(() => {
-        this._pendingBuildTimeout = null;
-        buildMap();
-      }, 0);
-    }
+    // OPTIMIZATION: Skip requestIdleCallback - preload aggressively instead
+    // This runs during main menu before gameplay starts
+    this._pendingBuildTimeout = setTimeout(() => {
+      this._pendingBuildTimeout = null;
+      buildMap();
+    }, 0);
   }
 
   _clearPreloadTimers() {
@@ -471,6 +595,30 @@ export default class Environment {
     }
   }
 
+  // OPTIMIZATION: Wait for critical maps to preload before gameplay
+  waitForCriticalMaps(callback) {
+    if (this.preloadComplete) {
+      callback();
+    } else {
+      this.preloadCallbacks.push(callback);
+      console.log("⏳ Waiting for critical maps to preload...");
+
+      // SAFETY: Timeout fallback in case preload fails
+      setTimeout(() => {
+        if (!this.preloadComplete) {
+          console.warn(
+            `⚠️ Preload timeout after 10s - ${this.criticalMapsLoaded}/${this.criticalMapCount} loaded`,
+          );
+          console.warn("   Starting game anyway to prevent infinite loading");
+          this.preloadComplete = true;
+          this.gameplayStarted = true; // Mark gameplay phase
+          this.preloadCallbacks.forEach((cb) => cb());
+          this.preloadCallbacks = [];
+        }
+      }, 10000); // 10 second timeout for all maps
+    }
+  }
+
   updateBackground(deltaTime) {
     if (this.skyDome) {
       this.skyDome.rotation.y += deltaTime * 0.01;
@@ -481,7 +629,7 @@ export default class Environment {
         star.material.opacity = Math.max(
           0.15,
           star.userData.baseOpacity +
-            Math.sin(this.time * 2 + star.userData.offset) * 0.2
+            Math.sin(this.time * 2 + star.userData.offset) * 0.2,
         );
       });
     }
@@ -503,12 +651,16 @@ export default class Environment {
     this.updateBackground(effectiveDelta);
     this.updateTransition(effectiveDelta);
 
+    if (this.currentMap && this.sectorState.enabled) {
+      this._applySectorCulling(playerPos);
+    }
+
     if (this.previousMap && this.previousMap !== this.currentMap) {
       this.previousMap.update(
         effectiveDelta,
         this.time,
         playerPos,
-        this.interactiveMode
+        this.interactiveMode,
       );
     }
 
@@ -517,8 +669,114 @@ export default class Environment {
         effectiveDelta,
         this.time,
         playerPos,
-        this.interactiveMode
+        this.interactiveMode,
       );
+    }
+  }
+
+  _prepareSectorVisibility(mapKey) {
+    this.sectorState = {
+      mapKey,
+      sectorMap: null,
+      sectorSize: this.sectorConfig.sectorSize,
+      childCount: this.currentMap?.group?.children?.length || 0,
+      childVisibility: [],
+      enabled: false,
+      lastCenterKey: null,
+    };
+
+    if (!this.currentMap || !this.currentMap.group || !this.workerManager) {
+      if (!this._sectorFallbackLogged) {
+        console.warn(
+          "⚠️ Sector visibility prep skipped: no worker manager or map group",
+        );
+        this._sectorFallbackLogged = true;
+      }
+      return;
+    }
+
+    const boxes = this._collectChildBoxes(this.currentMap.group.children);
+    if (!boxes.length) return;
+
+    this.workerManager
+      .queueEnvironmentSectorization(boxes, this.sectorConfig.sectorSize)
+      .then((result) => {
+        if (!result || !result.sectors) return;
+        this.sectorState.sectorMap = result.sectors;
+        this.sectorState.sectorSize = result.sectorSize;
+        this.sectorState.enabled = true;
+        this.sectorState.childVisibility = new Array(
+          this.sectorState.childCount,
+        ).fill(true);
+      })
+      .catch((err) => {
+        console.warn("Sector binning failed, disabling culling", err);
+      });
+  }
+
+  _collectChildBoxes(children) {
+    const boxes = [];
+    const tempBox = new THREE.Box3();
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      try {
+        child.updateWorldMatrix?.(true, true);
+        tempBox.setFromObject(child);
+        if (!isFinite(tempBox.min.x) || tempBox.isEmpty()) continue;
+        boxes.push({
+          id: i,
+          min: [tempBox.min.x, tempBox.min.y, tempBox.min.z],
+          max: [tempBox.max.x, tempBox.max.y, tempBox.max.z],
+        });
+      } catch (err) {
+        // Skip invalid child
+      }
+    }
+    return boxes;
+  }
+
+  _applySectorCulling(playerPos) {
+    const state = this.sectorState;
+    const sectors = state.sectorMap;
+    if (!sectors) return;
+
+    const size = state.sectorSize || this.sectorConfig.sectorSize;
+    const cx = Math.floor(playerPos.x / size);
+    const cz = Math.floor(playerPos.z / size);
+    const centerKey = `${cx},${cz}`;
+
+    // OPTIMIZATION: Skip if player hasn't moved to a different sector
+    if (state.lastCenterKey === centerKey) return;
+    state.lastCenterKey = centerKey;
+
+    const radius = this.sectorConfig.activationRadius;
+    const visibleIndices = new Set();
+    for (let x = cx - radius; x <= cx + radius; x++) {
+      for (let z = cz - radius; z <= cz + radius; z++) {
+        const key = `${x},${z}`;
+        const ids = sectors[key];
+        if (ids) {
+          ids.forEach((id) => visibleIndices.add(id));
+        }
+      }
+    }
+
+    const children = this.currentMap?.group?.children || [];
+    let updateCount = 0;
+    for (let i = 0; i < children.length; i++) {
+      const shouldShow = visibleIndices.size === 0 || visibleIndices.has(i);
+      if (state.childVisibility[i] === shouldShow) continue;
+      state.childVisibility[i] = shouldShow;
+      children[i].visible = shouldShow;
+      updateCount++;
+    }
+    // Only log if significant changes (debugging)
+    if (
+      updateCount > 50 &&
+      typeof window !== "undefined" &&
+      window.location?.hostname === "localhost"
+    ) {
+      console.log(`Sector culling updated ${updateCount} objects`);
     }
   }
 
@@ -548,7 +806,7 @@ export default class Environment {
     playerHeight,
     previousPosition,
     previousGroundHeight,
-    maxStepHeight
+    maxStepHeight,
   ) {
     if (!position) {
       return this.getFloorHeightAt(0, 0);
@@ -680,7 +938,7 @@ export default class Environment {
           minX,
           maxX,
           minZ,
-          maxZ
+          maxZ,
         )
       ) {
         return true;

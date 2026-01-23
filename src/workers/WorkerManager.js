@@ -18,6 +18,7 @@ export default class WorkerManager {
       collision: null,
       physics: null,
       ai: null,
+      environment: null,
     };
 
     this.enabled = {
@@ -25,6 +26,7 @@ export default class WorkerManager {
       collision: true,
       physics: true, // NOW ENABLED
       ai: true, // NEW: AI worker
+      environment: true,
     };
 
     this.ready = {
@@ -32,6 +34,7 @@ export default class WorkerManager {
       collision: false,
       physics: false,
       ai: false,
+      environment: false,
     };
 
     this.messageQueue = {
@@ -39,6 +42,7 @@ export default class WorkerManager {
       collision: [],
       physics: [],
       ai: [],
+      environment: [],
     };
 
     this.callbacks = new Map();
@@ -49,6 +53,7 @@ export default class WorkerManager {
       collision: { messages: 0, errors: 0, avgResponseTime: 0 },
       physics: { messages: 0, errors: 0, avgResponseTime: 0 },
       ai: { messages: 0, errors: 0, avgResponseTime: 0 },
+      environment: { messages: 0, errors: 0, avgResponseTime: 0 },
     };
   }
 
@@ -76,6 +81,11 @@ export default class WorkerManager {
     // Initialize AI worker
     if (this.enabled.ai) {
       promises.push(this._initAIWorker());
+    }
+
+    // Initialize environment worker
+    if (this.enabled.environment) {
+      promises.push(this._initEnvironmentWorker());
     }
 
     try {
@@ -436,6 +446,58 @@ export default class WorkerManager {
     });
   }
 
+  /**
+   * Initialize environment worker (sector binning)
+   */
+  async _initEnvironmentWorker() {
+    return new Promise((resolve, reject) => {
+      try {
+        this.workers.environment = new Worker(
+          new URL("./environment-worker.js", import.meta.url),
+          { type: "module" },
+        );
+
+        this.workers.environment.onmessage = (event) => {
+          this._handleEnvironmentMessage(event.data);
+        };
+
+        this.workers.environment.onerror = (error) => {
+          console.error("Environment worker error:", error);
+          this.metrics.environment.errors++;
+        };
+
+        const readyListener = (event) => {
+          if (
+            event.data.type === "READY" ||
+            event.data.type === "INITIALIZED"
+          ) {
+            this.ready.environment = true;
+            this.workers.environment.removeEventListener(
+              "message",
+              readyListener,
+            );
+            resolve();
+          }
+        };
+
+        this.workers.environment.addEventListener("message", readyListener);
+
+        setTimeout(() => {
+          if (!this.ready.environment) {
+            reject(new Error("Environment worker init timeout"));
+          }
+        }, 5000);
+      } catch (error) {
+        console.warn(
+          "Failed to create environment worker, using fallback:",
+          error,
+        );
+        this.enabled.environment = false;
+        resolve();
+      }
+    });
+  }
+
   // ==========================================
   // PHYSICS WORKER METHODS
   // ==========================================
@@ -521,6 +583,36 @@ export default class WorkerManager {
     });
   }
 
+  // ==========================================
+  // ENVIRONMENT WORKER METHODS
+  // ==========================================
+
+  /**
+   * Bin bounding boxes into sectors off-thread
+   */
+  queueEnvironmentSectorization(boxes, sectorSize = 40) {
+    // Fallback to main-thread binning if worker unavailable
+    if (!this.enabled.environment || !this.ready.environment) {
+      return Promise.resolve(this._binSectorsFallback(boxes, sectorSize));
+    }
+
+    return new Promise((resolve, reject) => {
+      const callbackId = this._registerCallback((result, error) => {
+        if (error) return reject(error);
+        resolve(result);
+      });
+
+      this.workers.environment.postMessage({
+        type: "BIN_SECTORS",
+        requestId: callbackId,
+        sectorSize,
+        boxes,
+      });
+
+      this.metrics.environment.messages++;
+    });
+  }
+
   _handlePhysicsMessage(data) {
     switch (data.type) {
       case "PHYSICS_UPDATE":
@@ -543,6 +635,49 @@ export default class WorkerManager {
         }
         break;
     }
+  }
+
+  _handleEnvironmentMessage(data) {
+    switch (data.type) {
+      case "SECTORS": {
+        const cb = this.callbacks.get(data.requestId);
+        if (cb) {
+          cb({ sectors: data.sectors, sectorSize: data.sectorSize });
+          this.callbacks.delete(data.requestId);
+        }
+        break;
+      }
+      case "SECTORS_ERROR": {
+        const cb = this.callbacks.get(data.requestId);
+        if (cb) {
+          cb(null, new Error(data.error || "Environment worker error"));
+          this.callbacks.delete(data.requestId);
+        }
+        break;
+      }
+    }
+  }
+
+  _binSectorsFallback(boxes, sectorSize = 40) {
+    const sectors = {};
+    const add = (key, id) => {
+      if (!sectors[key]) sectors[key] = [];
+      sectors[key].push(id);
+    };
+    const size = sectorSize;
+    for (let i = 0; i < boxes.length; i++) {
+      const box = boxes[i];
+      const minX = Math.floor(box.min[0] / size);
+      const maxX = Math.floor(box.max[0] / size);
+      const minZ = Math.floor(box.min[2] / size);
+      const maxZ = Math.floor(box.max[2] / size);
+      for (let x = minX; x <= maxX; x++) {
+        for (let z = minZ; z <= maxZ; z++) {
+          add(`${x},${z}`, box.id);
+        }
+      }
+    }
+    return { sectors, sectorSize: size };
   }
 
   // ==========================================

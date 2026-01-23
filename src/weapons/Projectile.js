@@ -1,6 +1,34 @@
 import * as THREE from "three";
 
 export default class Projectile {
+  // OPTIMIZATION: Static pools for shared geometry and materials
+  static geometryPool = new Map(); // keyed by size
+  static materialPool = new Map(); // keyed by color
+
+  static getGeometry(size) {
+    if (!this.geometryPool.has(size)) {
+      this.geometryPool.set(size, new THREE.SphereGeometry(size, 12, 12));
+    }
+    return this.geometryPool.get(size);
+  }
+
+  static getMaterial(color) {
+    const colorKey = color.toString();
+    if (!this.materialPool.has(colorKey)) {
+      this.materialPool.set(
+        colorKey,
+        new THREE.MeshPhongMaterial({
+          color: color,
+          emissive: color,
+          emissiveIntensity: 1,
+          transparent: true,
+          opacity: 0.9,
+        }),
+      );
+    }
+    return this.materialPool.get(colorKey);
+  }
+
   constructor(
     scene,
     position,
@@ -46,14 +74,9 @@ export default class Projectile {
   }
 
   createMesh(size) {
-    const geometry = new THREE.SphereGeometry(size, 12, 12);
-    const material = new THREE.MeshPhongMaterial({
-      color: this.color,
-      emissive: this.color,
-      emissiveIntensity: 1,
-      transparent: true,
-      opacity: 0.9,
-    });
+    // OPTIMIZATION: Use shared geometry and material from static pools
+    const geometry = Projectile.getGeometry(size);
+    const material = Projectile.getMaterial(this.color);
 
     this.mesh = new THREE.Mesh(geometry, material);
     this.mesh.position.copy(this.position);
@@ -102,7 +125,9 @@ export default class Projectile {
   }
 
   getPosition() {
-    return this.position.clone();
+    // OPTIMIZATION: Return direct reference (caller should not mutate)
+    // Previously cloned every call, causing allocations in collision checks
+    return this.position;
   }
 
   isExpired() {
@@ -121,8 +146,9 @@ export default class Projectile {
 
     if (this.mesh) {
       this.scene.remove(this.mesh);
-      this.mesh.geometry.dispose();
-      this.mesh.material.dispose();
+      // OPTIMIZATION: Don't dispose pooled resources - they're shared
+      // this.mesh.geometry.dispose(); // Shared from static pool
+      // this.mesh.material.dispose(); // Shared from static pool
       this.mesh = null;
     }
 
@@ -131,7 +157,8 @@ export default class Projectile {
 
   _handleImpact(position) {
     if (this.particleSystem && position) {
-      this.particleSystem.createImpact(position.clone(), this.color, 12);
+      // OPTIMIZATION: Pass position directly (particle system copies internally)
+      this.particleSystem.createImpact(position, this.color, 12);
     }
 
     this.destroy();

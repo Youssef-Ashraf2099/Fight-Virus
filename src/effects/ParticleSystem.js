@@ -5,6 +5,9 @@ export default class ParticleSystem {
     this.scene = scene;
     this.particles = [];
 
+    // OPTIMIZATION: Pre-allocate temp vectors to avoid allocations in update loop
+    this._tempVelocity = new THREE.Vector3();
+
     // OPTIMIZATION: Object pooling for geometries and materials
     this.geometryPool = {
       sphere: new THREE.SphereGeometry(0.2, 8, 8),
@@ -28,16 +31,20 @@ export default class ParticleSystem {
           emissiveIntensity: 1,
           transparent: transparent,
           opacity: 1,
-        })
+        }),
       );
     }
     return this.materialPool.get(key);
   }
 
-  createExplosion(position, color, count = 30) {
+  createExplosion(position, color, count = 20) {
+    if (typeof window !== "undefined" && window.profiler?.startOperation) {
+      window.profiler.startOperation("particle-explosion");
+    }
+
     // OPTIMIZATION: Limit particle count if approaching max
     if (this.particles.length > this.maxParticles - 50) {
-      count = Math.min(count, 15); // Reduce particles when near limit
+      count = Math.min(count, 10); // Reduce particles when near limit
     }
 
     const material = this.getMaterial(color);
@@ -50,7 +57,7 @@ export default class ParticleSystem {
       const velocity = new THREE.Vector3(
         (Math.random() - 0.5) * 10,
         (Math.random() - 0.5) * 10,
-        (Math.random() - 0.5) * 10
+        (Math.random() - 0.5) * 10,
       );
 
       this.scene.add(particle);
@@ -63,12 +70,20 @@ export default class ParticleSystem {
         gravity: -5,
       });
     }
+
+    if (typeof window !== "undefined" && window.profiler?.endOperation) {
+      window.profiler.endOperation("particle-explosion");
+    }
   }
 
-  createImpact(position, color, count = 10) {
+  createImpact(position, color, count = 6) {
+    if (typeof window !== "undefined" && window.profiler?.startOperation) {
+      window.profiler.startOperation("particle-impact");
+    }
+
     // OPTIMIZATION: Limit particle count if approaching max
     if (this.particles.length > this.maxParticles - 30) {
-      count = Math.min(count, 5);
+      count = Math.min(count, 3);
     }
 
     const material = this.getMaterial(color);
@@ -81,7 +96,7 @@ export default class ParticleSystem {
       const velocity = new THREE.Vector3(
         (Math.random() - 0.5) * 5,
         Math.random() * 5,
-        (Math.random() - 0.5) * 5
+        (Math.random() - 0.5) * 5,
       );
 
       this.scene.add(particle);
@@ -93,6 +108,10 @@ export default class ParticleSystem {
         maxLifetime: 0.5,
         gravity: -8,
       });
+    }
+
+    if (typeof window !== "undefined" && window.profiler?.endOperation) {
+      window.profiler.endOperation("particle-impact");
     }
   }
 
@@ -119,6 +138,10 @@ export default class ParticleSystem {
   }
 
   createShockwave(position, radius, color) {
+    if (typeof window !== "undefined" && window.profiler?.startOperation) {
+      window.profiler.startOperation("particle-shockwave");
+    }
+
     // OPTIMIZATION: Reuse geometry and material
     const material = this.getMaterial(color, true);
     const wave = new THREE.Mesh(this.geometryPool.ring, material);
@@ -135,6 +158,10 @@ export default class ParticleSystem {
       isShockwave: true,
       targetRadius: radius,
     });
+
+    if (typeof window !== "undefined" && window.profiler?.endOperation) {
+      window.profiler.endOperation("particle-shockwave");
+    }
   }
 
   update(deltaTime) {
@@ -176,9 +203,10 @@ export default class ParticleSystem {
       } else {
         // Normal particle physics
         particle.velocity.y += particle.gravity * deltaTime;
-        particle.mesh.position.add(
-          particle.velocity.clone().multiplyScalar(deltaTime)
-        );
+
+        // OPTIMIZATION: Reuse temp vector instead of clone()
+        this._tempVelocity.copy(particle.velocity).multiplyScalar(deltaTime);
+        particle.mesh.position.add(this._tempVelocity);
 
         // Fade out
         const lifetimeRatio = particle.lifetime / particle.maxLifetime;

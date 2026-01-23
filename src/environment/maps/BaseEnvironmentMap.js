@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import OptimizedEnvironmentBuilder from "../utils/OptimizedEnvironmentBuilder.js";
 
 export default class BaseEnvironmentMap {
   constructor(environment) {
@@ -9,6 +10,8 @@ export default class BaseEnvironmentMap {
     this.displayName = "System Sector";
     this.baseFloorHeight = 0;
     this.colliders = [];
+    // OPTIMIZATION: Builder for auto-batching geometry
+    this.builder = null;
     // Default map boundaries (can be overridden by subclasses)
     this.mapBoundaries = {
       minX: -60,
@@ -20,13 +23,32 @@ export default class BaseEnvironmentMap {
 
   build(parentGroup) {
     this.parentGroup = parentGroup;
+    // OPTIMIZATION: Initialize builder before create()
+    this.builder = new OptimizedEnvironmentBuilder(this.scene, this.group);
     this.create();
+    // OPTIMIZATION: Finalize builder to merge geometries
+    if (this.builder) {
+      this.builder.finalize();
+      this.builder = null; // Free memory
+    }
     parentGroup.add(this.group);
+    // OPTIMIZATION: Disable shadow casting for all environment meshes
+    // Only player and bosses should cast shadows
+    this._disableShadowCasting(this.group);
     this.onEnter();
   }
 
   create() {
     // Subclasses override to populate this.group
+  }
+
+  _disableShadowCasting(object) {
+    object.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = false;
+        // Keep receiveShadow for floor/platforms
+      }
+    });
   }
 
   onEnter() {}
