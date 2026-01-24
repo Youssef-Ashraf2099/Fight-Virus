@@ -3,6 +3,7 @@
 ## Install Go
 
 ### Windows
+
 1. Download: https://go.dev/dl/ (Get latest stable, e.g., go1.21.x)
 2. Run installer
 3. Verify: Open PowerShell and run:
@@ -12,12 +13,14 @@
    Should output: `go version go1.21.x windows/amd64`
 
 ### macOS
+
 ```bash
 brew install go
 go version
 ```
 
 ### Linux
+
 ```bash
 wget https://go.dev/dl/go1.21.x.linux-amd64.tar.gz
 tar -C /usr/local -xzf go1.21.x.linux-amd64.tar.gz
@@ -30,12 +33,14 @@ go version
 ## Build Steps
 
 ### 1. **Run Tests** (Validate code)
+
 ```bash
 cd src-go
 go test ./... -v
 ```
 
 Expected output:
+
 ```
 ok      fightvirus/entities/player   0.001s
 ok      fightvirus/entities/enemies  0.001s
@@ -46,12 +51,14 @@ PASS
 ### 2. **Compile Game Core Binary**
 
 #### Build for current platform:
+
 ```bash
 cd src-go
 go build -o ../bin/game-core ./cmd
 ```
 
 #### Build for all platforms:
+
 ```bash
 # Windows
 GOOS=windows GOARCH=amd64 go build -o ../bin/game-core-win.exe ./cmd
@@ -66,16 +73,19 @@ GOOS=linux GOARCH=amd64 go build -o ../bin/game-core-linux ./cmd
 ### 3. **Create Shared Library** (For calling from JS)
 
 #### Windows DLL:
+
 ```bash
 go build -buildmode=c-shared -o ../bin/game-core.dll ./cmd
 ```
 
 #### macOS dylib:
+
 ```bash
 go build -buildmode=c-shared -o ../bin/game-core.dylib ./cmd
 ```
 
 #### Linux .so:
+
 ```bash
 go build -buildmode=c-shared -o ../bin/game-core.so ./cmd
 ```
@@ -280,11 +290,13 @@ func (wsb *WebSocketBridge) broadcastLoop() {
 ```
 
 Add to `go.mod`:
+
 ```
 require github.com/gorilla/websocket v1.5.0
 ```
 
 Then run:
+
 ```bash
 go get github.com/gorilla/websocket
 ```
@@ -297,7 +309,7 @@ go get github.com/gorilla/websocket
 
 ```javascript
 export class GoGameBridge {
-  constructor(wsURL = 'ws://localhost:9000/ws') {
+  constructor(wsURL = "ws://localhost:9000/ws") {
     this.ws = null;
     this.wsURL = wsURL;
     this.connected = false;
@@ -310,29 +322,29 @@ export class GoGameBridge {
       this.ws = new WebSocket(this.wsURL);
 
       this.ws.onopen = () => {
-        console.log('✅ Connected to Go game core');
+        console.log("✅ Connected to Go game core");
         this.connected = true;
         resolve();
       };
 
       this.ws.onmessage = (event) => {
         this.gameState = JSON.parse(event.data);
-        this.notifyListeners('stateUpdate', this.gameState);
+        this.notifyListeners("stateUpdate", this.gameState);
       };
 
       this.ws.onerror = (error) => {
-        console.error('❌ WebSocket error:', error);
+        console.error("❌ WebSocket error:", error);
         reject(error);
       };
 
       this.ws.onclose = () => {
-        console.warn('⚠️ Disconnected from Go core');
+        console.warn("⚠️ Disconnected from Go core");
         this.connected = false;
       };
 
       setTimeout(() => {
         if (!this.connected) {
-          reject(new Error('Connection timeout'));
+          reject(new Error("Connection timeout"));
         }
       }, 5000);
     });
@@ -349,7 +361,7 @@ export class GoGameBridge {
   }
 
   onStateUpdate(callback) {
-    this.listeners.push({ event: 'stateUpdate', callback });
+    this.listeners.push({ event: "stateUpdate", callback });
   }
 
   notifyListeners(event, data) {
@@ -371,9 +383,9 @@ export class GoGameBridge {
 ### Usage in GameMain.js
 
 ```javascript
-import { GoGameBridge } from './systems/GoGameBridge.js';
+import { GoGameBridge } from "./systems/GoGameBridge.js";
 
-const bridge = new GoGameBridge('ws://localhost:9000/ws');
+const bridge = new GoGameBridge("ws://localhost:9000/ws");
 
 // Start game
 async function init() {
@@ -387,7 +399,7 @@ async function init() {
   });
 
   // In input handler
-  document.addEventListener('keydown', (e) => {
+  document.addEventListener("keydown", (e) => {
     const input = {
       moveDirection: [0, 0, 0],
       fireWeapon: false,
@@ -396,13 +408,13 @@ async function init() {
       useEMP: false,
     };
 
-    if (e.key === 'w') input.moveDirection[2] = -1;
-    if (e.key === 'a') input.moveDirection[0] = -1;
-    if (e.key === 's') input.moveDirection[2] = 1;
-    if (e.key === 'd') input.moveDirection[0] = 1;
-    if (e.key === ' ') input.fireWeapon = true;
-    if (e.key === 'Shift') input.useSprint = true;
-    if (e.key === 'e') input.useEMP = true;
+    if (e.key === "w") input.moveDirection[2] = -1;
+    if (e.key === "a") input.moveDirection[0] = -1;
+    if (e.key === "s") input.moveDirection[2] = 1;
+    if (e.key === "d") input.moveDirection[0] = 1;
+    if (e.key === " ") input.fireWeapon = true;
+    if (e.key === "Shift") input.useSprint = true;
+    if (e.key === "e") input.useEMP = true;
 
     bridge.sendInput(input);
   });
@@ -414,16 +426,19 @@ async function init() {
 ## Performance Expectations
 
 ### Before (JavaScript):
+
 - ~15 enemies max before lag
 - 30-40 FPS with 10 enemies
 - Collision checks: O(n²)
 
 ### After (Go, Phase 1):
+
 - ~50 enemies stable
 - 60 FPS with 20 enemies
 - Collision checks: O(n²) but faster math
 
 ### After (Go + Goroutines, Phase 2):
+
 - 100+ enemies
 - 60 FPS consistently
 - Collision checks: O(n²/4) with 4 workers
@@ -433,18 +448,22 @@ async function init() {
 ## Troubleshooting
 
 ### "go: command not found"
+
 - Go not in PATH
 - Restart terminal after installation
 - Check `go version` works
 
 ### "undefined: websocket"
+
 - Run `go get github.com/gorilla/websocket`
 
 ### "Module not found: fightvirus"
+
 - Make sure `go.mod` is at `src-go/go.mod`
 - Check module name matches imports
 
 ### Compilation errors in tests
+
 - Ensure all `.go` files are in correct packages
 - Check imports paths match directory structure
 

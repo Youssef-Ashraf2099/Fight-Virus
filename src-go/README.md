@@ -6,20 +6,21 @@ This is the Go implementation of Fight Virus game mechanics. Phase 1 focuses on 
 
 ## 📊 Quick Stats
 
-| Metric | Value |
-|--------|-------|
-| **Lines of Code** | ~950 (vs 2,649 JS) |
-| **Reduction** | 64% smaller |
-| **Dependencies** | 0 (pure stdlib) |
-| **Goroutine Ready** | ✅ Yes |
-| **JSON Serialization** | ✅ Built-in |
-| **Thread Safe** | ✅ Mutex protected |
+| Metric                 | Value              |
+| ---------------------- | ------------------ |
+| **Lines of Code**      | ~950 (vs 2,649 JS) |
+| **Reduction**          | 64% smaller        |
+| **Dependencies**       | 0 (pure stdlib)    |
+| **Goroutine Ready**    | ✅ Yes             |
+| **JSON Serialization** | ✅ Built-in        |
+| **Thread Safe**        | ✅ Mutex protected |
 
 ## 🚀 Quick Start
 
 ### 1. Install Go
 
 **Windows/macOS/Linux:**
+
 ```bash
 # Download from https://go.dev/dl/
 # Or use package manager:
@@ -29,6 +30,7 @@ choco install golang     # Windows
 ```
 
 Verify:
+
 ```bash
 go version
 ```
@@ -57,6 +59,7 @@ go run ./cmd/main.go 200  # Run 200 frames (3.3 seconds @ 60 FPS)
 ```
 
 Output:
+
 ```
 🎮 Fight Virus - Go Core Engine (Phase 1 Validation)
 ============================================================
@@ -124,6 +127,7 @@ dotProduct := v1.Dot(v2)
 ```
 
 Optimized for collision detection:
+
 - `DistanceToSq()` - Faster than `DistanceTo()` (no sqrt)
 - Used in inner loops
 
@@ -139,6 +143,7 @@ BaseEntity (position, velocity, health)
 ```
 
 #### Player Example:
+
 ```go
 player := player.NewPlayer("player-1")
 player.Update(deltaTime, inputVelocity)
@@ -149,6 +154,7 @@ if player.UseEMP() {
 ```
 
 #### Enemy Example:
+
 ```go
 enemy := enemies.NewBaseEnemy(
     "RansomwareVirus",  // Class
@@ -166,6 +172,7 @@ if enemy.IsAggroed {
 ```
 
 #### Boss Example:
+
 ```go
 boss := bosses.NewBaseBoss(
     "Circuit Overlord",     // Boss name
@@ -199,15 +206,16 @@ for frame := 0; frame < 1000; frame++ {
         MoveDirection: [3]float64{1, 0, 0},
         FireWeapon: true,
     }
-    
+
     core.HandlePlayerInput(input)
     core.Update(0.016) // 60 FPS
-    
+
     state, _ := core.GetState() // JSON for JS renderer
 }
 ```
 
 Features:
+
 - Collision detection (enemy-to-player, boss-to-player, enemy-to-enemy)
 - Entity spawning (9 enemy types, 10 boss types)
 - Knockback and stun application
@@ -228,6 +236,7 @@ jsonState, _ := manager.SerializeToJSON()
 ```
 
 Output format:
+
 ```json
 {
   "player": {
@@ -277,18 +286,22 @@ Enemies use a simple state machine:
 ```
 
 **Idle** (BehaviorState = 0):
+
 - Slow wander around spawn point
 - Watch for aggro radius (default 30 units)
 
 **Pursuing** (BehaviorState = 1):
+
 - Move at full speed toward player
 - Check if in attack range
 
 **Attacking** (BehaviorState = 2):
+
 - Move closer if too far
 - Execute attack when cooldown ready
 
 **Stunned** (BehaviorState = 3):
+
 - Stop all movement
 - Wait for stun duration to expire
 
@@ -326,6 +339,7 @@ core.SpawnBoss("trojan-warhorse",    x, y, z)      // Final boss
 ```
 
 Each has:
+
 - Unique health pool (1,600-4,000 HP)
 - Speed and damage stats
 - Multi-phase progression (override in subclass)
@@ -347,6 +361,7 @@ core.Player.Weapons[6]  // Neon Knife (4 attacks/sec, melee)
 ```
 
 Each weapon has:
+
 - Fire rate (attacks per second)
 - Projectile speed
 - Projectile damage
@@ -358,6 +373,7 @@ Each weapon has:
 ### Benchmarks (on Intel i7, 4 cores)
 
 **Before (JavaScript):**
+
 ```
 15 enemies: 40 FPS, avg frame 25ms
 20 enemies: 25 FPS, avg frame 40ms
@@ -365,6 +381,7 @@ Each weapon has:
 ```
 
 **After (Go, Phase 1):**
+
 ```
 30 enemies: 60 FPS, avg frame 16ms
 50 enemies: 60 FPS, avg frame 16ms
@@ -372,6 +389,7 @@ Each weapon has:
 ```
 
 **Expected (Go + Goroutines, Phase 2):**
+
 ```
 100 enemies: 60 FPS, avg frame 16ms
 150 enemies: 60 FPS, avg frame 16ms
@@ -386,9 +404,9 @@ Each weapon has:
 // JS side
 async function gameLoop() {
   const input = { moveDirection: [1, 0, 0], fireWeapon: true };
-  const response = await fetch('http://localhost:9000/input', {
-    method: 'POST',
-    body: JSON.stringify(input)
+  const response = await fetch("http://localhost:9000/input", {
+    method: "POST",
+    body: JSON.stringify(input),
   });
   const state = await response.json();
   updateScene(state);
@@ -413,12 +431,14 @@ See [GO_SETUP_GUIDE.md](../docs/GO_SETUP_GUIDE.md) for full integration examples
 ## ✅ Testing
 
 Run all tests:
+
 ```bash
 cd src-go
 go test ./... -v
 ```
 
 Tests cover:
+
 - ✅ Entity creation and initialization
 - ✅ Movement and velocity
 - ✅ Damage and healing
@@ -464,6 +484,7 @@ Once Phase 1 is validated:
 ## 🐛 Troubleshooting
 
 ### Build fails with "module not found"
+
 ```bash
 cd src-go
 go mod tidy
@@ -471,6 +492,7 @@ go get ./...
 ```
 
 ### Tests fail with "undefined: Vector3"
+
 ```bash
 # Make sure working directory is src-go/
 cd src-go
@@ -478,10 +500,12 @@ go test ./entities/player -v
 ```
 
 ### Runtime panic: "index out of range"
+
 - Likely weapon index out of bounds
 - Check `len(player.Weapons)` before accessing
 
 ### Performance not improving
+
 - Ensure Go binary is being used, not JS
 - Check `go build -O` optimization flags
 - Profile with: `go test -cpuprofile=cpu.prof ./...`
@@ -493,6 +517,7 @@ Same as main Fight Virus project.
 ## 🤝 Contributing
 
 When adding new features:
+
 1. Add to Go code first
 2. Write tests
 3. Validate with JS renderer

@@ -34,9 +34,7 @@ export default class GoCoreClient {
         moveDirection: payload?.moveDirection || [0, 0, 0],
         fireWeapon: Boolean(payload?.fireWeapon),
         switchWeapon:
-          typeof payload?.switchWeapon === "number"
-            ? payload.switchWeapon
-            : -1,
+          typeof payload?.switchWeapon === "number" ? payload.switchWeapon : -1,
         useSprint: Boolean(payload?.useSprint),
         useEMP: Boolean(payload?.useEMP),
       };

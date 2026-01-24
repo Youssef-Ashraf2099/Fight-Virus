@@ -234,25 +234,25 @@ class GameMain {
     // Track mouse position for delta calculation
     const currentMousePos = this.inputManager.getMousePosition?.();
     if (!currentMousePos) return;
-    
+
     if (!this.lastMousePos) {
       this.lastMousePos = { x: currentMousePos.x, y: currentMousePos.y };
       return;
     }
-    
+
     // Calculate mouse movement delta
     const deltaX = currentMousePos.x - this.lastMousePos.x;
     const deltaY = currentMousePos.y - this.lastMousePos.y;
-    
+
     // Update last position for next frame
     this.lastMousePos.x = currentMousePos.x;
     this.lastMousePos.y = currentMousePos.y;
-    
+
     // Only rotate if mouse moved significantly (avoid tiny jitter)
     if (Math.abs(deltaX) > 0.5 || Math.abs(deltaY) > 0.5) {
       this.camera.rotation.y -= deltaX * 0.003; // Yaw (left/right)
       this.camera.rotation.x -= deltaY * 0.003; // Pitch (up/down)
-      
+
       // Clamp pitch to prevent flipping (can't look too far up/down)
       this.camera.rotation.x = Math.max(
         -Math.PI / 2,
@@ -316,7 +316,11 @@ class GameMain {
       }
 
       if (enemy.position && enemy.position.length === 3) {
-        mesh.position.set(enemy.position[0], enemy.position[1], enemy.position[2]);
+        mesh.position.set(
+          enemy.position[0],
+          enemy.position[1],
+          enemy.position[2],
+        );
       }
     });
 
@@ -1725,7 +1729,7 @@ class GameMain {
           playerState.position[2],
         );
       }
-      
+
       // Handle mouse look separately
       this.updateMouseLook();
 

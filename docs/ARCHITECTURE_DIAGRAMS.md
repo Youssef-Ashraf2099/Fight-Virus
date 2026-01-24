@@ -387,7 +387,7 @@ Reduction: ███████████████████████
                 │  └────────────────┘  │
                 │                      │
                 │  Read Operations:    │
-                │  ├─ GetState()      │  
+                │  ├─ GetState()      │
                 │  │ └─ RLock (fast) │  → Multiple goroutines OK
                 │  └─ GetFrameTime() │
                 │                      │
