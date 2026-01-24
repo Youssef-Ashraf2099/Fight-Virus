@@ -5,6 +5,7 @@
 **Location**: `e:\Fight Virus\blender-export\`
 
 **What's Included**:
+
 - 9 Enemy Models (OBJ format)
 - 9 Materials (MTL format with colors)
 - Import instructions
@@ -14,6 +15,7 @@
 ## 🚀 Import to Blender (3 Methods)
 
 ### Method 1: Quick Import (One Model)
+
 **Fastest way to test:**
 
 1. Open Blender
@@ -26,6 +28,7 @@
 ---
 
 ### Method 2: Batch Import (All Models at Once)
+
 **Best for importing everything:**
 
 1. Open Blender
@@ -66,6 +69,7 @@ print(f"✅ Imported {len(objects)} models!")
 ---
 
 ### Method 3: Command Line (Advanced)
+
 ```bash
 blender --python import_script.py
 ```
@@ -75,6 +79,7 @@ blender --python import_script.py
 ## 🎨 Make Models Look Better
 
 ### Step 1: Smooth Shading
+
 **Makes models less blocky:**
 
 1. Select all models: `A` (press A key)
@@ -82,6 +87,7 @@ blender --python import_script.py
 3. Done! Smoother appearance
 
 ### Step 2: Add Detail (Subdivision)
+
 **Adds geometry for smoother curves:**
 
 1. Select a model
@@ -91,6 +97,7 @@ blender --python import_script.py
 5. Model becomes smoother!
 
 ### Step 3: Enhance Materials
+
 **Make glow effects stronger:**
 
 1. Select model
@@ -106,6 +113,7 @@ blender --python import_script.py
 ### After Editing in Blender:
 
 **FBX Export (Recommended)**:
+
 1. `File` → `Export` → `FBX (.fbx)`
 2. Settings:
    - ✅ Check `Selected Objects` (if specific models)
@@ -116,6 +124,7 @@ blender --python import_script.py
 4. Import FBX into Unity's Assets folder
 
 **GLB Export (Alternative)**:
+
 1. `File` → `Export` → `glTF 2.0 (.glb/.gltf)`
 2. Select `GLB` format
 3. ✅ Apply Modifiers
@@ -125,39 +134,40 @@ blender --python import_script.py
 
 ## 📊 Exported Models Reference
 
-| Model | Shape | Size | Color | Use |
-|-------|-------|------|-------|-----|
-| **RansomwareVirus** | Cube (large) | 1.5x | Orange | AOE Boss |
-| **RootkitVirus** | Cube (huge) | 2.0x | Dark Red | Tank |
-| **TrojanVirus** | Pyramid | 1.0x | Purple | Standard |
-| **WormVirus** | Cylinder | 1.0x | Green | Fast |
-| **ShieldVirus** | Sphere | 1.4x | Blue | Shielded |
-| **SpywareVirus** | Octahedron | 1.0x | Purple | Stealth |
-| **DroneVirus** | Tetrahedron | 1.0x | Cyan | Flying |
-| **BlasterVirus** | Cone | 1.0x | Red | Ranged |
-| **AdwareVirus** | Icosahedron | 0.8x | Yellow | Swarm |
+| Model               | Shape        | Size | Color    | Use      |
+| ------------------- | ------------ | ---- | -------- | -------- |
+| **RansomwareVirus** | Cube (large) | 1.5x | Orange   | AOE Boss |
+| **RootkitVirus**    | Cube (huge)  | 2.0x | Dark Red | Tank     |
+| **TrojanVirus**     | Pyramid      | 1.0x | Purple   | Standard |
+| **WormVirus**       | Cylinder     | 1.0x | Green    | Fast     |
+| **ShieldVirus**     | Sphere       | 1.4x | Blue     | Shielded |
+| **SpywareVirus**    | Octahedron   | 1.0x | Purple   | Stealth  |
+| **DroneVirus**      | Tetrahedron  | 1.0x | Cyan     | Flying   |
+| **BlasterVirus**    | Cone         | 1.0x | Red      | Ranged   |
+| **AdwareVirus**     | Icosahedron  | 0.8x | Yellow   | Swarm    |
 
 ---
 
 ## 🔧 Useful Blender Shortcuts
 
-| Action | Key |
-|--------|-----|
-| **Select All** | A |
-| **Move** | G |
-| **Rotate** | R |
-| **Scale** | S |
-| **Delete** | X |
-| **Duplicate** | Shift + D |
+| Action           | Key                        |
+| ---------------- | -------------------------- |
+| **Select All**   | A                          |
+| **Move**         | G                          |
+| **Rotate**       | R                          |
+| **Scale**        | S                          |
+| **Delete**       | X                          |
+| **Duplicate**    | Shift + D                  |
 | **Smooth Shade** | Right-click → Shade Smooth |
-| **Frame View** | Numpad . (period) |
-| **Toggle X-Ray** | Alt + Z |
+| **Frame View**   | Numpad . (period)          |
+| **Toggle X-Ray** | Alt + Z                    |
 
 ---
 
 ## 💡 Quick Enhancement Ideas
 
 ### Idea 1: Add Glow Rings
+
 ```python
 # Add torus around each model
 import bpy
@@ -175,6 +185,7 @@ for obj in bpy.data.objects:
 ```
 
 ### Idea 2: Add Particle Effects
+
 1. Select model
 2. Go to `Particle Properties` tab
 3. Click `+` to add particle system
@@ -182,6 +193,7 @@ for obj in bpy.data.objects:
 5. Adjust settings (Lifetime, Velocity, etc.)
 
 ### Idea 3: Add Animation
+
 1. Select model
 2. Move timeline to frame 1
 3. Press `I` → `Rotation`
@@ -195,19 +207,24 @@ for obj in bpy.data.objects:
 ## 🐛 Troubleshooting
 
 ### "OBJ files won't import"
+
 ✅ Use `File → Import → Wavefront (.obj)`, NOT `File → Open`
 
 ### "Models are black"
+
 ✅ Add light: `Add` → `Light` → `Sun`
 
 ### "Materials missing"
+
 ✅ MTL files should auto-load from `materials/` folder
 ✅ Or manually apply in Material Properties
 
 ### "Models too small/big"
+
 ✅ Select model, press `S`, type scale factor (e.g., `2`), Enter
 
 ### "Script won't run"
+
 ✅ Make sure path is correct: `models_dir = r"E:\Fight Virus\blender-export\models"`
 ✅ Use raw string `r"..."` for Windows paths
 

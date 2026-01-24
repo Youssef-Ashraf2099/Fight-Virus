@@ -20,6 +20,7 @@ node scripts/export-to-blender.js
 ```
 
 This creates:
+
 ```
 blender-export/
 ├── models/              (OBJ files - 3D geometry)
@@ -36,12 +37,14 @@ blender-export/
 ### Step 2: Import into Blender
 
 **Option A: Individual Import**
+
 1. Open Blender
 2. `File` → `Import` → `Wavefront (.obj)`
 3. Navigate to `blender-export/models/`
 4. Select an OBJ file → `Import OBJ`
 
 **Option B: Batch Import (All at Once)**
+
 1. Open Blender
 2. Switch to `Scripting` workspace (top menu)
 3. Click `New` (+ icon)
@@ -79,36 +82,40 @@ print(f"✅ Imported {len(objects)} models")
 
 ## Exported Models
 
-| Model | Shape | Health | Description |
-|-------|-------|--------|-------------|
-| **RansomwareVirus** | Cube (large) | 220 HP | AOE attacker |
-| **RootkitVirus** | Cube (huge) | 250 HP | Tank |
-| **TrojanVirus** | Pyramid | 130 HP | Standard enemy |
-| **WormVirus** | Cylinder | 100 HP | Fast mover |
-| **ShieldVirus** | Sphere | 180 HP | Shielded |
-| **SpywareVirus** | Octahedron | 90 HP | Stealth |
-| **DroneVirus** | Tetrahedron | 70 HP | Flying |
-| **BlasterVirus** | Cone | 150 HP | Ranged |
-| **AdwareVirus** | Icosahedron | 80 HP | Swarm |
+| Model               | Shape        | Health | Description    |
+| ------------------- | ------------ | ------ | -------------- |
+| **RansomwareVirus** | Cube (large) | 220 HP | AOE attacker   |
+| **RootkitVirus**    | Cube (huge)  | 250 HP | Tank           |
+| **TrojanVirus**     | Pyramid      | 130 HP | Standard enemy |
+| **WormVirus**       | Cylinder     | 100 HP | Fast mover     |
+| **ShieldVirus**     | Sphere       | 180 HP | Shielded       |
+| **SpywareVirus**    | Octahedron   | 90 HP  | Stealth        |
+| **DroneVirus**      | Tetrahedron  | 70 HP  | Flying         |
+| **BlasterVirus**    | Cone         | 150 HP | Ranged         |
+| **AdwareVirus**     | Icosahedron  | 80 HP  | Swarm          |
 
 ## Working with Models in Blender
 
 ### Make Models Look Better
 
 **1. Smooth Shading**
+
 - Right-click model → `Shade Smooth`
 
 **2. Add Detail**
+
 - Select model
 - Add Modifier → `Subdivision Surface`
 - Set Levels to 2-3
 
 **3. Adjust Materials**
+
 - Switch to `Shading` workspace
 - Materials are auto-imported with colors
 - Increase `Emission` strength for glow effect
 
 **4. Scale Models**
+
 - Select model
 - Press `S` (scale)
 - Type number (e.g., `2` for 2x size)
@@ -119,6 +126,7 @@ print(f"✅ Imported {len(objects)} models")
 After editing in Blender:
 
 **Option 1: FBX (Recommended)**
+
 1. `File` → `Export` → `FBX (.fbx)`
 2. Settings:
    - ✅ Selected Objects (if specific models)
@@ -127,6 +135,7 @@ After editing in Blender:
 3. Save to Unity project: `Assets/Models/`
 
 **Option 2: GLTF/GLB (Modern)**
+
 1. `File` → `Export` → `glTF 2.0 (.glb/.gltf)`
 2. Settings:
    - Format: GLB (binary) or GLTF (separate)
@@ -136,6 +145,7 @@ After editing in Blender:
 ## Blender Python Scripts
 
 ### Script 1: Import All Models
+
 ```python
 import bpy
 import os
@@ -149,6 +159,7 @@ for filename in os.listdir(models_dir):
 ```
 
 ### Script 2: Apply Smooth Shading to All
+
 ```python
 import bpy
 
@@ -159,6 +170,7 @@ for obj in bpy.data.objects:
 ```
 
 ### Script 3: Add Subdivision to All
+
 ```python
 import bpy
 
@@ -170,6 +182,7 @@ for obj in bpy.data.objects:
 ```
 
 ### Script 4: Scale All Models
+
 ```python
 import bpy
 
@@ -181,6 +194,7 @@ for obj in bpy.data.objects:
 ```
 
 ### Script 5: Export All as FBX
+
 ```python
 import bpy
 import os
@@ -215,6 +229,7 @@ for obj in bpy.data.objects:
 ## Tips & Tricks
 
 ### Tip 1: Add Glow Effect
+
 ```python
 # In Blender, after importing
 import bpy
@@ -224,24 +239,28 @@ for obj in bpy.data.objects:
         mat = obj.data.materials[0]
         mat.use_nodes = True
         nodes = mat.node_tree.nodes
-        
+
         # Increase emission strength
         if "Emission" in nodes:
             nodes["Emission"].inputs[1].default_value = 2.0  # Strength
 ```
 
 ### Tip 2: Add Wireframe Modifier
+
 Makes models look "digital/cyber":
+
 1. Select model
 2. Add Modifier → `Wireframe`
 3. Adjust thickness
 
 ### Tip 3: Create Variants
+
 - Duplicate model: `Shift + D`
 - Modify slightly (scale, shape)
 - Export as new enemy variant
 
 ### Tip 4: Animate Models
+
 1. Select model
 2. Set keyframe: `I` → Location/Rotation/Scale
 3. Move timeline
@@ -252,17 +271,21 @@ Makes models look "digital/cyber":
 ## Troubleshooting
 
 **Models appear black in Blender**
+
 - Solution: Add lights to scene (`Add` → `Light` → `Sun`)
 
 **Materials don't import**
+
 - Solution: Materials are in `materials/` folder
 - Blender should auto-load them
 - If not, manually apply: Material Properties → Browse material
 
 **Models are too small/large**
+
 - Solution: Scale in Blender (select, press `S`, type scale factor)
 
 **OBJ files won't open**
+
 - Solution: Make sure you're using `File → Import → Wavefront (.obj)`
 - Not "Open" - use "Import"!
 
