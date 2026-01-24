@@ -33,52 +33,70 @@ export default class Sword extends BaseWeapon {
   }
 
   _initModel() {
-    // Placeholder geometry until GLB is loaded
-    // Blade
-    const bladeGeo = new THREE.BoxGeometry(0.1, 1.2, 0.05);
-    // Handle
-    const handleGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.3);
-    
-    // Material with Env Map (Tech Art Requirement)
-    const envMap = new THREE.CubeTextureLoader()
-      .setPath('../Assets/textures/env/') // Creating placeholder path
-      .load(['px.jpg', 'nx.jpg', 'py.jpg', 'ny.jpg', 'pz.jpg', 'nz.jpg'], (tex) => {
-         // Fallback or success logic
-      }, undefined, (err) => {
-          // console.warn("Env map failed to load, using default");
-      });
-      
-    // Normal Map would be loaded here
-    
-    const material = new THREE.MeshStandardMaterial({
-      color: 0xcdcdcd,
-      roughness: 0.1,
-      metalness: 0.9,
-      envMap: envMap,
-      envMapIntensity: 1.0,
-      flatShading: false
-    });
-
+    // High-Fidelity Cyber Katana Model
     this.mesh = new THREE.Group();
     
-    const blade = new THREE.Mesh(bladeGeo, material);
-    blade.position.y = 0.6;
-    blade.castShadow = true; // Weapon layer might not need shadows?
+    // 1. Blade Spine (The solid metal back)
+    const spineGeo = new THREE.BoxGeometry(0.04, 1.4, 0.04);
+    const spineMat = new THREE.MeshStandardMaterial({
+        color: 0x222222,
+        roughness: 0.4,
+        metalness: 0.9
+    });
+    const spine = new THREE.Mesh(spineGeo, spineMat);
+    spine.position.y = 0.7; // Center relative to handle
+    spine.position.z = -0.01; // Slightly back
+    this.mesh.add(spine);
     
-    const handle = new THREE.Mesh(handleGeo, new THREE.MeshStandardMaterial({ color: 0x333333 }));
-    handle.position.y = -0.15;
+    // 2. Energy Edge (The glowing laser part)
+    // Using a tapered plane for the sharp edge look
+    // Or actually a thin box for volumetric feel
+    const edgeGeo = new THREE.BoxGeometry(0.01, 1.4, 0.06);
+    const edgeMat = new THREE.MeshBasicMaterial({
+        color: 0x00ffff,
+        transparent: true,
+        opacity: 0.9,
+    });
+    this.energyEdge = new THREE.Mesh(edgeGeo, edgeMat);
+    this.energyEdge.position.y = 0.7;
+    this.energyEdge.position.z = 0.03; // Forward edge
+    this.mesh.add(this.energyEdge);
     
-    this.mesh.add(blade);
-    this.mesh.add(handle);
+    // Add inner white core for "laser" look
+    const edgeCoreGeo = new THREE.BoxGeometry(0.005, 1.38, 0.04);
+    const edgeCore = new THREE.Mesh(edgeCoreGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    edgeCore.position.y = 0.7;
+    edgeCore.position.z = 0.03;
+    this.mesh.add(edgeCore);
     
-    // Tip and Base markers for trail
+    // 3. Tsuba (Hand Guard) - Tech Ring
+    const guardGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.02, 8);
+    const guardMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8, roughness: 0.2 });
+    const guard = new THREE.Mesh(guardGeo, guardMat);
+    guard.position.y = 0.0;
+    this.mesh.add(guard);
+    
+    // 4. Hilt (Handle)
+    const hiltGeo = new THREE.CylinderGeometry(0.03, 0.04, 0.35, 8);
+    const hiltMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.9 });
+    const hilt = new THREE.Mesh(hiltGeo, hiltMat);
+    hilt.position.y = -0.18;
+    this.mesh.add(hilt);
+    
+    // Tech bits on handle
+    const pommelGeo = new THREE.CylinderGeometry(0.05, 0.04, 0.05, 6);
+    const pommel = new THREE.Mesh(pommelGeo, guardMat);
+    pommel.position.y = -0.37;
+    this.mesh.add(pommel);
+    
+    // Tip and Base markers for trail (Adjusted positions)
     this.tipMarker = new THREE.Object3D();
-    this.tipMarker.position.set(0, 1.2, 0);
-    blade.add(this.tipMarker);
+    this.tipMarker.position.set(0, 1.4, 0.03); // Tip of energy edge
+    this.mesh.add(this.tipMarker);
     
     this.baseMarker = new THREE.Object3D();
-    this.baseMarker.position.set(0, 0, 0);
-    blade.add(this.baseMarker);
+    this.baseMarker.position.set(0, 0.1, 0.03); // Base of energy edge
+    this.mesh.add(this.baseMarker);
 
     // Initial pose (In view model space)
     this.mesh.position.set(0.3, -0.4, -0.5);
@@ -104,6 +122,13 @@ export default class Sword extends BaseWeapon {
             this.isSwinging = false;
             this.animator.setState(WEAPON_STATES.IDLE);
         }
+    }
+
+    // Animate Energy Pulse
+    if (this.energyEdge) {
+        // Flickering energy effect
+        const pulse = 0.8 + Math.sin(Date.now() * 0.02) * 0.2 + (Math.random() * 0.1);
+        this.energyEdge.material.opacity = pulse;
     }
 
     // Update Trail

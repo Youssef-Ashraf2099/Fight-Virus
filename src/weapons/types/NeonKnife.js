@@ -28,61 +28,87 @@ class ThrowableKnife {
   createMesh() {
     const group = new THREE.Group();
 
-    // Knife blade (elongated diamond shape)
-    const bladeGeometry = new THREE.ConeGeometry(0.15, 1.2, 4);
-    const bladeMaterial = new THREE.MeshPhongMaterial({
-      color: this.color,
-      emissive: this.color,
-      emissiveIntensity: 1.2,
-      transparent: true,
-      opacity: 0.9,
-      shininess: 100,
+    // 1. Core Handle (Tech Grip)
+    const handleGeo = new THREE.CylinderGeometry(0.06, 0.08, 0.5, 8);
+    const handleMat = new THREE.MeshStandardMaterial({ 
+        color: 0x111111, 
+        roughness: 0.7,
+        metalness: 0.5 
     });
-
-    const blade = new THREE.Mesh(bladeGeometry, bladeMaterial);
-    blade.rotation.x = Math.PI / 2; // Point forward
-    blade.position.z = 0.3;
-    group.add(blade);
-
-    // Knife handle
-    const handleGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.4, 8);
-    const handleMaterial = new THREE.MeshPhongMaterial({
-      color: 0x0a0a0a,
-      metalness: 0.3,
-      roughness: 0.6,
-    });
-
-    const handle = new THREE.Mesh(handleGeometry, handleMaterial);
+    const handle = new THREE.Mesh(handleGeo, handleMat);
     handle.rotation.x = Math.PI / 2;
-    handle.position.z = -0.35;
+    handle.position.z = -0.4;
     group.add(handle);
 
-    // Handle accent rings
-    for (let i = 0; i < 3; i++) {
-      const ringGeometry = new THREE.TorusGeometry(0.09, 0.015, 8, 16);
-      const ringMaterial = new THREE.MeshPhongMaterial({
-        color: this.color,
+    // 2. Crossguard (Energy Emitter Halo) - Fixed to simple torus for now
+    const guardGeo = new THREE.TorusGeometry(0.12, 0.04, 8, 16);
+    const guardMat = new THREE.MeshPhongMaterial({
+        color: 0x444444,
         emissive: this.color,
-        emissiveIntensity: 0.8,
-      });
-      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-      ring.rotation.y = Math.PI / 2;
-      ring.position.z = -0.45 + i * 0.15;
-      group.add(ring);
+        emissiveIntensity: 0.5
+    });
+    const guard = new THREE.Mesh(guardGeo, guardMat);
+    guard.position.z = -0.15;
+    group.add(guard);
+
+    // 3. Main Blade (Split Design)
+    const bladeGeo = new THREE.BoxGeometry(0.1, 0.4, 0.04);
+    const bladeMat = new THREE.MeshStandardMaterial({
+        color: 0x222222,
+        metalness: 0.9,
+        roughness: 0.2
+    });
+    
+    // Top Half
+    const bladeTop = new THREE.Mesh(new THREE.ConeGeometry(0.08, 1.2, 4), bladeMat);
+    bladeTop.rotation.x = Math.PI / 2;
+    bladeTop.position.z = 0.5;
+    bladeTop.position.y = 0.06;
+    group.add(bladeTop);
+    
+    // Bottom Half
+    const bladeBot = new THREE.Mesh(new THREE.ConeGeometry(0.08, 1.2, 4), bladeMat);
+    bladeBot.rotation.x = Math.PI / 2;
+    bladeBot.position.z = 0.5;
+    bladeBot.position.y = -0.06;
+    group.add(bladeBot);
+
+    // 4. Energy Core (Glowing Center Stream)
+    const coreGeo = new THREE.BoxGeometry(0.02, 0.02, 1.0);
+    const coreMat = new THREE.MeshBasicMaterial({ 
+        color: this.color,
+        transparent: true,
+        opacity: 0.9
+    });
+    const energyCore = new THREE.Mesh(coreGeo, coreMat);
+    energyCore.position.z = 0.4;
+    group.add(energyCore);
+    
+    // 5. Rotating Bits (Floating Tech)
+    this.floaters = [];
+    const bitGeo = new THREE.BoxGeometry(0.03, 0.03, 0.03);
+    for(let i=0; i<4; i++) {
+        const bit = new THREE.Mesh(bitGeo, coreMat);
+        bit.position.set(0, 0.2, -0.4 + i*0.1);
+        bit.userData = { offset: i, axis: new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize() };
+        group.add(bit);
+        this.floaters.push(bit);
     }
 
+    // Energy trail visuals handled by particle system mostly, but we add a local glow plane
     // Energy trail glow
-    const glowGeometry = new THREE.PlaneGeometry(0.8, 0.3);
+    const glowGeometry = new THREE.PlaneGeometry(1.5, 0.6);
     const glowMaterial = new THREE.MeshBasicMaterial({
       color: this.color,
       transparent: true,
-      opacity: 0.4,
+      opacity: 0.3,
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
     });
 
     const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-    glow.position.z = 0.2;
+    glow.position.z = 0.1;
+    glow.rotation.x = Math.PI / 2; // Flat with blade
     group.add(glow);
     this.glowMesh = glow;
 
@@ -115,6 +141,18 @@ class ThrowableKnife {
       if (this.glowMesh) {
         const pulse = 0.3 + Math.sin(Date.now() * 0.01) * 0.15;
         this.glowMesh.material.opacity = pulse;
+      }
+      
+      // Animate Float Bits
+      if (this.floaters) {
+          const t = Date.now() * 0.005;
+          this.floaters.forEach(bit => {
+              const r = 0.15;
+              bit.position.x = Math.cos(t + bit.userData.offset) * r;
+              bit.position.y = Math.sin(t + bit.userData.offset) * r;
+              bit.rotation.x += 0.1;
+              bit.rotation.y += 0.1;
+          });
       }
     }
 

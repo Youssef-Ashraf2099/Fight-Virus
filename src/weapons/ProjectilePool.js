@@ -9,9 +9,9 @@ class ProjectilePool {
         let proj;
         if (this.pool.length > 0) {
             proj = this.pool.pop();
-            proj.reset(position, direction, speed, lifetime, color, damage, size);
+            proj.reset(position, direction, speed, lifetime, color || 0xffffff, damage, size);
         } else {
-            proj = new Projectile(scene, position, direction, speed, lifetime, color, damage, size);
+            proj = new Projectile(scene, position, direction, speed, lifetime, color || 0xffffff, damage, size);
         }
         return proj;
     }

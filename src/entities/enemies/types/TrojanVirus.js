@@ -35,64 +35,67 @@ export default class TrojanVirus extends BaseEnemy {
   }
 
   createMesh() {
-    // Create menacing geometric virus shape
-
-    // Core body - Dodecahedron
-    const coreGeometry = new THREE.DodecahedronGeometry(1.5, 0);
-    const coreMaterial = this.createGlowMaterial(this.color, 0.8);
-    this.mesh = new THREE.Mesh(coreGeometry, coreMaterial);
+    // Enhanced visuals: A spiked, glowing core with an orbiting data-shield
+    
+    // 1. Inner Core (Burning Heart)
+    const coreGeo = new THREE.IcosahedronGeometry(0.8, 1);
+    const coreMat = new THREE.MeshPhongMaterial({
+        color: 0xff0000,
+        emissive: 0xff4400,
+        emissiveIntensity: 1.5,
+        shininess: 100
+    });
+    this.innerCore = new THREE.Mesh(coreGeo, coreMat);
+    this.group.add(this.innerCore);
+    
+    // 2. Main Shell (Armored)
+    const shellGeo = new THREE.DodecahedronGeometry(1.4, 0);
+    const shellMat = new THREE.MeshStandardMaterial({
+        color: 0x440000,
+        roughness: 0.3,
+        metalness: 0.8,
+        wireframe: false
+    });
+    this.mesh = new THREE.Mesh(shellGeo, shellMat);
     this.mesh.castShadow = true;
     this.group.add(this.mesh);
-
-    // Spikes protruding from faces
+    
+    // 3. Spikes (Menacing)
     this.spikes = [];
-    const spikeGeometry = new THREE.ConeGeometry(0.3, 2, 8);
-    const spikeMaterial = this.createGlowMaterial(0xff3333, 1);
-
-    for (let i = 0; i < 12; i++) {
-      const spike = new THREE.Mesh(spikeGeometry, spikeMaterial);
-      const phi = Math.acos(-1 + (2 * i) / 12);
-      const theta = Math.sqrt(12 * Math.PI) * phi;
-
-      spike.position.set(
-        Math.cos(theta) * Math.sin(phi) * 2,
-        Math.cos(phi) * 2,
-        Math.sin(theta) * Math.sin(phi) * 2
-      );
-
-      spike.lookAt(0, 0, 0);
-      spike.rotateX(Math.PI);
-
-      this.spikes.push(spike);
-      this.group.add(spike);
-    }
-
-    // Inner rotating core
-    const innerCoreGeometry = new THREE.IcosahedronGeometry(0.8, 0);
-    const innerCoreMaterial = new THREE.MeshPhongMaterial({
-      color: 0xffff00,
-      emissive: 0xffff00,
-      emissiveIntensity: 1,
-      wireframe: true,
+    const spikeGeo = new THREE.ConeGeometry(0.15, 1.2, 6);
+    const spikeMat = new THREE.MeshPhongMaterial({ color: 0xcc0000, shininess: 80 });
+    
+    // Position spikes on faces of Dodecahedron (approximate centers)
+    const positions = [
+        [0, 1.4, 0], [0, -1.4, 0], 
+        [1.2, 0.6, 0], [-1.2, 0.6, 0], [1.2, -0.6, 0], [-1.2, -0.6, 0],
+        [0, 0.6, 1.2], [0, -0.6, 1.2], [0, 0.6, -1.2], [0, -0.6, -1.2]
+    ];
+    
+    positions.forEach(pos => {
+        const spike = new THREE.Mesh(spikeGeo, spikeMat);
+        spike.position.set(...pos);
+        spike.lookAt(0,0,0);
+        spike.rotateX(Math.PI); // Point outward
+        this.mesh.add(spike); // Parent to shell so they rotate with it
+        this.spikes.push(spike);
     });
-    this.innerCore = new THREE.Mesh(innerCoreGeometry, innerCoreMaterial);
-    this.group.add(this.innerCore);
+    
+    // 4. Data Shield Ring (Orbiting)
+    const ringGeo = new THREE.TorusGeometry(2.5, 0.05, 6, 32);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.6 });
+    this.shieldRing = new THREE.Mesh(ringGeo, ringMat);
+    this.shieldRing.rotation.x = Math.PI / 2;
+    this.group.add(this.shieldRing);
+    
+    const ringGeo2 = new THREE.TorusGeometry(2.0, 0.05, 6, 32);
+    this.shieldRing2 = new THREE.Mesh(ringGeo2, ringMat.clone());
+    this.shieldRing2.rotation.x = Math.PI / 2;
+    this.shieldRing2.rotation.y = Math.PI / 4;
+    this.group.add(this.shieldRing2);
 
-    // Energy field
-    const fieldGeometry = new THREE.IcosahedronGeometry(3, 1);
-    const fieldMaterial = new THREE.MeshPhongMaterial({
-      color: this.color,
-      emissive: this.color,
-      emissiveIntensity: 0.5,
-      transparent: true,
-      opacity: 0.2,
-      wireframe: true,
-    });
-    this.energyField = new THREE.Mesh(fieldGeometry, fieldMaterial);
-    this.group.add(this.energyField);
-
-    // Point light
-    this.light = new THREE.PointLight(this.color, 1.5, 10);
+    // Light
+    this.light = new THREE.PointLight(0xff0000, 2, 8);
     this.group.add(this.light);
 
     this.group.position.copy(this.position);
@@ -119,31 +122,22 @@ export default class TrojanVirus extends BaseEnemy {
     if (this.mesh) {
         this.mesh.rotation.x += deltaTime * 0.5;
         this.mesh.rotation.y += deltaTime * 0.8;
-        
-        // Pulse scale based on health
-        const healthRatio = this.health / this.maxHealth;
-        const scale = 1 + Math.sin(this.time * 2) * 0.1 * healthRatio;
-        this.mesh.scale.setScalar(scale);
     }
 
-    // Counter-rotate inner core
+    // Pulse core
     if (this.innerCore) {
-        this.innerCore.rotation.x -= deltaTime * 2;
-        this.innerCore.rotation.y -= deltaTime * 1.5;
+        const s = 0.8 + Math.sin(this.time * 5) * 0.2;
+        this.innerCore.scale.set(s, s, s);
     }
-
-    // Pulse spikes
-    if (this.spikes) {
-        this.spikes.forEach((spike, index) => {
-            const pulse = 1 + Math.sin(this.time * 3 + index) * 0.3;
-            spike.scale.y = pulse;
-        });
+    
+    // Rotate rings
+    if (this.shieldRing) {
+        this.shieldRing.rotation.z += deltaTime * 1.5;
+        this.shieldRing.rotation.x = Math.PI/2 + Math.sin(this.time)*0.2;
     }
-
-    // Rotate energy field
-    if (this.energyField) {
-        this.energyField.rotation.x += deltaTime * 0.3;
-        this.energyField.rotation.z += deltaTime * 0.5;
+    if (this.shieldRing2) {
+        this.shieldRing2.rotation.z -= deltaTime * 1.0;
+        this.shieldRing2.rotation.y += deltaTime * 0.2;
     }
   }
 

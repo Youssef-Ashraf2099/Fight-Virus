@@ -80,12 +80,12 @@ export default class CPUEnvironment extends BaseEnvironmentMap {
 
         // Enhanced sub-structures with circuit-like pattern
         ctx.fillStyle = "rgba(8, 30, 22, 0.45)";
-        const subdivisions = 4;
+        const subdivisions = 8; // Double complexity
         const subW = cellW / subdivisions;
         const subH = cellH / subdivisions;
         for (let sy = 0; sy < subdivisions; sy++) {
           for (let sx = 0; sx < subdivisions; sx++) {
-            if ((sx + sy) % 2 === 0) {
+            if ((sx + sy) % 3 === 0 || Math.random() > 0.8) {
               ctx.fillRect(
                 x + sx * subW + subW * 0.1,
                 y + sy * subH + subH * 0.1,
@@ -709,14 +709,14 @@ export default class CPUEnvironment extends BaseEnvironmentMap {
     });
     this.binarySprites = [];
 
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 150; i++) { // Increased from 60
       const texture = this.binaryTextures[i % this.binaryTextures.length];
       const sprite = new THREE.Sprite(materialFor(texture));
-      const radius = 46 + Math.random() * 18;
+      const radius = 46 + Math.random() * 25;
       const angle = Math.random() * Math.PI * 2;
       sprite.position.set(
         Math.cos(angle) * radius,
-        2 + Math.random() * 10,
+        2 + Math.random() * 20,
         Math.sin(angle) * radius
       );
       const scale = 1 + Math.random() * 0.8;

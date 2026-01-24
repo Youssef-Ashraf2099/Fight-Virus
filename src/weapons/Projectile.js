@@ -13,6 +13,7 @@ export default class Projectile {
   }
 
   static getMaterial(color) {
+    if (color === undefined || color === null) color = 0xffffff;
     const colorKey = color.toString();
     if (!this.materialPool.has(colorKey)) {
       this.materialPool.set(
@@ -62,6 +63,9 @@ export default class Projectile {
     this.mesh = null;
     this.light = null;
     
+    // Initialize position for createMesh
+    this.position = position.clone();
+
     // Create mesh once
     this.createMesh(size);
     
