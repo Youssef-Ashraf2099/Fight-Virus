@@ -3,16 +3,19 @@ import DetailedWeaponModels from "../../weapons/DetailedWeaponModels.js";
 import { createAudioElement } from "../../utils/audio.js";
 
 export default class Player {
-  constructor(scene, camera, environment) {
+  constructor(scene, camera, environment, weaponScene, weaponCamera) {
     this.scene = scene;
     this.camera = camera;
     this.environment = environment || null;
+    this.weaponScene = weaponScene || null;
+    this.weaponCamera = weaponCamera || null;
 
     // Stats - Balanced for challenging but fair gameplay
     this.maxHealth = 1500000000000000; // Increased for better survivability against multiple enemies // will increase for test purpose
     this.health = this.maxHealth;
     this.maxEnergy = 100;
     this.energy = this.maxEnergy;
+    this.fragments = 0; // Currency for Safe Mode Hub updates
 
     // Damage reduction and invulnerability frames
     this.damageReduction = 0; // Percentage damage reduction
@@ -178,7 +181,13 @@ export default class Player {
     this.weaponGroup.renderOrder = 2;
     this.weaponGroup.frustumCulled = false;
 
-    this.camera.add(this.weaponGroup);
+    this.weaponGroup.frustumCulled = false;
+
+    if (this.weaponCamera) {
+      this.weaponCamera.add(this.weaponGroup);
+    } else {
+      this.camera.add(this.weaponGroup);
+    }
 
     this.weaponLight = new THREE.PointLight(0x00ff99, 1.1, 4);
     this.weaponLight.castShadow = false;
@@ -274,7 +283,7 @@ export default class Player {
     console.log("✓ Damage indicator system initialized");
   }
 
-  setWeaponViewModel(weaponId) {
+  setWeaponViewModel(weaponId, weaponInstance) {
     if (!this.weaponGroup) return;
 
     // Clear reload tint from current weapon before switching
@@ -290,7 +299,18 @@ export default class Player {
     }
 
     if (!this.weaponModels[weaponId]) {
-      this.weaponModels[weaponId] = this.buildWeaponModel(weaponId);
+      if (weaponInstance && typeof weaponInstance.getWeaponMesh === 'function') {
+          // Injection for new Tech Art weapons (Sword)
+          const mesh = weaponInstance.getWeaponMesh();
+          this.weaponModels[weaponId] = {
+              group: mesh,
+              muzzle: null, // Sword handles its own vfx?
+              flash: null,
+              animate: null // Sword handles animation via WeaponHelper
+          };
+      } else {
+          this.weaponModels[weaponId] = this.buildWeaponModel(weaponId);
+      }
     }
 
     const modelData = this.weaponModels[weaponId];

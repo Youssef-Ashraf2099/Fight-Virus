@@ -252,6 +252,12 @@ export default class WaveManager {
       this.waveActive = false;
       this.bossActive = false;
       this.lastWaveHadBoss = this.bossFightTriggered;
+      
+      // Narrative End Trigger
+      if (this.currentWave >= 30) {
+          return "VICTORY";
+      }
+      
       return true; // Wave completed
     }
 

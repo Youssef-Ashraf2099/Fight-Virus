@@ -18,6 +18,8 @@ import Noise from "../bosses/Noise.js";
 import FirewallArchon from "../bosses/FirewallArchon.js";
 import NeuralOvermind from "../bosses/NeuralOvermind.js";
 import PacketHydra from "../bosses/PacketHydra.js";
+import InstancedEnemyRenderer from "../../rendering/InstancedEnemyRenderer.js";
+import { vec3Pool } from "../../utils/Vector3Pool.js";
 
 export default class EnemyManager {
   constructor(scene, particleSystem, environment) {
@@ -58,6 +60,11 @@ export default class EnemyManager {
       "neural-overmind": NeuralOvermind,
       "packet-hydra": PacketHydra,
     };
+
+    // Tech Art: Instanced Rendering System
+    this.instancedRenderer = new InstancedEnemyRenderer(scene);
+    this.instancedRenderer.init().catch(err => console.error("Instanced Renderer Failed:", err));
+    this.instancedTypes = new Set(["trojan", "adware"]);
   }
 
   setEnvironment(environment) {
@@ -86,7 +93,7 @@ export default class EnemyManager {
       return null;
     }
 
-    const spawnPosition = position ? position.clone() : new THREE.Vector3();
+    const spawnPosition = position ? position : vec3Pool.get(); // Zero alloc if pos provided
 
     if (this.lastPlayerPosition) {
       this._ensureSafeSpawnDistance(spawnPosition, this.lastPlayerPosition);
@@ -104,6 +111,7 @@ export default class EnemyManager {
       spawnPosition,
       this.particleSystem,
       difficulty,
+      this.instancedTypes.has(type) ? { isInstanced: true } : {}
     );
 
     if (enemy) {
@@ -145,8 +153,8 @@ export default class EnemyManager {
     }
 
     const spawnPosition = position
-      ? position.clone()
-      : new THREE.Vector3(0, 0, 0);
+      ? position
+      : vec3Pool.get(0, 0, 0);
 
     // Bosses spawn at map center, adjust for floor height
     if (this.environment) {
@@ -198,10 +206,12 @@ export default class EnemyManager {
         delaySeconds,
       );
     } else {
-      // Fallback: main thread queue
       this.spawnQueue.push({
         type,
-        position: position ? position.clone() : new THREE.Vector3(),
+        // Store primitive nums to avoid holding vector refs in queue
+        x: position.x || 0,
+        y: position.y || 0,
+        z: position.z || 0,
         difficulty,
         delay: Math.max(0, delaySeconds),
       });
@@ -245,13 +255,13 @@ export default class EnemyManager {
       const angle = (i / count) * Math.PI * 2;
       const spawnRadius = radius + Math.random() * 10;
 
-      // Reuse temp vector
-      this._tempSpawnPos.set(
-        Math.cos(angle) * spawnRadius,
-        0,
-        Math.sin(angle) * spawnRadius,
-      );
-      const position = this._tempSpawnPos.clone();
+      // Use Pool - No allocation
+      const px = Math.cos(angle) * spawnRadius;
+      const pz = Math.sin(angle) * spawnRadius;
+      // We pass the raw values to queueSpawn which now expects vec3 or saves primitives
+      // Actually queueSpawn takes a Vector3 input in signature.
+      // Let's use a temp pool vector.
+      const position = vec3Pool.get(px, 0, pz);
 
       const randomType =
         allowedTypes[Math.floor(Math.random() * allowedTypes.length)];
@@ -263,6 +273,11 @@ export default class EnemyManager {
   }
 
   update(deltaTime, playerPosition) {
+    // Reset pool at start of frame update (EnemyManager is updated once per frame)
+    // WARN: vectors retrieved from pool are only valid for THIS frame.
+    // If we need to persist, we must clone or store primitives (like in queueSpawn).
+    vec3Pool.reset();
+    
     // Reuse temp vector to avoid allocation
     if (!this._tempPlayerPos) this._tempPlayerPos = new THREE.Vector3();
     if (playerPosition) {
@@ -329,7 +344,7 @@ export default class EnemyManager {
           continue;
         }
 
-        const spawnPosition = request.position.clone();
+        const spawnPosition = vec3Pool.get(request.x, request.y, request.z);
         if (playerPosition) {
           this._ensureSafeSpawnDistance(spawnPosition, playerPosition);
         }
@@ -387,6 +402,10 @@ export default class EnemyManager {
 
     // Optional: Track kill count for debugging
     // const killed = aliveBefore - this.enemies.length;
+
+    if (this.instancedRenderer) {
+        this.instancedRenderer.update(this.enemies, playerPosition);
+    }
   }
 
   getEnemies() {

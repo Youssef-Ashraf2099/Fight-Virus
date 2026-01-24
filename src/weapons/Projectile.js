@@ -57,7 +57,25 @@ export default class Projectile {
     }
 
     this.scene = scene;
-    this.position = position.clone();
+    this._stepVector = new THREE.Vector3();
+    this._previousPosition = new THREE.Vector3();
+    this.mesh = null;
+    this.light = null;
+    
+    // Create mesh once
+    this.createMesh(size);
+    
+    // Initialize state
+    this.reset(position, direction, speed, lifetime, color, damage, size);
+  }
+
+  reset(position, direction, speed, lifetime, color, damage, size = 0.5) {
+    if (!position || !direction) {
+        console.error("Projectile reset failed: invalid args");
+        return;
+    }
+    
+    this.position = position.clone(); // Clone to avoid ref issues if source changes
     this.velocity = direction.clone().normalize().multiplyScalar(speed);
     this.lifetime = lifetime;
     this.maxLifetime = lifetime;
@@ -65,12 +83,22 @@ export default class Projectile {
     this.damage = damage;
     this.collisionRadius = size;
     this.heightPadding = size * 0.6;
-    this.particleSystem = null;
     this.destroyed = false;
-    this._stepVector = new THREE.Vector3();
-    this._previousPosition = new THREE.Vector3();
-
-    this.createMesh(size);
+    
+    // Reactivate mesh
+    if (!this.mesh) {
+        this.createMesh(size);
+    }
+    
+    this.mesh.visible = true;
+    this.mesh.position.copy(this.position);
+    this.mesh.material.color.setHex(color);
+    this.mesh.material.emissive.setHex(color);
+    this.mesh.material.opacity = 0.9;
+    
+    if (this.light) {
+        this.light.color.setHex(color);
+    }
   }
 
   createMesh(size) {
@@ -135,24 +163,15 @@ export default class Projectile {
   }
 
   destroy() {
-    if (this.destroyed) {
-      return;
-    }
+    // Just deactivate for pooling
+    if (this.destroyed) return;
     this.destroyed = true;
-
-    if (this.light && this.mesh) {
-      this.mesh.remove(this.light);
-    }
-
+    
     if (this.mesh) {
-      this.scene.remove(this.mesh);
-      // OPTIMIZATION: Don't dispose pooled resources - they're shared
-      // this.mesh.geometry.dispose(); // Shared from static pool
-      // this.mesh.material.dispose(); // Shared from static pool
-      this.mesh = null;
+        this.mesh.visible = false;
+        // Move away to prevent lingering collisions or rendering artifacts
+        this.mesh.position.set(0, -1000, 0); 
     }
-
-    this.light = null;
   }
 
   _handleImpact(position) {

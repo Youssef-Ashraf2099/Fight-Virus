@@ -4,14 +4,18 @@ import ShockwaveEmitter from "./types/ShockwaveEmitter.js";
 import PlasmaLauncher from "./types/PlasmaLauncher.js";
 import Revolver from "./types/Revolver.js";
 import SciFiSword from "./types/SciFiSword.js";
+import Sword from "../entities/weapons/Sword.js";
 import NeonKnife from "./types/NeonKnife.js";
+import { projectilePool } from "./ProjectilePool.js";
 
 class WeaponManager {
-  constructor(scene, player, particleSystem, environment) {
+  constructor(scene, player, particleSystem, environment, weaponScene, weaponCamera) {
     this.scene = scene;
     this.player = player;
     this.particleSystem = particleSystem;
     this.environment = environment || null;
+    this.weaponScene = weaponScene;
+    this.weaponCamera = weaponCamera;
     this.enemyManager = null; // Will be set later for melee weapons
 
     this.weaponDefinitions = {
@@ -29,7 +33,7 @@ class WeaponManager {
       },
       sciFiSword: {
         order: 3,
-        create: () => new SciFiSword(scene, particleSystem),
+        create: () => new Sword(scene, particleSystem, this.weaponCamera), // Use new Tech Art Sword
       },
       neonKnife: {
         order: 4,
@@ -77,7 +81,7 @@ class WeaponManager {
         current.onEquip();
       }
       if (this.player?.setWeaponViewModel && current) {
-        this.player.setWeaponViewModel(current.viewModelId || current.name);
+        this.player.setWeaponViewModel(current.viewModelId || current.name, current);
         this.player.updateWeaponHUD?.(current);
       }
       return;
@@ -90,7 +94,7 @@ class WeaponManager {
     }
 
     if (this.player?.setWeaponViewModel && weapon) {
-      this.player.setWeaponViewModel(weapon.viewModelId || weapon.name);
+      this.player.setWeaponViewModel(weapon.viewModelId || weapon.name, weapon);
       this.player.updateWeaponHUD?.(weapon);
     }
   }
@@ -229,15 +233,15 @@ class WeaponManager {
 
         if (updateResult === false) {
           if (typeof proj.destroy === "function") {
-            proj.destroy();
+            // proj.destroy() is called inside release if needed, but safe to call here or let release handle it
+            // checking implementation: release calls destroy().
+            projectilePool.release(proj);
           }
           continue;
         }
 
         if (typeof proj.isExpired === "function" && proj.isExpired()) {
-          if (typeof proj.destroy === "function") {
-            proj.destroy();
-          }
+          projectilePool.release(proj);
           continue;
         }
 
@@ -245,7 +249,7 @@ class WeaponManager {
       } catch (error) {
         // Defensive: prevent a single bad projectile from stalling the frame
         if (typeof proj?.destroy === "function") {
-          proj.destroy();
+           projectilePool.release(proj);
         }
         // Optionally log in dev mode
         if (process.env.NODE_ENV !== "production") {

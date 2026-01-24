@@ -13,6 +13,10 @@ import EnemyManager from "../entities/enemies/EnemyManager.js";
 import WaveManager from "../systems/WaveManager.js";
 import UpgradeManager from "./UpgradeManager.js";
 import SpectatorMode from "./SpectatorMode.js";
+import BIT from "../entities/companions/BIT.js";
+import HubSystem from "./HubSystem.js";
+import CorruptionPass from "../rendering/CorruptionPass.js";
+import CutsceneManager from "../systems/CutsceneManager.js";
 import DetailedWeaponModels from "../weapons/DetailedWeaponModels.js";
 import { createAudioElement } from "../utils/audio.js";
 import SaveManager from "./SaveManager.js";
@@ -23,6 +27,7 @@ import {
   withTempVector3,
   withTempVectors3,
 } from "../utils/ObjectPool.js";
+import { vec3Pool } from "../utils/Vector3Pool.js"; // Global linear pool
 import { profiler } from "../utils/PerformanceProfiler.js";
 
 class GameMain {
@@ -51,6 +56,16 @@ class GameMain {
         1000,
       );
       this.scene.add(this.camera); // ensure weapon viewmodel renders
+
+      // Technical Art: Separate Weapon Layer
+      this.weaponScene = new THREE.Scene();
+      this.weaponCamera = new THREE.PerspectiveCamera(
+        75, 
+        window.innerWidth / window.innerHeight, 
+        0.01, 
+        10
+      );
+      this.weaponScene.add(this.weaponCamera);
 
       // console.log("Getting canvas element...");
       const canvas = document.getElementById("gameCanvas");
@@ -240,7 +255,8 @@ class GameMain {
     }
 
     // Create player (FPS mode - player controls camera)
-    this.player = new Player(this.scene, this.camera, this.environment);
+    // Create player (FPS mode - player controls camera)
+    this.player = new Player(this.scene, this.camera, this.environment, this.weaponScene, this.weaponCamera);
 
     // Create weapon system
     this.weaponManager = new WeaponManager(
@@ -248,6 +264,8 @@ class GameMain {
       this.player,
       this.particleSystem,
       this.environment,
+      this.weaponScene,
+      this.weaponCamera
     );
 
     // Create enemy manager
@@ -280,6 +298,16 @@ class GameMain {
 
     // Create upgrade manager for post-boss rewards
     this.upgradeManager = new UpgradeManager(this.player, this.weaponManager);
+
+    // Create BIT companion
+    this.bit = new BIT(this.scene, this.player);
+    
+    // Hub & Progression
+    this.hubSystem = new HubSystem(this.player, this.uiManager);
+    this.uiManager.setHubSystem(this.hubSystem);
+    
+    // Corruption Shader
+    this.corruptionPass = new CorruptionPass();
 
     // Create learn mode manager
     this.spectatorMode = new SpectatorMode(
@@ -739,12 +767,84 @@ class GameMain {
     }
   }
 
-  quitToMainMenu() {
+  playIntroCutscene() {
+      const sequence = [
+          { duration: 4, text: "SYSTEM REBOOT INITIATED...", cameraPos: new THREE.Vector3(0, 50, 50), cameraLookAt: new THREE.Vector3(0, 0, 0) },
+          { duration: 4, text: "VIRAL INFECTION DETECTED", cameraPos: new THREE.Vector3(20, 20, 20), cameraLookAt: new THREE.Vector3(0, 0, 0) },
+          { duration: 3, text: "LOADING DEFENSE PROTOCOLS...", cameraPos: new THREE.Vector3(0, 1.8, 0), cameraLookAt: new THREE.Vector3(0, 1.8, -10) }
+      ];
+      
+      this.cutsceneManager.onComplete = () => {
+          this.hideLoadingOverlay();
+          this.showMainMenu();
+      };
+      
+      this.cutsceneManager.startSequence(sequence);
+  }
+
+  showMainMenu() {
     this.uiManager?.hidePauseMenu?.();
     this.isPaused = false;
     this.pausedAudioShouldResume = false;
     this.wasRunningBeforePause = false;
     this.wasFullscreenBeforePause = false;
+
+    // Update continue button visibility
+    const continueButton = document.getElementById("continueButton");
+    const continueHint = document.getElementById("continueHint");
+    if (continueButton && this.saveManager) {
+      if (this.saveManager.hasCheckpoint()) {
+        continueButton.style.display = "inline-flex";
+        const checkpointInfo = this.saveManager.getCheckpointInfo();
+        if (checkpointInfo && continueHint) {
+          continueHint.textContent = `Wave ${
+            checkpointInfo.wave
+          } • ${checkpointInfo.score.toLocaleString()} pts • ${
+            checkpointInfo.timeAgo
+          }`;
+          continueHint.style.display = "block";
+        }
+      } else {
+        continueButton.style.display = "none";
+        if (continueHint) {
+          continueHint.style.display = "none";
+        }
+      }
+    }
+
+    const startScreen = document.getElementById("startScreen");
+    if (startScreen) {
+      startScreen.style.display = "flex";
+    }
+
+    const hud = document.getElementById("hud");
+    if (hud) {
+      hud.style.display = "none";
+    }
+
+    const scoreEl = document.getElementById("score");
+    if (scoreEl) {
+      scoreEl.style.display = "none";
+    }
+
+    const weaponInfo = document.getElementById("weaponInfo");
+    if (weaponInfo) {
+      weaponInfo.style.display = "none";
+    }
+
+    const minimap = document.getElementById("minimap");
+    if (minimap) {
+      minimap.style.display = "none";
+    }
+
+    const crosshair = document.getElementById("crosshair");
+    if (crosshair) {
+      crosshair.style.display = "none";
+    }
+  }
+
+  quitToMainMenu() {
+    console.log("GameMain: quitting to main menu");
 
     this.releasePointerLock();
 
@@ -788,58 +888,7 @@ class GameMain {
 
     this.spectatorMode?.stop?.();
 
-    const startScreen = document.getElementById("startScreen");
-    if (startScreen) {
-      startScreen.style.display = "flex";
-    }
-
-    // Update continue button visibility
-    const continueButton = document.getElementById("continueButton");
-    const continueHint = document.getElementById("continueHint");
-    if (continueButton && this.saveManager) {
-      if (this.saveManager.hasCheckpoint()) {
-        continueButton.style.display = "inline-flex";
-        const checkpointInfo = this.saveManager.getCheckpointInfo();
-        if (checkpointInfo && continueHint) {
-          continueHint.textContent = `Wave ${
-            checkpointInfo.wave
-          } • ${checkpointInfo.score.toLocaleString()} pts • ${
-            checkpointInfo.timeAgo
-          }`;
-          continueHint.style.display = "block";
-        }
-      } else {
-        continueButton.style.display = "none";
-        if (continueHint) {
-          continueHint.style.display = "none";
-        }
-      }
-    }
-
-    const hud = document.getElementById("hud");
-    if (hud) {
-      hud.style.display = "none";
-    }
-
-    const scoreEl = document.getElementById("score");
-    if (scoreEl) {
-      scoreEl.style.display = "none";
-    }
-
-    const weaponInfo = document.getElementById("weaponInfo");
-    if (weaponInfo) {
-      weaponInfo.style.display = "none";
-    }
-
-    const minimap = document.getElementById("minimap");
-    if (minimap) {
-      minimap.style.display = "none";
-    }
-
-    const crosshair = document.getElementById("crosshair");
-    if (crosshair) {
-      crosshair.style.display = "none";
-    }
+    this.showMainMenu();
   }
 
   exitGame() {
@@ -1311,19 +1360,37 @@ class GameMain {
         // Restore wave and environment
         const startWave = (checkpoint.wave || 1) + 1; // Start at next wave
         console.log(`Restoring to wave ${startWave}...`);
-
         // Set wave manager to correct wave
         this.waveManager.currentWave = checkpoint.wave || 1;
         this.waveManager.difficulty = checkpoint.difficulty || 1;
 
-        // Set environment phase
+        // Create BIT companion
+    this.bit = new BIT(this.scene, this.player);
+    
+    // Hub & Progression
+    this.hubSystem = new HubSystem(this.player, this.uiManager);
+    this.uiManager.setHubSystem(this.hubSystem);
+    
+    // Corruption Shader
+    this.corruptionPass = new CorruptionPass();
+
+    // Create cutscene manager
+    this.cutsceneManager = new CutsceneManager(this.scene, this.camera, this.uiManager, this.inputManager);
+
+    // Initial environment phase setup
         const phaseIndex = checkpoint.phaseIndex || 0;
         this.environment.setPhase(phaseIndex);
         this.environment.setInteractiveMode(true);
-
-        // Start next wave
-        this.waveManager.startWave();
-        this.environment.setPhaseByWave(this.waveManager.getCurrentWave());
+        
+    // Performance: Force preload critical maps before starting
+    if (this.environment.waitForCriticalMaps) {
+        this.environment.waitForCriticalMaps(() => {
+            console.log("Maps ready. Starting Intro...");
+            this.playIntroCutscene();
+        });
+    } else {
+        this.playIntroCutscene();
+    }    this.environment.setPhaseByWave(this.waveManager.getCurrentWave());
 
         // Update UI
         this.uiManager.updateScore(this.score);
@@ -1491,6 +1558,12 @@ class GameMain {
   }
 
   update(deltaTime) {
+    // Cutscene Update
+    if (this.cutsceneManager && this.cutsceneManager.isActive) {
+        this.cutsceneManager.update(deltaTime);
+        return; // Skip game logic during cutscene
+    }
+
     // Update learn mode if active
     if (this.spectatorMode && this.spectatorMode.isActive()) {
       this.spectatorMode.update(deltaTime);
@@ -1587,6 +1660,15 @@ class GameMain {
       this.onWaveComplete();
     }
     this.profiler.endOperation("wave-manager");
+
+    this.profiler.endOperation("wave-manager");
+
+    // Update BIT
+    if (this.bit) {
+        this.bit.update(cappedDelta);
+        const unsafe = this.enemyManager.getActiveEnemyCount() > 0 || !this.player.isGrounded; // Unsafe if enemies or mid-air (parkour hint)
+        this.bit.setSafe(!unsafe);
+    }
 
     if (this.player.health <= 0) {
       this.gameOver();
@@ -2249,12 +2331,39 @@ class GameMain {
 
     // Frame profiling around update + render
     this.profiler.startFrame();
+    
+    // Reset Linear Vector Pool for this frame
+    vec3Pool.reset();
 
     this.update(clampedDelta);
 
     this.profiler.startOperation("render");
+    this.profiler.startOperation("render");
     this.renderer.render(this.scene, this.camera);
+
+    // Weapon Layer Render
+    if (this.weaponScene && this.weaponCamera) {
+      this.weaponCamera.position.copy(this.camera.position);
+      this.weaponCamera.quaternion.copy(this.camera.quaternion);
+      
+      this.renderer.autoClear = false;
+      this.renderer.clearDepth();
+      this.renderer.render(this.weaponScene, this.weaponCamera);
+      this.renderer.autoClear = true;
+    }
+
     this.profiler.endOperation("render");
+    
+    // Update Corruption Effect
+    if (this.corruptionPass) {
+        let corruptionLevel = 1.0;
+        if (this.hubSystem) {
+            if (this.hubSystem.isUnlocked('minimap')) corruptionLevel -= 0.3;
+            if (this.hubSystem.isUnlocked('healthBars')) corruptionLevel -= 0.3;
+            if (this.hubSystem.isUnlocked('damageIndicators')) corruptionLevel -= 0.3;
+        }
+        this.corruptionPass.update(clampedDelta, Math.max(0.1, corruptionLevel));
+    }
 
     // OPTIMIZATION: Render health bars with frustum culling
     if (this.healthBarCanvas && this.healthBarContext) {

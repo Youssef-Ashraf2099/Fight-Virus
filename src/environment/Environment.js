@@ -596,27 +596,42 @@ export default class Environment {
   }
 
   // OPTIMIZATION: Wait for critical maps to preload before gameplay
+  // OPTIMIZATION: Wait for critical maps to preload before gameplay
+  // Now supports a 'force' mode to block until done
   waitForCriticalMaps(callback) {
     if (this.preloadComplete) {
       callback();
-    } else {
-      this.preloadCallbacks.push(callback);
-      console.log("⏳ Waiting for critical maps to preload...");
-
-      // SAFETY: Timeout fallback in case preload fails
-      setTimeout(() => {
-        if (!this.preloadComplete) {
-          console.warn(
-            `⚠️ Preload timeout after 10s - ${this.criticalMapsLoaded}/${this.criticalMapCount} loaded`,
-          );
-          console.warn("   Starting game anyway to prevent infinite loading");
-          this.preloadComplete = true;
-          this.gameplayStarted = true; // Mark gameplay phase
-          this.preloadCallbacks.forEach((cb) => cb());
-          this.preloadCallbacks = [];
-        }
-      }, 10000); // 10 second timeout for all maps
+      return;
     }
+    
+    console.log("⏳ Waiting for critical maps to preload... Forcing synchronous build.");
+    
+    // Force build remaining maps immediately to prevent gameplay stutter
+    while(this._preloadQueue.length > 0) {
+        const { config } = this._preloadQueue.shift();
+        if (!this.mapCache.has(config.key)) {
+             try {
+                const map = config.factory();
+                // console.log(`   ⚙️ Force-Preloading ${config.key}...`);
+                if (profiler?.startOperation) profiler.startOperation("env-preload-force");
+                map.build(this.mapGroup);
+                if (profiler?.endOperation) profiler.endOperation("env-preload-force");
+                
+                if (map.group) map.group.visible = false;
+                if (typeof map.onExit === "function") map.onExit();
+                
+                this.mapCache.set(config.key, { map });
+                this.criticalMapsLoaded++;
+             } catch(e) {
+                 console.error(`Failed to force build ${config.key}`, e);
+             }
+        }
+    }
+    
+    this.preloadComplete = true;
+    this.gameplayStarted = true;
+    console.log("   🎉 Forced Preload Complete.");
+    callback();
   }
 
   updateBackground(deltaTime) {

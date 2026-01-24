@@ -73,7 +73,7 @@ export default class RetroTerminalEnvironment extends BaseEnvironmentMap {
       deckMaterial
     );
     keyDeck.position.set(0, 3, 2);
-    keyDeck.castShadow = true;
+    keyDeck.castShadow = false;
     this.group.add(keyDeck);
 
     const deckRiser = new THREE.Mesh(
@@ -81,7 +81,7 @@ export default class RetroTerminalEnvironment extends BaseEnvironmentMap {
       deckMaterial.clone()
     );
     deckRiser.position.set(0, 2.4, -9.5);
-    deckRiser.castShadow = true;
+    deckRiser.castShadow = false;
     this.group.add(deckRiser);
 
     [-24, -12, 0, 12, 24].forEach((x) => {
@@ -95,7 +95,7 @@ export default class RetroTerminalEnvironment extends BaseEnvironmentMap {
         })
       );
       support.position.set(x, 2.1, 2); // seats the keys visually into the deck
-      support.castShadow = true;
+      support.castShadow = false;
       this.group.add(support);
     });
 

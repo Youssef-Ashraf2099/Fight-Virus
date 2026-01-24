@@ -2,8 +2,9 @@ import * as THREE from "three";
 import BaseEnemy from "../BaseEnemy.js";
 
 export default class AdwareVirus extends BaseEnemy {
-  constructor(scene, position, particleSystem, difficulty = 1) {
+  constructor(scene, position, particleSystem, difficulty = 1, options = {}) {
     super(scene, position, particleSystem, difficulty);
+    this.typeId = "AdwareVirus";
 
     // Adware stats - Swarm behavior, weak individually, fast melee
     this.maxHealth = 50 * difficulty;
@@ -19,7 +20,14 @@ export default class AdwareVirus extends BaseEnemy {
     this.attackType = "melee";
     this.attackRange = 2.5;
 
-    this.createMesh();
+    if (options.isInstanced) {
+        this.isInstanced = true;
+        this.group = new THREE.Object3D();
+        this.group.position.copy(this.position);
+        this.scene.add(this.group);
+    } else {
+        this.createMesh();
+    }
   }
 
   createMesh() {
@@ -99,41 +107,63 @@ export default class AdwareVirus extends BaseEnemy {
   }
 
   animate(deltaTime) {
+    // If instanced, we don't have individual mesh parts to animate.
+    // The visual rotation is handled by InstancedEnemyRenderer (if implemented to read rotation).
+    // Or we rotate the group object which might be used by the renderer for positioning/orienting.
+    if (this.isInstanced) {
+        if (this.group) {
+            // Just rotate the "logical" group representation if needed for gameplay logic (facing)
+            // (e.g. if gameplay raycasts check group orientation)
+            this.group.rotation.z = Math.sin(this.time * 2) * 0.1;
+        }
+        return;
+    }
+
     // Billboard always faces camera (would face player in full implementation)
     // For now, just rotate slowly
-    this.mesh.rotation.z = Math.sin(this.time * 2) * 0.1;
-
-    // Pulse size (annoying!)
-    const scale = 1 + Math.sin(this.time * 4) * 0.2;
-    this.mesh.scale.setScalar(scale);
+    if (this.mesh) {
+        this.mesh.rotation.z = Math.sin(this.time * 2) * 0.1;
+        
+        // Pulse size (annoying!)
+        const scale = 1 + Math.sin(this.time * 4) * 0.2;
+        this.mesh.scale.setScalar(scale);
+    }
 
     // Exclamation mark bounce
-    this.exclamation.position.y = 0.2 + Math.abs(Math.sin(this.time * 5)) * 0.3;
+    if (this.exclamation) {
+        this.exclamation.position.y = 0.2 + Math.abs(Math.sin(this.time * 5)) * 0.3;
+    }
 
     // Flash frame
-    this.frame.material.emissiveIntensity = 0.5 + Math.sin(this.time * 6) * 0.3;
+    if (this.frame && this.frame.material) {
+        this.frame.material.emissiveIntensity = 0.5 + Math.sin(this.time * 6) * 0.3;
+    }
 
     // Spin corners
-    this.corners.forEach((corner, index) => {
-      corner.rotation.z += deltaTime * 5;
-      const offset = Math.sin(this.time * 3 + index) * 0.2;
-      corner.scale.setScalar(1 + offset);
-    });
+    if (this.corners) {
+        this.corners.forEach((corner, index) => {
+            corner.rotation.z += deltaTime * 5;
+            const offset = Math.sin(this.time * 3 + index) * 0.2;
+            corner.scale.setScalar(1 + offset);
+        });
+    }
 
     // Spam particles orbit chaotically
-    this.spamParticles.forEach((spam, index) => {
-      const angle = spam.userData.angle + this.time * spam.userData.speed;
-      const radius = 2 + Math.sin(this.time * 2 + index) * 0.5;
+    if (this.spamParticles) {
+        this.spamParticles.forEach((spam, index) => {
+            const angle = spam.userData.angle + this.time * spam.userData.speed;
+            const radius = 2 + Math.sin(this.time * 2 + index) * 0.5;
 
-      spam.position.set(
-        Math.cos(angle) * radius,
-        Math.sin(angle * 2) * 1.5,
-        Math.sin(angle) * radius
-      );
+            spam.position.set(
+                Math.cos(angle) * radius,
+                Math.sin(angle * 2) * 1.5,
+                Math.sin(angle) * radius
+            );
 
-      spam.rotation.x += deltaTime * 10;
-      spam.rotation.y += deltaTime * 8;
-    });
+            spam.rotation.x += deltaTime * 10;
+            spam.rotation.y += deltaTime * 8;
+        });
+    }
   }
 
   updateBehavior(deltaTime, playerPosition) {

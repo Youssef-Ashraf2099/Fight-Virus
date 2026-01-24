@@ -2,6 +2,7 @@ import * as THREE from "three";
 
 import Projectile from "../Projectile.js";
 import BaseWeapon from "../BaseWeapon.js";
+import { projectilePool } from "../ProjectilePool.js";
 
 class PulseCannon extends BaseWeapon {
   constructor(scene, particleSystem) {
@@ -63,7 +64,8 @@ class PulseCannon extends BaseWeapon {
     // Muzzle flash effect
     this.particleSystem.createMuzzleFlash(origin, this.projectileColor);
 
-    return new Projectile(
+    // Use Pool
+    return projectilePool.get(
       this.scene,
       origin,
       direction,

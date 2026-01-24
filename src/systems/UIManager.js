@@ -50,6 +50,12 @@ export default class UIManager {
       this.minimapCanvas.width = this.minimapSize;
       this.minimapCanvas.height = this.minimapSize;
     }
+    
+    this.hubSystem = null;
+  }
+  
+  setHubSystem(hubSystem) {
+      this.hubSystem = hubSystem;
   }
 
   updateHealth(current, max) {
@@ -534,6 +540,19 @@ export default class UIManager {
 
   updateMinimap(playerPosition, enemies, phaseName) {
     if (!this.minimapCtx || !playerPosition) return;
+    
+    // Check unlock status
+    if (this.hubSystem && !this.hubSystem.isUnlocked('minimap')) {
+        // Draw locked state?
+        const ctx = this.minimapCtx;
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, this.minimapSize, this.minimapSize);
+        ctx.fillStyle = "red";
+        ctx.font = "12px Courier";
+        ctx.textAlign = "center";
+        ctx.fillText("MINIMAP OFFLINE", this.minimapSize/2, this.minimapSize/2);
+        return;
+    }
 
     const ctx = this.minimapCtx;
     const centerX = this.minimapSize / 2;

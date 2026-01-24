@@ -2,8 +2,9 @@ import * as THREE from "three";
 import BaseEnemy from "../BaseEnemy.js";
 
 export default class TrojanVirus extends BaseEnemy {
-  constructor(scene, position, particleSystem, difficulty = 1) {
+  constructor(scene, position, particleSystem, difficulty = 1, options = {}) {
     super(scene, position, particleSystem, difficulty);
+    this.typeId = "TrojanVirus";
 
     // Trojan stats - Heavy, slow, high damage charger
     this.maxHealth = 180 * difficulty;
@@ -21,7 +22,16 @@ export default class TrojanVirus extends BaseEnemy {
     this.chargeSpeed = 10; // Fast charge speed
     this.isCharging = false;
 
-    this.createMesh();
+    if (options.isInstanced) {
+        this.isInstanced = true;
+        this.group = new THREE.Object3D();
+        this.group.position.copy(this.position);
+        // We add the group to scene so we can animate it (rotation/scale) and use it for logic position tracking
+        // Object3D is invisible so no draw call.
+        this.scene.add(this.group);
+    } else {
+        this.createMesh();
+    }
   }
 
   createMesh() {
@@ -90,28 +100,51 @@ export default class TrojanVirus extends BaseEnemy {
   }
 
   animate(deltaTime) {
+    if (this.isInstanced) {
+        if (this.group) {
+            // Apply basic rotation to the group so the instanced renderer can pick it up
+            this.group.rotation.x += deltaTime * 0.5;
+            this.group.rotation.y += deltaTime * 0.8;
+            
+            // Pulse scale simulation for renderer to read
+            // InstancedRenderer must copy group.scale
+            const healthRatio = this.health / this.maxHealth;
+            const scale = 1 + Math.sin(this.time * 2) * 0.1 * healthRatio;
+            this.group.scale.setScalar(scale);
+        }
+        return;
+    }
+
     // Rotate main body
-    this.mesh.rotation.x += deltaTime * 0.5;
-    this.mesh.rotation.y += deltaTime * 0.8;
+    if (this.mesh) {
+        this.mesh.rotation.x += deltaTime * 0.5;
+        this.mesh.rotation.y += deltaTime * 0.8;
+        
+        // Pulse scale based on health
+        const healthRatio = this.health / this.maxHealth;
+        const scale = 1 + Math.sin(this.time * 2) * 0.1 * healthRatio;
+        this.mesh.scale.setScalar(scale);
+    }
 
     // Counter-rotate inner core
-    this.innerCore.rotation.x -= deltaTime * 2;
-    this.innerCore.rotation.y -= deltaTime * 1.5;
+    if (this.innerCore) {
+        this.innerCore.rotation.x -= deltaTime * 2;
+        this.innerCore.rotation.y -= deltaTime * 1.5;
+    }
 
     // Pulse spikes
-    this.spikes.forEach((spike, index) => {
-      const pulse = 1 + Math.sin(this.time * 3 + index) * 0.3;
-      spike.scale.y = pulse;
-    });
+    if (this.spikes) {
+        this.spikes.forEach((spike, index) => {
+            const pulse = 1 + Math.sin(this.time * 3 + index) * 0.3;
+            spike.scale.y = pulse;
+        });
+    }
 
     // Rotate energy field
-    this.energyField.rotation.x += deltaTime * 0.3;
-    this.energyField.rotation.z += deltaTime * 0.5;
-
-    // Pulse scale based on health
-    const healthRatio = this.health / this.maxHealth;
-    const scale = 1 + Math.sin(this.time * 2) * 0.1 * healthRatio;
-    this.mesh.scale.setScalar(scale);
+    if (this.energyField) {
+        this.energyField.rotation.x += deltaTime * 0.3;
+        this.energyField.rotation.z += deltaTime * 0.5;
+    }
   }
 
   updateBehavior(deltaTime, playerPosition) {

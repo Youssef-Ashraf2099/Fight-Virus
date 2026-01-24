@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import GPUParticles from "./GPUParticles.js";
 
 export default class ParticleSystem {
   constructor(scene) {
@@ -20,6 +21,9 @@ export default class ParticleSystem {
 
     // Defer particle creation to spread allocations across frames
     this._pendingAdds = [];
+    
+    // Tech Art: GPU Particle System
+    this.gpuParticles = new GPUParticles(scene);
   }
 
   // OPTIMIZATION: Get or create material from pool
@@ -41,29 +45,8 @@ export default class ParticleSystem {
   }
 
   createExplosion(position, color, count = 20) {
-    // OPTIMIZATION: Defer creation to avoid burst allocations
-    const px = position.x,
-      py = position.y,
-      pz = position.z;
-    const mat = this.getMaterial(color);
-    const toCreate = Math.max(
-      0,
-      Math.min(count, this.maxParticles - this.particles.length),
-    );
-    for (let i = 0; i < toCreate; i++) {
-      this._pendingAdds.push({
-        type: "sphere",
-        px,
-        py,
-        pz,
-        mat,
-        lifetime: 1,
-        gravity: -5,
-        vx: (Math.random() - 0.5) * 10,
-        vy: (Math.random() - 0.5) * 10,
-        vz: (Math.random() - 0.5) * 10,
-      });
-    }
+    // Forward to GPU system
+    this.gpuParticles.spawnExplosion(position, color, count);
   }
 
   createImpact(position, color, count = 6) {
@@ -142,6 +125,8 @@ export default class ParticleSystem {
   }
 
   update(deltaTime) {
+    this.gpuParticles.update(deltaTime);
+    
     // Process pending particle creations in chunks to avoid spikes
     const maxCreates = 40; // cap creations per frame
     let created = 0;
