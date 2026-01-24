@@ -1,0 +1,126 @@
+[
+  {
+    "className": "Revolver",
+    "displayName": "Revolver",
+    "stats": {
+      "damage": 25,
+      "fireRate": 2.5,
+      "magazineSize": 6,
+      "reloadTime": 1.5,
+      "projectileSpeed": 80,
+      "projectileLifetime": 2,
+      "spread": 0.02
+    },
+    "visuals": {
+      "projectileColor": 16776960,
+      "muzzleFlashColor": 16755200,
+      "trailLength": 0.5
+    }
+  },
+  {
+    "className": "PulseCannon",
+    "displayName": "Pulse Cannon",
+    "stats": {
+      "damage": 15,
+      "fireRate": 8,
+      "magazineSize": 40,
+      "reloadTime": 2,
+      "projectileSpeed": 100,
+      "projectileLifetime": 1.5,
+      "spread": 0.03
+    },
+    "visuals": {
+      "projectileColor": 65535,
+      "muzzleFlashColor": 52479,
+      "trailLength": 0.8
+    }
+  },
+  {
+    "className": "LaserRifle",
+    "displayName": "Laser Rifle",
+    "stats": {
+      "damage": 20,
+      "fireRate": 10,
+      "magazineSize": 30,
+      "reloadTime": 1.8,
+      "projectileSpeed": 120,
+      "projectileLifetime": 1.2,
+      "spread": 0.01
+    },
+    "visuals": {
+      "projectileColor": 16711680,
+      "muzzleFlashColor": 16724787,
+      "trailLength": 1
+    }
+  },
+  {
+    "className": "PlasmaLauncher",
+    "displayName": "Plasma Launcher",
+    "stats": {
+      "damage": 50,
+      "fireRate": 1.5,
+      "magazineSize": 4,
+      "reloadTime": 3,
+      "projectileSpeed": 40,
+      "projectileLifetime": 3,
+      "spread": 0.05,
+      "explosionRadius": 5
+    },
+    "visuals": {
+      "projectileColor": 65280,
+      "muzzleFlashColor": 65280,
+      "trailLength": 1.5
+    }
+  },
+  {
+    "className": "ShockwaveEmitter",
+    "displayName": "Shockwave Emitter",
+    "stats": {
+      "damage": 30,
+      "fireRate": 3,
+      "magazineSize": 8,
+      "reloadTime": 2.5,
+      "projectileSpeed": 60,
+      "projectileLifetime": 2.5,
+      "spread": 0.1,
+      "aoeRadius": 4
+    },
+    "visuals": {
+      "projectileColor": 13369599,
+      "muzzleFlashColor": 16711935,
+      "trailLength": 0.3
+    }
+  },
+  {
+    "className": "SciFiSword",
+    "displayName": "Energy Sword",
+    "stats": {
+      "damage": 45,
+      "fireRate": 3,
+      "magazineSize": -1,
+      "reloadTime": 0,
+      "attackRange": 3,
+      "attackAngle": 90
+    },
+    "visuals": {
+      "bladeColor": 65535,
+      "glowColor": 35071
+    }
+  },
+  {
+    "className": "NeonKnife",
+    "displayName": "Neon Knife",
+    "stats": {
+      "damage": 35,
+      "fireRate": 5,
+      "magazineSize": -1,
+      "reloadTime": 0,
+      "attackRange": 2,
+      "attackAngle": 60
+    },
+    "visuals": {
+      "bladeColor": 16711935,
+      "glowColor": 16711816
+    }
+  }
+]

@@ -1,0 +1,19 @@
+# Blender OBJ Export - TrojanVirus
+# Fight Virus Game Assets
+
+o TrojanVirus
+
+# Vertices (5)
+v 0.000000 1.200000 0.000000
+v -1.200000 0.000000 -1.200000
+v 1.200000 0.000000 -1.200000
+v 1.200000 0.000000 1.200000
+v -1.200000 0.000000 1.200000
+
+# Faces (6)
+f 1 2 3
+f 1 3 4
+f 1 4 5
+f 1 5 2
+f 2 4 3
+f 2 5 4

@@ -1,0 +1,201 @@
+[
+  {
+    "className": "RansomwareVirus",
+    "displayName": "Ransomware",
+    "baseStats": {
+      "maxHealth": 220,
+      "speed": 2,
+      "damage": 28,
+      "contactDamage": 10,
+      "collisionRadius": 1.5,
+      "scoreValue": 200
+    },
+    "behavior": {
+      "movementType": "chase",
+      "attackType": "aoe",
+      "attackRange": 8,
+      "detectionRange": 50
+    },
+    "visuals": {
+      "color": 16737792,
+      "emissive": 16724736
+    }
+  },
+  {
+    "className": "TrojanVirus",
+    "displayName": "Trojan",
+    "baseStats": {
+      "maxHealth": 130,
+      "speed": 2.5,
+      "damage": 20,
+      "contactDamage": 8,
+      "collisionRadius": 1.2,
+      "scoreValue": 120
+    },
+    "behavior": {
+      "movementType": "chase",
+      "attackType": "melee",
+      "attackRange": 3,
+      "detectionRange": 50
+    },
+    "visuals": {
+      "color": 10027212,
+      "emissive": 6684876
+    }
+  },
+  {
+    "className": "WormVirus",
+    "displayName": "Worm",
+    "baseStats": {
+      "maxHealth": 100,
+      "speed": 3.5,
+      "damage": 15,
+      "contactDamage": 5,
+      "collisionRadius": 1,
+      "scoreValue": 100
+    },
+    "behavior": {
+      "movementType": "chase",
+      "attackType": "melee",
+      "attackRange": 2,
+      "detectionRange": 60
+    },
+    "visuals": {
+      "color": 52326,
+      "emissive": 65416
+    }
+  },
+  {
+    "className": "ShieldVirus",
+    "displayName": "Shield Virus",
+    "baseStats": {
+      "maxHealth": 180,
+      "speed": 1.8,
+      "damage": 18,
+      "contactDamage": 8,
+      "collisionRadius": 1.4,
+      "scoreValue": 150
+    },
+    "behavior": {
+      "movementType": "chase",
+      "attackType": "melee",
+      "attackRange": 3,
+      "detectionRange": 50,
+      "hasShield": true
+    },
+    "visuals": {
+      "color": 3381759,
+      "emissive": 26367
+    }
+  },
+  {
+    "className": "AdwareVirus",
+    "displayName": "Adware",
+    "baseStats": {
+      "maxHealth": 80,
+      "speed": 2.8,
+      "damage": 12,
+      "contactDamage": 4,
+      "collisionRadius": 0.9,
+      "scoreValue": 80
+    },
+    "behavior": {
+      "movementType": "swarm",
+      "attackType": "melee",
+      "attackRange": 2,
+      "detectionRange": 45
+    },
+    "visuals": {
+      "color": 16763904,
+      "emissive": 16750848
+    }
+  },
+  {
+    "className": "RootkitVirus",
+    "displayName": "Rootkit",
+    "baseStats": {
+      "maxHealth": 250,
+      "speed": 1.5,
+      "damage": 30,
+      "contactDamage": 12,
+      "collisionRadius": 1.8,
+      "scoreValue": 250
+    },
+    "behavior": {
+      "movementType": "tank",
+      "attackType": "melee",
+      "attackRange": 4,
+      "detectionRange": 40
+    },
+    "visuals": {
+      "color": 10027008,
+      "emissive": 13369344
+    }
+  },
+  {
+    "className": "SpywareVirus",
+    "displayName": "Spyware",
+    "baseStats": {
+      "maxHealth": 90,
+      "speed": 4,
+      "damage": 14,
+      "contactDamage": 5,
+      "collisionRadius": 0.8,
+      "scoreValue": 110
+    },
+    "behavior": {
+      "movementType": "stealth",
+      "attackType": "ranged",
+      "attackRange": 15,
+      "detectionRange": 70
+    },
+    "visuals": {
+      "color": 6684927,
+      "emissive": 10040319
+    }
+  },
+  {
+    "className": "DroneVirus",
+    "displayName": "Drone",
+    "baseStats": {
+      "maxHealth": 70,
+      "speed": 3,
+      "damage": 10,
+      "contactDamage": 3,
+      "collisionRadius": 0.7,
+      "scoreValue": 90
+    },
+    "behavior": {
+      "movementType": "flying",
+      "attackType": "ranged",
+      "attackRange": 20,
+      "detectionRange": 60
+    },
+    "visuals": {
+      "color": 52428,
+      "emissive": 65535
+    }
+  },
+  {
+    "className": "BlasterVirus",
+    "displayName": "Blaster",
+    "baseStats": {
+      "maxHealth": 150,
+      "speed": 2.2,
+      "damage": 25,
+      "contactDamage": 10,
+      "collisionRadius": 1.3,
+      "scoreValue": 180
+    },
+    "behavior": {
+      "movementType": "chase",
+      "attackType": "ranged",
+      "attackRange": 25,
+      "detectionRange": 65
+    },
+    "visuals": {
+      "color": 16724787,
+      "emissive": 16737894
+    }
+  }
+]

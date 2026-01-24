@@ -1,0 +1,121 @@
+# Blender Import Guide
+
+## How to Import These Models
+
+### Method 1: Direct Import (Individual Files)
+1. Open Blender
+2. File → Import → Wavefront (.obj)
+3. Navigate to: E:\Fight Virus\blender-export\models
+4. Select a .obj file and click "Import OBJ"
+5. The model will appear at the origin
+
+### Method 2: Batch Import (All Files)
+Use this Blender Python script:
+
+```python
+import bpy
+import os
+
+# Set this to your models directory
+models_dir = r"E:\\Fight Virus\\blender-export\\models"
+
+# Import all OBJ files
+for filename in os.listdir(models_dir):
+    if filename.endswith(".obj"):
+        filepath = os.path.join(models_dir, filename)
+        bpy.ops.import_scene.obj(filepath=filepath)
+        print(f"Imported: {filename}")
+
+# Arrange models in a grid
+objects = [obj for obj in bpy.context.scene.objects if obj.type == 'MESH']
+spacing = 3
+cols = 3
+
+for i, obj in enumerate(objects):
+    row = i // cols
+    col = i % cols
+    obj.location = (col * spacing, row * spacing, 0)
+
+print(f"Imported {len(objects)} models")
+```
+
+To run this script in Blender:
+1. Switch to "Scripting" workspace
+2. Click "New" to create a new script
+3. Paste the code above
+4. Update `models_dir` path if needed
+5. Click "Run Script" (▶ button)
+
+### Method 3: Use Blender Command Line
+```bash
+blender --python import_all_models.py
+```
+
+## Exported Models
+
+### Enemies (9)
+1. **Ransomware** (RansomwareVirus.obj)
+2. **Trojan** (TrojanVirus.obj)
+3. **Worm** (WormVirus.obj)
+4. **Shield Virus** (ShieldVirus.obj)
+5. **Adware** (AdwareVirus.obj)
+6. **Rootkit** (RootkitVirus.obj)
+7. **Spyware** (SpywareVirus.obj)
+8. **Drone** (DroneVirus.obj)
+9. **Blaster** (BlasterVirus.obj)
+
+### Bosses (10)
+1. **Circuit Overlord** (CircuitOverlord.obj)
+2. **Corruption Core** (CorruptionCore.obj)
+3. **Data Wyrm** (DataWyrm.obj)
+4. **Firewall Archon** (FirewallArchon.obj)
+5. **Ladybug Sentinel** (LadyBugSentinel.obj)
+6. **Neural Overmind** (NeuralOvermind.obj)
+7. **Noise** (Noise.obj)
+8. **Packet Hydra** (PacketHydra.obj)
+9. **Pixel Reaper** (PixelReaper.obj)
+10. **Trojan Warhorse** (TrojanHorseColossus.obj)
+
+### Weapons (7)
+1. **Revolver** (Revolver.obj)
+2. **Pulse Cannon** (PulseCannon.obj)
+3. **Laser Rifle** (LaserRifle.obj)
+4. **Plasma Launcher** (PlasmaLauncher.obj)
+5. **Shockwave Emitter** (ShockwaveEmitter.obj)
+6. **Energy Sword** (SciFiSword.obj)
+7. **Neon Knife** (NeonKnife.obj)
+
+### Environments (5)
+1. **CPU Core** (cpu.obj)
+2. **Kernel Space** (kernel.obj)
+3. **Memory Banks** (memory.obj)
+4. **GPU Complex** (gpu.obj)
+5. **Motherboard** (motherboard.obj)
+
+## Material Colors
+
+Materials are stored in the `materials/` folder as .mtl files.
+Each model has:
+- Base color (from enemy.visuals.color)
+- Emissive color (from enemy.visuals.emissive)
+
+To apply materials in Blender:
+1. Select an object
+2. Go to Shading workspace
+3. The material should be auto-imported
+4. Adjust Emission strength in the Shader Editor if needed
+
+## Next Steps
+
+1. **Scale & Position**: Adjust sizes to match your scene scale
+2. **Add Details**: Use Blender's modeling tools to add detail
+3. **Texture**: Apply textures or procedural materials
+4. **Export**: Export as .fbx or .gltf for Unity
+5. **Animate**: Add animations if desired
+
+## Tips
+
+- Use "Shade Smooth" (right-click → Shade Smooth) for smoother appearance
+- Add Subdivision Surface modifier for higher quality
+- Use Array modifier to create multiple copies
+- Enable "Auto Smooth" in Object Data Properties

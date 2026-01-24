@@ -1,0 +1,137 @@
+[
+  {
+    "name": "cpu",
+    "displayName": "CPU Core",
+    "description": "The central processing unit - where all computation happens",
+    "baseFloorHeight": 0,
+    "boundaries": {
+      "minX": -60,
+      "maxX": 60,
+      "minZ": -60,
+      "maxZ": 60
+    },
+    "palette": {
+      "ambient": 1710654,
+      "directional": 6711039,
+      "accentA": 65535,
+      "accentB": 16711935,
+      "fog": 657950,
+      "fogDensity": 0.015,
+      "background": 657950
+    },
+    "features": [
+      "Processing cores",
+      "Data pathways",
+      "Circuit patterns",
+      "Energy flows"
+    ]
+  },
+  {
+    "name": "kernel",
+    "displayName": "Kernel Space",
+    "description": "The core system kernel - critical low-level operations",
+    "baseFloorHeight": 0,
+    "boundaries": {
+      "minX": -60,
+      "maxX": 60,
+      "minZ": -60,
+      "maxZ": 60
+    },
+    "palette": {
+      "ambient": 1972762,
+      "directional": 16737894,
+      "accentA": 16711680,
+      "accentB": 16755200,
+      "fog": 1968650,
+      "fogDensity": 0.018,
+      "background": 1968650
+    },
+    "features": [
+      "System calls",
+      "Memory management",
+      "Process scheduling",
+      "Hardware drivers"
+    ]
+  },
+  {
+    "name": "memory",
+    "displayName": "Memory Banks",
+    "description": "RAM modules - volatile data storage",
+    "baseFloorHeight": 0,
+    "boundaries": {
+      "minX": -60,
+      "maxX": 60,
+      "minZ": -60,
+      "maxZ": 60
+    },
+    "palette": {
+      "ambient": 1719834,
+      "directional": 6750054,
+      "accentA": 65280,
+      "accentB": 65450,
+      "fog": 663050,
+      "fogDensity": 0.012,
+      "background": 663050
+    },
+    "features": [
+      "Memory cells",
+      "Data buses",
+      "Cache hierarchy",
+      "Address spaces"
+    ]
+  },
+  {
+    "name": "gpu",
+    "displayName": "GPU Complex",
+    "description": "Graphics processing unit - parallel computation powerhouse",
+    "baseFloorHeight": 0,
+    "boundaries": {
+      "minX": -60,
+      "maxX": 60,
+      "minZ": -60,
+      "maxZ": 60
+    },
+    "palette": {
+      "ambient": 4069950,
+      "directional": 16738047,
+      "accentA": 16711935,
+      "accentB": 13369599,
+      "fog": 1968670,
+      "fogDensity": 0.02,
+      "background": 1968670
+    },
+    "features": [
+      "Shader cores",
+      "Texture units",
+      "Render pipelines",
+      "Parallel processing"
+    ]
+  },
+  {
+    "name": "motherboard",
+    "displayName": "Motherboard",
+    "description": "The main circuit board connecting all components",
+    "baseFloorHeight": 0,
+    "boundaries": {
+      "minX": -60,
+      "maxX": 60,
+      "minZ": -60,
+      "maxZ": 60
+    },
+    "palette": {
+      "ambient": 1715774,
+      "directional": 6728447,
+      "accentA": 43775,
+      "accentB": 65535,
+      "fog": 662046,
+      "fogDensity": 0.014,
+      "background": 662046
+    },
+    "features": [
+      "PCB traces",
+      "Connection buses",
+      "Component sockets",
+      "Power distribution"
+    ]
+  }
+]

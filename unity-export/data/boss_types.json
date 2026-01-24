@@ -1,0 +1,225 @@
+[
+  {
+    "className": "CircuitOverlord",
+    "displayName": "Circuit Overlord",
+    "title": "The First Guardian",
+    "baseStats": {
+      "maxHealth": 1500,
+      "speed": 5,
+      "damage": 40,
+      "contactDamage": 20,
+      "collisionRadius": 7,
+      "scoreValue": 3000
+    },
+    "visuals": {
+      "color": 65535,
+      "secondaryColor": 16711680
+    },
+    "behavior": {
+      "attackType": "hybrid",
+      "attackRange": 32,
+      "projectileSpeed": 20,
+      "spawnElevation": 2
+    }
+  },
+  {
+    "className": "CorruptionCore",
+    "displayName": "Corruption Core",
+    "title": "The System Destroyer",
+    "baseStats": {
+      "maxHealth": 2000,
+      "speed": 4,
+      "damage": 60,
+      "contactDamage": 35,
+      "collisionRadius": 8,
+      "scoreValue": 5000
+    },
+    "visuals": {
+      "color": 0,
+      "secondaryColor": 16711680
+    },
+    "behavior": {
+      "attackType": "hybrid",
+      "attackRange": 35,
+      "projectileSpeed": 22
+    }
+  },
+  {
+    "className": "DataWyrm",
+    "displayName": "Data Wyrm",
+    "title": "Corrupted Guardian of the Mainframe",
+    "baseStats": {
+      "maxHealth": 6000,
+      "speed": 7,
+      "damage": 45,
+      "contactDamage": 45,
+      "collisionRadius": 4,
+      "scoreValue": 15000
+    },
+    "visuals": {
+      "color": 16711731,
+      "secondaryColor": 65535,
+      "accentColor": 1710618
+    },
+    "behavior": {
+      "attackType": "hybrid",
+      "projectileSpeed": 28,
+      "spawnElevation": 8
+    }
+  },
+  {
+    "className": "FirewallArchon",
+    "displayName": "Firewall Archon",
+    "title": "Guardian of the Shield Grid",
+    "baseStats": {
+      "maxHealth": 2900,
+      "speed": 5.5,
+      "damage": 52,
+      "contactDamage": 26,
+      "collisionRadius": 4.2,
+      "scoreValue": 4800
+    },
+    "visuals": {
+      "color": 16734749,
+      "secondaryColor": 16762726
+    },
+    "behavior": {
+      "attackType": "hybrid",
+      "projectileSpeed": 26,
+      "spawnElevation": 1.8
+    }
+  },
+  {
+    "className": "LadyBugSentinel",
+    "displayName": "Ladybug Sentinel",
+    "title": "Memory Vault Caretaker",
+    "baseStats": {
+      "maxHealth": 1400,
+      "speed": 6.5,
+      "damage": 35,
+      "contactDamage": 18,
+      "collisionRadius": 5.2,
+      "scoreValue": 3200
+    },
+    "visuals": {
+      "color": 16724838,
+      "secondaryColor": 3735508
+    },
+    "behavior": {
+      "attackType": "hybrid",
+      "projectileSpeed": 26,
+      "spawnElevation": 1.4
+    }
+  },
+  {
+    "className": "NeuralOvermind",
+    "displayName": "Neural Overmind",
+    "title": "Architect of the Deep Net",
+    "baseStats": {
+      "maxHealth": 2500,
+      "speed": 5.8,
+      "damage": 44,
+      "contactDamage": 24,
+      "collisionRadius": 3.9,
+      "scoreValue": 4600
+    },
+    "visuals": {
+      "color": 7010303,
+      "secondaryColor": 16740316
+    },
+    "behavior": {
+      "attackType": "hybrid",
+      "projectileSpeed": 27,
+      "spawnElevation": 5.2
+    }
+  },
+  {
+    "className": "Noise",
+    "displayName": "Noise",
+    "title": "Corrupted Data Anomaly",
+    "baseStats": {
+      "maxHealth": 2600,
+      "speed": 6.5,
+      "damage": 48,
+      "contactDamage": 28,
+      "collisionRadius": 4.5,
+      "scoreValue": 4200
+    },
+    "visuals": {
+      "color": 16737480,
+      "secondaryColor": 7310847
+    },
+    "behavior": {
+      "attackType": "hybrid",
+      "projectileSpeed": 28,
+      "spawnElevation": 2.6
+    }
+  },
+  {
+    "className": "PacketHydra",
+    "displayName": "Packet Hydra",
+    "title": "Master of the Network Void",
+    "baseStats": {
+      "maxHealth": 2700,
+      "speed": 6.8,
+      "damage": 46,
+      "contactDamage": 24,
+      "collisionRadius": 4.1,
+      "scoreValue": 4400
+    },
+    "visuals": {
+      "color": 5111778,
+      "secondaryColor": 3112447
+    },
+    "behavior": {
+      "attackType": "hybrid",
+      "projectileSpeed": 29,
+      "spawnElevation": 2.1
+    }
+  },
+  {
+    "className": "PixelReaper",
+    "displayName": "Pixel Reaper",
+    "title": "Corrupted Rendering Engine",
+    "baseStats": {
+      "maxHealth": 9000,
+      "speed": 8,
+      "damage": 50,
+      "contactDamage": 50,
+      "collisionRadius": 4.5,
+      "scoreValue": 18000
+    },
+    "visuals": {
+      "color": 16711816,
+      "secondaryColor": 16711935,
+      "accentColor": 16772608
+    },
+    "behavior": {
+      "attackType": "hybrid",
+      "projectileSpeed": 30,
+      "spawnElevation": 6
+    }
+  },
+  {
+    "className": "TrojanHorseColossus",
+    "displayName": "Trojan Warhorse",
+    "title": "Payload Siege Engine",
+    "baseStats": {
+      "maxHealth": 2300,
+      "speed": 4.2,
+      "damage": 48,
+      "contactDamage": 28,
+      "collisionRadius": 6.4,
+      "scoreValue": 4200
+    },
+    "visuals": {
+      "color": 16759637,
+      "secondaryColor": 16742195
+    },
+    "behavior": {
+      "attackType": "hybrid",
+      "projectileSpeed": 22,
+      "spawnElevation": 1.8
+    }
+  }
+]

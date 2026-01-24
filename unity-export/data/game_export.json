@@ -1,0 +1,699 @@
+{
+  "metadata": {
+    "gameName": "Fight Virus",
+    "version": "1.0",
+    "engine": "Three.js WebGL",
+    "targetEngine": "Unity",
+    "exportDate": "2026-01-24T01:35:15.705Z",
+    "description": "A cybersecurity-themed shooter where you fight viruses inside a computer system"
+  },
+  "enemyTypes": [
+    {
+      "className": "RansomwareVirus",
+      "displayName": "Ransomware",
+      "baseStats": {
+        "maxHealth": 220,
+        "speed": 2,
+        "damage": 28,
+        "contactDamage": 10,
+        "collisionRadius": 1.5,
+        "scoreValue": 200
+      },
+      "behavior": {
+        "movementType": "chase",
+        "attackType": "aoe",
+        "attackRange": 8,
+        "detectionRange": 50
+      },
+      "visuals": {
+        "color": 16737792,
+        "emissive": 16724736
+      }
+    },
+    {
+      "className": "TrojanVirus",
+      "displayName": "Trojan",
+      "baseStats": {
+        "maxHealth": 130,
+        "speed": 2.5,
+        "damage": 20,
+        "contactDamage": 8,
+        "collisionRadius": 1.2,
+        "scoreValue": 120
+      },
+      "behavior": {
+        "movementType": "chase",
+        "attackType": "melee",
+        "attackRange": 3,
+        "detectionRange": 50
+      },
+      "visuals": {
+        "color": 10027212,
+        "emissive": 6684876
+      }
+    },
+    {
+      "className": "WormVirus",
+      "displayName": "Worm",
+      "baseStats": {
+        "maxHealth": 100,
+        "speed": 3.5,
+        "damage": 15,
+        "contactDamage": 5,
+        "collisionRadius": 1,
+        "scoreValue": 100
+      },
+      "behavior": {
+        "movementType": "chase",
+        "attackType": "melee",
+        "attackRange": 2,
+        "detectionRange": 60
+      },
+      "visuals": {
+        "color": 52326,
+        "emissive": 65416
+      }
+    },
+    {
+      "className": "ShieldVirus",
+      "displayName": "Shield Virus",
+      "baseStats": {
+        "maxHealth": 180,
+        "speed": 1.8,
+        "damage": 18,
+        "contactDamage": 8,
+        "collisionRadius": 1.4,
+        "scoreValue": 150
+      },
+      "behavior": {
+        "movementType": "chase",
+        "attackType": "melee",
+        "attackRange": 3,
+        "detectionRange": 50,
+        "hasShield": true
+      },
+      "visuals": {
+        "color": 3381759,
+        "emissive": 26367
+      }
+    },
+    {
+      "className": "AdwareVirus",
+      "displayName": "Adware",
+      "baseStats": {
+        "maxHealth": 80,
+        "speed": 2.8,
+        "damage": 12,
+        "contactDamage": 4,
+        "collisionRadius": 0.9,
+        "scoreValue": 80
+      },
+      "behavior": {
+        "movementType": "swarm",
+        "attackType": "melee",
+        "attackRange": 2,
+        "detectionRange": 45
+      },
+      "visuals": {
+        "color": 16763904,
+        "emissive": 16750848
+      }
+    },
+    {
+      "className": "RootkitVirus",
+      "displayName": "Rootkit",
+      "baseStats": {
+        "maxHealth": 250,
+        "speed": 1.5,
+        "damage": 30,
+        "contactDamage": 12,
+        "collisionRadius": 1.8,
+        "scoreValue": 250
+      },
+      "behavior": {
+        "movementType": "tank",
+        "attackType": "melee",
+        "attackRange": 4,
+        "detectionRange": 40
+      },
+      "visuals": {
+        "color": 10027008,
+        "emissive": 13369344
+      }
+    },
+    {
+      "className": "SpywareVirus",
+      "displayName": "Spyware",
+      "baseStats": {
+        "maxHealth": 90,
+        "speed": 4,
+        "damage": 14,
+        "contactDamage": 5,
+        "collisionRadius": 0.8,
+        "scoreValue": 110
+      },
+      "behavior": {
+        "movementType": "stealth",
+        "attackType": "ranged",
+        "attackRange": 15,
+        "detectionRange": 70
+      },
+      "visuals": {
+        "color": 6684927,
+        "emissive": 10040319
+      }
+    },
+    {
+      "className": "DroneVirus",
+      "displayName": "Drone",
+      "baseStats": {
+        "maxHealth": 70,
+        "speed": 3,
+        "damage": 10,
+        "contactDamage": 3,
+        "collisionRadius": 0.7,
+        "scoreValue": 90
+      },
+      "behavior": {
+        "movementType": "flying",
+        "attackType": "ranged",
+        "attackRange": 20,
+        "detectionRange": 60
+      },
+      "visuals": {
+        "color": 52428,
+        "emissive": 65535
+      }
+    },
+    {
+      "className": "BlasterVirus",
+      "displayName": "Blaster",
+      "baseStats": {
+        "maxHealth": 150,
+        "speed": 2.2,
+        "damage": 25,
+        "contactDamage": 10,
+        "collisionRadius": 1.3,
+        "scoreValue": 180
+      },
+      "behavior": {
+        "movementType": "chase",
+        "attackType": "ranged",
+        "attackRange": 25,
+        "detectionRange": 65
+      },
+      "visuals": {
+        "color": 16724787,
+        "emissive": 16737894
+      }
+    }
+  ],
+  "bossTypes": [
+    {
+      "className": "CircuitOverlord",
+      "displayName": "Circuit Overlord",
+      "title": "The First Guardian",
+      "baseStats": {
+        "maxHealth": 1500,
+        "speed": 5,
+        "damage": 40,
+        "contactDamage": 20,
+        "collisionRadius": 7,
+        "scoreValue": 3000
+      },
+      "visuals": {
+        "color": 65535,
+        "secondaryColor": 16711680
+      },
+      "behavior": {
+        "attackType": "hybrid",
+        "attackRange": 32,
+        "projectileSpeed": 20,
+        "spawnElevation": 2
+      }
+    },
+    {
+      "className": "CorruptionCore",
+      "displayName": "Corruption Core",
+      "title": "The System Destroyer",
+      "baseStats": {
+        "maxHealth": 2000,
+        "speed": 4,
+        "damage": 60,
+        "contactDamage": 35,
+        "collisionRadius": 8,
+        "scoreValue": 5000
+      },
+      "visuals": {
+        "color": 0,
+        "secondaryColor": 16711680
+      },
+      "behavior": {
+        "attackType": "hybrid",
+        "attackRange": 35,
+        "projectileSpeed": 22
+      }
+    },
+    {
+      "className": "DataWyrm",
+      "displayName": "Data Wyrm",
+      "title": "Corrupted Guardian of the Mainframe",
+      "baseStats": {
+        "maxHealth": 6000,
+        "speed": 7,
+        "damage": 45,
+        "contactDamage": 45,
+        "collisionRadius": 4,
+        "scoreValue": 15000
+      },
+      "visuals": {
+        "color": 16711731,
+        "secondaryColor": 65535,
+        "accentColor": 1710618
+      },
+      "behavior": {
+        "attackType": "hybrid",
+        "projectileSpeed": 28,
+        "spawnElevation": 8
+      }
+    },
+    {
+      "className": "FirewallArchon",
+      "displayName": "Firewall Archon",
+      "title": "Guardian of the Shield Grid",
+      "baseStats": {
+        "maxHealth": 2900,
+        "speed": 5.5,
+        "damage": 52,
+        "contactDamage": 26,
+        "collisionRadius": 4.2,
+        "scoreValue": 4800
+      },
+      "visuals": {
+        "color": 16734749,
+        "secondaryColor": 16762726
+      },
+      "behavior": {
+        "attackType": "hybrid",
+        "projectileSpeed": 26,
+        "spawnElevation": 1.8
+      }
+    },
+    {
+      "className": "LadyBugSentinel",
+      "displayName": "Ladybug Sentinel",
+      "title": "Memory Vault Caretaker",
+      "baseStats": {
+        "maxHealth": 1400,
+        "speed": 6.5,
+        "damage": 35,
+        "contactDamage": 18,
+        "collisionRadius": 5.2,
+        "scoreValue": 3200
+      },
+      "visuals": {
+        "color": 16724838,
+        "secondaryColor": 3735508
+      },
+      "behavior": {
+        "attackType": "hybrid",
+        "projectileSpeed": 26,
+        "spawnElevation": 1.4
+      }
+    },
+    {
+      "className": "NeuralOvermind",
+      "displayName": "Neural Overmind",
+      "title": "Architect of the Deep Net",
+      "baseStats": {
+        "maxHealth": 2500,
+        "speed": 5.8,
+        "damage": 44,
+        "contactDamage": 24,
+        "collisionRadius": 3.9,
+        "scoreValue": 4600
+      },
+      "visuals": {
+        "color": 7010303,
+        "secondaryColor": 16740316
+      },
+      "behavior": {
+        "attackType": "hybrid",
+        "projectileSpeed": 27,
+        "spawnElevation": 5.2
+      }
+    },
+    {
+      "className": "Noise",
+      "displayName": "Noise",
+      "title": "Corrupted Data Anomaly",
+      "baseStats": {
+        "maxHealth": 2600,
+        "speed": 6.5,
+        "damage": 48,
+        "contactDamage": 28,
+        "collisionRadius": 4.5,
+        "scoreValue": 4200
+      },
+      "visuals": {
+        "color": 16737480,
+        "secondaryColor": 7310847
+      },
+      "behavior": {
+        "attackType": "hybrid",
+        "projectileSpeed": 28,
+        "spawnElevation": 2.6
+      }
+    },
+    {
+      "className": "PacketHydra",
+      "displayName": "Packet Hydra",
+      "title": "Master of the Network Void",
+      "baseStats": {
+        "maxHealth": 2700,
+        "speed": 6.8,
+        "damage": 46,
+        "contactDamage": 24,
+        "collisionRadius": 4.1,
+        "scoreValue": 4400
+      },
+      "visuals": {
+        "color": 5111778,
+        "secondaryColor": 3112447
+      },
+      "behavior": {
+        "attackType": "hybrid",
+        "projectileSpeed": 29,
+        "spawnElevation": 2.1
+      }
+    },
+    {
+      "className": "PixelReaper",
+      "displayName": "Pixel Reaper",
+      "title": "Corrupted Rendering Engine",
+      "baseStats": {
+        "maxHealth": 9000,
+        "speed": 8,
+        "damage": 50,
+        "contactDamage": 50,
+        "collisionRadius": 4.5,
+        "scoreValue": 18000
+      },
+      "visuals": {
+        "color": 16711816,
+        "secondaryColor": 16711935,
+        "accentColor": 16772608
+      },
+      "behavior": {
+        "attackType": "hybrid",
+        "projectileSpeed": 30,
+        "spawnElevation": 6
+      }
+    },
+    {
+      "className": "TrojanHorseColossus",
+      "displayName": "Trojan Warhorse",
+      "title": "Payload Siege Engine",
+      "baseStats": {
+        "maxHealth": 2300,
+        "speed": 4.2,
+        "damage": 48,
+        "contactDamage": 28,
+        "collisionRadius": 6.4,
+        "scoreValue": 4200
+      },
+      "visuals": {
+        "color": 16759637,
+        "secondaryColor": 16742195
+      },
+      "behavior": {
+        "attackType": "hybrid",
+        "projectileSpeed": 22,
+        "spawnElevation": 1.8
+      }
+    }
+  ],
+  "weaponTypes": [
+    {
+      "className": "Revolver",
+      "displayName": "Revolver",
+      "stats": {
+        "damage": 25,
+        "fireRate": 2.5,
+        "magazineSize": 6,
+        "reloadTime": 1.5,
+        "projectileSpeed": 80,
+        "projectileLifetime": 2,
+        "spread": 0.02
+      },
+      "visuals": {
+        "projectileColor": 16776960,
+        "muzzleFlashColor": 16755200,
+        "trailLength": 0.5
+      }
+    },
+    {
+      "className": "PulseCannon",
+      "displayName": "Pulse Cannon",
+      "stats": {
+        "damage": 15,
+        "fireRate": 8,
+        "magazineSize": 40,
+        "reloadTime": 2,
+        "projectileSpeed": 100,
+        "projectileLifetime": 1.5,
+        "spread": 0.03
+      },
+      "visuals": {
+        "projectileColor": 65535,
+        "muzzleFlashColor": 52479,
+        "trailLength": 0.8
+      }
+    },
+    {
+      "className": "LaserRifle",
+      "displayName": "Laser Rifle",
+      "stats": {
+        "damage": 20,
+        "fireRate": 10,
+        "magazineSize": 30,
+        "reloadTime": 1.8,
+        "projectileSpeed": 120,
+        "projectileLifetime": 1.2,
+        "spread": 0.01
+      },
+      "visuals": {
+        "projectileColor": 16711680,
+        "muzzleFlashColor": 16724787,
+        "trailLength": 1
+      }
+    },
+    {
+      "className": "PlasmaLauncher",
+      "displayName": "Plasma Launcher",
+      "stats": {
+        "damage": 50,
+        "fireRate": 1.5,
+        "magazineSize": 4,
+        "reloadTime": 3,
+        "projectileSpeed": 40,
+        "projectileLifetime": 3,
+        "spread": 0.05,
+        "explosionRadius": 5
+      },
+      "visuals": {
+        "projectileColor": 65280,
+        "muzzleFlashColor": 65280,
+        "trailLength": 1.5
+      }
+    },
+    {
+      "className": "ShockwaveEmitter",
+      "displayName": "Shockwave Emitter",
+      "stats": {
+        "damage": 30,
+        "fireRate": 3,
+        "magazineSize": 8,
+        "reloadTime": 2.5,
+        "projectileSpeed": 60,
+        "projectileLifetime": 2.5,
+        "spread": 0.1,
+        "aoeRadius": 4
+      },
+      "visuals": {
+        "projectileColor": 13369599,
+        "muzzleFlashColor": 16711935,
+        "trailLength": 0.3
+      }
+    },
+    {
+      "className": "SciFiSword",
+      "displayName": "Energy Sword",
+      "stats": {
+        "damage": 45,
+        "fireRate": 3,
+        "magazineSize": -1,
+        "reloadTime": 0,
+        "attackRange": 3,
+        "attackAngle": 90
+      },
+      "visuals": {
+        "bladeColor": 65535,
+        "glowColor": 35071
+      }
+    },
+    {
+      "className": "NeonKnife",
+      "displayName": "Neon Knife",
+      "stats": {
+        "damage": 35,
+        "fireRate": 5,
+        "magazineSize": -1,
+        "reloadTime": 0,
+        "attackRange": 2,
+        "attackAngle": 60
+      },
+      "visuals": {
+        "bladeColor": 16711935,
+        "glowColor": 16711816
+      }
+    }
+  ],
+  "environments": [
+    {
+      "name": "cpu",
+      "displayName": "CPU Core",
+      "description": "The central processing unit - where all computation happens",
+      "baseFloorHeight": 0,
+      "boundaries": {
+        "minX": -60,
+        "maxX": 60,
+        "minZ": -60,
+        "maxZ": 60
+      },
+      "palette": {
+        "ambient": 1710654,
+        "directional": 6711039,
+        "accentA": 65535,
+        "accentB": 16711935,
+        "fog": 657950,
+        "fogDensity": 0.015,
+        "background": 657950
+      },
+      "features": [
+        "Processing cores",
+        "Data pathways",
+        "Circuit patterns",
+        "Energy flows"
+      ]
+    },
+    {
+      "name": "kernel",
+      "displayName": "Kernel Space",
+      "description": "The core system kernel - critical low-level operations",
+      "baseFloorHeight": 0,
+      "boundaries": {
+        "minX": -60,
+        "maxX": 60,
+        "minZ": -60,
+        "maxZ": 60
+      },
+      "palette": {
+        "ambient": 1972762,
+        "directional": 16737894,
+        "accentA": 16711680,
+        "accentB": 16755200,
+        "fog": 1968650,
+        "fogDensity": 0.018,
+        "background": 1968650
+      },
+      "features": [
+        "System calls",
+        "Memory management",
+        "Process scheduling",
+        "Hardware drivers"
+      ]
+    },
+    {
+      "name": "memory",
+      "displayName": "Memory Banks",
+      "description": "RAM modules - volatile data storage",
+      "baseFloorHeight": 0,
+      "boundaries": {
+        "minX": -60,
+        "maxX": 60,
+        "minZ": -60,
+        "maxZ": 60
+      },
+      "palette": {
+        "ambient": 1719834,
+        "directional": 6750054,
+        "accentA": 65280,
+        "accentB": 65450,
+        "fog": 663050,
+        "fogDensity": 0.012,
+        "background": 663050
+      },
+      "features": [
+        "Memory cells",
+        "Data buses",
+        "Cache hierarchy",
+        "Address spaces"
+      ]
+    },
+    {
+      "name": "gpu",
+      "displayName": "GPU Complex",
+      "description": "Graphics processing unit - parallel computation powerhouse",
+      "baseFloorHeight": 0,
+      "boundaries": {
+        "minX": -60,
+        "maxX": 60,
+        "minZ": -60,
+        "maxZ": 60
+      },
+      "palette": {
+        "ambient": 4069950,
+        "directional": 16738047,
+        "accentA": 16711935,
+        "accentB": 13369599,
+        "fog": 1968670,
+        "fogDensity": 0.02,
+        "background": 1968670
+      },
+      "features": [
+        "Shader cores",
+        "Texture units",
+        "Render pipelines",
+        "Parallel processing"
+      ]
+    },
+    {
+      "name": "motherboard",
+      "displayName": "Motherboard",
+      "description": "The main circuit board connecting all components",
+      "baseFloorHeight": 0,
+      "boundaries": {
+        "minX": -60,
+        "maxX": 60,
+        "minZ": -60,
+        "maxZ": 60
+      },
+      "palette": {
+        "ambient": 1715774,
+        "directional": 6728447,
+        "accentA": 43775,
+        "accentB": 65535,
+        "fog": 662046,
+        "fogDensity": 0.014,
+        "background": 662046
+      },
+      "features": [
+        "PCB traces",
+        "Connection buses",
+        "Component sockets",
+        "Power distribution"
+      ]
+    }
+  ]
+}
