@@ -18,6 +18,7 @@ import { createAudioElement } from "../utils/audio.js";
 import SaveManager from "./SaveManager.js";
 import WorkerManager from "../workers/WorkerManager.js";
 import ModelGallery from "./ModelGallery.js";
+import GoCoreClient from "../net/GoCoreClient.js";
 import {
   vector3Pool,
   withTempVector3,
@@ -33,6 +34,13 @@ class GameMain {
     // Initialize profiler for lag detection
     this.profiler = profiler;
     this.showPerformanceOverlay = false; // Set to true to see lag sources
+
+    // Go core bridging (hardcoded - always enabled for desktop app)
+    this.goCoreBaseUrl = "http://localhost:9000";
+    this.useGoCore = true; // Always use Go core (desktop unified mode)
+    this.goCoreClient = null;
+    this.goEnemyMeshes = new Map();
+    this.goBossMeshes = new Map();
 
     // Expose profiler globally for other modules
     if (typeof window !== "undefined") {
@@ -177,9 +185,184 @@ class GameMain {
     window.addEventListener("unhandledrejection", this.onUnhandledRejection);
   }
 
+  async tryEnableGoCore() {
+    // Go core is hardcoded as enabled for desktop app - no flags needed
+    try {
+      const health = await fetch(`${this.goCoreBaseUrl}/health`);
+      if (!health.ok) {
+        throw new Error(`health check failed (${health.status})`);
+      }
+
+      this.goCoreClient = new GoCoreClient(this.goCoreBaseUrl);
+
+      // Map weapon hotkeys to Go core weapon switch
+      this.inputManager.on("weapon1", () =>
+        this.goCoreClient.setSwitchWeapon(0),
+      );
+      this.inputManager.on("weapon2", () =>
+        this.goCoreClient.setSwitchWeapon(1),
+      );
+      this.inputManager.on("weapon3", () =>
+        this.goCoreClient.setSwitchWeapon(2),
+      );
+      this.inputManager.on("weapon4", () =>
+        this.goCoreClient.setSwitchWeapon(3),
+      );
+      this.inputManager.on("weaponNext", () =>
+        this.goCoreClient.setSwitchWeapon(4),
+      );
+      this.inputManager.on("weaponPrev", () =>
+        this.goCoreClient.setSwitchWeapon(5),
+      );
+      this.inputManager.on("special", () => this.goCoreClient.requestEMP());
+
+      // Prime initial state
+      await this.goCoreClient.fetchState();
+
+      console.info(`✅ Go core connected at ${this.goCoreBaseUrl}`);
+    } catch (err) {
+      console.error(
+        "❌ Go core NOT reachable - make sure ./bin/game-core is running:",
+        err,
+      );
+      this.useGoCore = false;
+      this.goCoreClient = null;
+    }
+  }
+
+  updateMouseLook() {
+    // Track mouse position for delta calculation
+    const currentMousePos = this.inputManager.getMousePosition?.();
+    if (!currentMousePos) return;
+    
+    if (!this.lastMousePos) {
+      this.lastMousePos = { x: currentMousePos.x, y: currentMousePos.y };
+      return;
+    }
+    
+    // Calculate mouse movement delta
+    const deltaX = currentMousePos.x - this.lastMousePos.x;
+    const deltaY = currentMousePos.y - this.lastMousePos.y;
+    
+    // Update last position for next frame
+    this.lastMousePos.x = currentMousePos.x;
+    this.lastMousePos.y = currentMousePos.y;
+    
+    // Only rotate if mouse moved significantly (avoid tiny jitter)
+    if (Math.abs(deltaX) > 0.5 || Math.abs(deltaY) > 0.5) {
+      this.camera.rotation.y -= deltaX * 0.003; // Yaw (left/right)
+      this.camera.rotation.x -= deltaY * 0.003; // Pitch (up/down)
+      
+      // Clamp pitch to prevent flipping (can't look too far up/down)
+      this.camera.rotation.x = Math.max(
+        -Math.PI / 2,
+        Math.min(Math.PI / 2, this.camera.rotation.x),
+      );
+    }
+  }
+
+  applyGoState(state) {
+    if (!state || !state.player) {
+      return;
+    }
+
+    const playerState = state.player;
+    if (playerState.position && playerState.position.length === 3) {
+      this.player.position.set(
+        playerState.position[0],
+        playerState.position[1],
+        playerState.position[2],
+      );
+
+      // Keep camera in sync with player position (eye height offset)
+      if (this.camera) {
+        this.camera.position.copy(this.player.position);
+        // Add eye height offset
+        this.camera.position.y += 1.6; // Standard eye height above feet
+      }
+    }
+
+    if (typeof playerState.health === "number") {
+      this.player.health = playerState.health;
+    }
+    if (typeof playerState.maxHealth === "number") {
+      this.player.maxHealth = playerState.maxHealth;
+    }
+
+    // Basic UI sync from Go state
+    this.uiManager.updateHealth(this.player.health, this.player.maxHealth);
+    this.uiManager.updateEnemyCount((state.enemies || []).length);
+
+    if (typeof this.uiManager.updateWave === "function") {
+      const wave = state.wave || this.waveManager?.getCurrentWave?.() || 0;
+      this.uiManager.updateWave(wave);
+    }
+
+    // Minimal visual sync: draw simple meshes for enemies/bosses from Go state
+    const enemyIds = new Set();
+    (state.enemies || []).forEach((enemy, idx) => {
+      const id = enemy.id || `enemy-${idx}`;
+      enemyIds.add(id);
+      let mesh = this.goEnemyMeshes.get(id);
+      if (!mesh) {
+        const radius = enemy.collisionRadius || 1.2;
+        mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(Math.max(0.4, radius), 12, 12),
+          new THREE.MeshStandardMaterial({ color: 0xff3355 }),
+        );
+        mesh.castShadow = true;
+        this.scene.add(mesh);
+        this.goEnemyMeshes.set(id, mesh);
+      }
+
+      if (enemy.position && enemy.position.length === 3) {
+        mesh.position.set(enemy.position[0], enemy.position[1], enemy.position[2]);
+      }
+    });
+
+    // Remove any meshes no longer present
+    for (const [id, mesh] of this.goEnemyMeshes.entries()) {
+      if (!enemyIds.has(id)) {
+        this.scene.remove(mesh);
+        this.goEnemyMeshes.delete(id);
+      }
+    }
+
+    const bossIds = new Set();
+    (state.bosses || []).forEach((boss, idx) => {
+      const id = boss.id || `boss-${idx}`;
+      bossIds.add(id);
+      let mesh = this.goBossMeshes.get(id);
+      if (!mesh) {
+        const radius = boss.collisionRadius || 3;
+        mesh = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(Math.max(1, radius), 1),
+          new THREE.MeshStandardMaterial({ color: 0x55ccff, metalness: 0.2 }),
+        );
+        mesh.castShadow = true;
+        this.scene.add(mesh);
+        this.goBossMeshes.set(id, mesh);
+      }
+
+      if (boss.position && boss.position.length === 3) {
+        mesh.position.set(boss.position[0], boss.position[1], boss.position[2]);
+      }
+    });
+
+    for (const [id, mesh] of this.goBossMeshes.entries()) {
+      if (!bossIds.has(id)) {
+        this.scene.remove(mesh);
+        this.goBossMeshes.delete(id);
+      }
+    }
+  }
+
   async init() {
     // Setup camera for FPS (will be controlled by player)
     this.camera.position.set(0, 1.8, 0);
+    this.camera.rotation.order = "YXZ";
+    this.camera.rotation.x = 0; // No pitch (looking straight ahead, not down)
+    this.camera.rotation.y = 0; // No yaw
 
     // Initialize worker manager for performance optimization
     console.log("Initializing worker threads...");
@@ -208,6 +391,8 @@ class GameMain {
     // Initialize systems
     this.inputManager = new InputManager();
     this.uiManager = new UIManager();
+    // Attempt to enable Go core bridge if configured/reachable
+    await this.tryEnableGoCore();
     if (typeof PuzzleManager === "function") {
       try {
         this.puzzleManager = new PuzzleManager(this.uiManager);
@@ -1498,6 +1683,52 @@ class GameMain {
     }
 
     if (!this.isRunning) {
+      return;
+    }
+
+    if (this.useGoCore && this.goCoreClient) {
+      const move = this.inputManager.getMoveInput() || {};
+      // Simple movement: W/A/S/D keys map directly
+      const moveX = (move.right ? 1 : 0) - (move.left ? 1 : 0);
+      const moveZ = (move.forward ? -1 : 0) + (move.backward ? 1 : 0);
+
+      // Go expects velocity (not normalized direction) - 3x faster movement
+      const playerSpeed = 150;
+      const inputPayload = {
+        moveDirection: [moveX * playerSpeed, 0, moveZ * playerSpeed],
+        fireWeapon: this.inputManager.isMouseButtonDown(0) && this.gameStarted,
+        switchWeapon: this.goCoreClient.consumeSwitchWeapon(),
+        useSprint: Boolean(move.sprint),
+        useEMP: this.goCoreClient.consumeEMP(),
+      };
+
+      this.goCoreClient
+        .sendInput(inputPayload)
+        .then((state) => {
+          if (state) {
+            this.applyGoState(state);
+          }
+        })
+        .catch(() => {});
+
+      const latest = this.goCoreClient.getLatestState();
+      if (latest) {
+        this.applyGoState(latest);
+      }
+
+      // Position camera from Go state
+      const playerState = this.goCoreClient.getLatestState()?.player;
+      if (playerState && playerState.position && this.camera) {
+        this.camera.position.set(
+          playerState.position[0],
+          playerState.position[1] + 1.6, // Eye height
+          playerState.position[2],
+        );
+      }
+      
+      // Handle mouse look separately
+      this.updateMouseLook();
+
       return;
     }
 
